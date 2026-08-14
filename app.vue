@@ -16,8 +16,8 @@
           :src="config.avatar_url"
           :alt="config.name"
           class="banner-img"
-          width="720"
-          height="935"
+          width="160"
+          height="207"
           fetchpriority="high"
           decoding="async"
         >
@@ -196,9 +196,11 @@ onMounted(async () => {
       if (!isGeneric) {
         config.bio = incomingBio
       }
-      // senão mantém a bio padrão de curiosidade (língua bifurcada)
-      const av = data.avatar_url || ''
-      if (av && !av.includes('pravatar') && !av.includes('placeholder') && !av.startsWith('data:')) {
+      // Sempre usa o banner local embutido (evita 404 / pravatar / URL quebrada do painel)
+      config.avatar_url = DEFAULT_BANNER
+      const av = (data.avatar_url || '').trim()
+      // só aceita URL externa https válida (não data:, não relative, não placeholder)
+      if (av.startsWith('https://') && !av.includes('pravatar') && !av.includes('placeholder') && av.length > 20) {
         config.avatar_url = av
       }
       if (Array.isArray(data.links) && data.links.length) {
@@ -373,8 +375,7 @@ function trackClick(link: LinkItem) {
   overflow: hidden;
   border: 1px solid rgba(236, 72, 153, 0.28);
   box-shadow: 0 0 24px rgba(236, 72, 153, 0.15);
-  /* proporção natural da foto (~720x935), sem esticar nem cortar demais */
-  aspect-ratio: 720 / 935;
+  aspect-ratio: 160 / 207;
   max-height: min(38vh, 300px);
   background: #0a0a0c;
 }
@@ -383,7 +384,7 @@ function trackClick(link: LinkItem) {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 35%;
+  object-position: center 30%;
   display: block;
 }
 
