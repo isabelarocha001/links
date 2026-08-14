@@ -11,7 +11,6 @@
     </button>
 
     <main class="container">
-      <!-- BANNER grande com foto + emoji na íntima -->
       <div class="banner-wrap">
         <img :src="config.avatar_url" :alt="config.name" class="banner-img">
         <div class="banner-gradient"></div>
@@ -23,13 +22,11 @@
         </div>
       </div>
 
-      <!-- CTA com setas -->
       <div class="cta-choose">
         <p class="cta-title">👇 Escolhe o que tu quer primeiro 👇</p>
-        <p class="cta-sub">dois caminhos · mesmo prazer</p>
+        <p class="cta-sub">três caminhos · mesmo prazer</p>
       </div>
 
-      <!-- Links espaçados -->
       <div class="links">
         <a
           v-for="link in config.links"
@@ -40,7 +37,10 @@
           rel="noopener noreferrer"
           @click="trackClick(link)"
         >
-          <span class="link-icon">{{ link.icon }}</span>
+          <span class="link-icon">
+            <img v-if="link.logo" :src="link.logo" :alt="link.label" class="logo-img">
+            <template v-else>{{ link.icon }}</template>
+          </span>
           <span class="link-label">{{ link.label }}</span>
           <span class="link-arrow">→</span>
         </a>
@@ -95,9 +95,10 @@
 </template>
 
 <script setup lang="ts">
-type LinkItem = { label: string; icon: string; url: string }
+type LinkItem = { label: string; icon: string; url: string; logo?: string }
 
 import { WANESSA_BANNER } from '~/utils/banner'
+import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 
 const DEFAULT_BANNER = WANESSA_BANNER
 
@@ -106,9 +107,24 @@ const config = reactive({
   bio: 'conteúdo quente · privacidade total 😈',
   avatar_url: DEFAULT_BANNER,
   links: [
-    { label: 'Prévia Telegram', icon: '🔥', url: '#' },
-    { label: 'Telegram VIP', icon: '💦', url: '#' },
-    { label: 'PrivSex', icon: '😈', url: 'https://privsex.com' }
+    {
+      label: 'Canal de prévias',
+      icon: '📱',
+      logo: LOGO_TG_BLUE,
+      url: 'https://t.me/+yA5Y1pAWx5RlMWIx'
+    },
+    {
+      label: 'Telegram VIP',
+      icon: '⭐',
+      logo: LOGO_TG_PURPLE,
+      url: 'https://t.me/wanessaavipbot?start=pressel'
+    },
+    {
+      label: 'PrivSex',
+      icon: '🔥',
+      logo: LOGO_PRIVSEX,
+      url: 'https://privsex.com/wanessa'
+    }
   ] as LinkItem[]
 })
 
@@ -142,7 +158,7 @@ function readUtms() {
 
 function offerFromLabel(label: string) {
   const map: Record<string, string> = {
-    'Prévia Telegram': 'previa_telegram',
+    'Canal de prévias': 'previa_telegram',
     'Telegram VIP': 'telegram_vip',
     'PrivSex': 'privsex'
   }
@@ -155,12 +171,23 @@ onMounted(async () => {
     if (data) {
       config.name = data.name || config.name
       config.bio = data.bio || config.bio
-      // se avatar do config for generico/pravatar, mantém a foto real
       const av = data.avatar_url || ''
       if (av && !av.includes('pravatar') && !av.includes('placeholder')) {
         config.avatar_url = av
       }
-      if (Array.isArray(data.links) && data.links.length) config.links = data.links
+      // mantém logos padrão; só sobrescreve label/url do backend se existirem
+      if (Array.isArray(data.links) && data.links.length) {
+        const byLabel = new Map(config.links.map(l => [l.label.toLowerCase(), l]))
+        config.links = data.links.map((l: LinkItem) => {
+          const key = (l.label || '').toLowerCase()
+          const base = byLabel.get(key)
+          return {
+            ...l,
+            logo: base?.logo || l.logo,
+            icon: l.icon || base?.icon || '🔗'
+          }
+        })
+      }
     }
   } catch {}
 
@@ -179,7 +206,7 @@ function openEdit() {
   edit.name = config.name
   edit.bio = config.bio
   edit.avatar_url = config.avatar_url.startsWith('data:') ? '' : config.avatar_url
-  edit.links = config.links.map(l => ({ ...l }))
+  edit.links = config.links.map(l => ({ label: l.label, icon: l.icon, url: l.url }))
   while (edit.links.length < 3) {
     edit.links.push({ label: '', icon: '🔗', url: '#' })
   }
@@ -224,7 +251,16 @@ async function doSave() {
     config.name = edit.name
     config.bio = edit.bio
     if (payload.avatar_url) config.avatar_url = payload.avatar_url
-    config.links = edit.links.filter(l => l.label)
+    // re-aplica logos conhecidos
+    const logoMap: Record<string, string> = {
+      'canal de prévias': LOGO_TG_BLUE,
+      'telegram vip': LOGO_TG_PURPLE,
+      'privsex': LOGO_PRIVSEX
+    }
+    config.links = edit.links.filter(l => l.label).map(l => ({
+      ...l,
+      logo: logoMap[l.label.toLowerCase()]
+    }))
     saveMsg.value = 'Salvo!'
   } catch (e: any) {
     saveError.value = e?.data?.statusMessage || 'Erro ao salvar'
@@ -320,7 +356,6 @@ function trackClick(link: LinkItem) {
   z-index: 1;
 }
 
-/* BANNER */
 .banner-wrap {
   position: relative;
   width: 100%;
@@ -399,7 +434,6 @@ function trackClick(link: LinkItem) {
   margin-top: 4px;
 }
 
-/* CTA escolha */
 .cta-choose {
   text-align: center;
   margin-bottom: 18px;
@@ -417,7 +451,6 @@ function trackClick(link: LinkItem) {
   margin-top: 4px;
 }
 
-/* Links bem espaçados */
 .links {
   width: 100%;
   display: flex;
@@ -469,15 +502,24 @@ function trackClick(link: LinkItem) {
 }
 
 .link-icon {
-  font-size: 1.35rem;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(236, 72, 153, 0.2);
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
   flex-shrink: 0;
+  overflow: hidden;
+  font-size: 1.2rem;
+}
+
+.logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+  border-radius: 50%;
 }
 
 .link-label { flex: 1; }
@@ -502,7 +544,6 @@ function trackClick(link: LinkItem) {
   text-align: center;
 }
 
-/* Modal (admin) */
 .modal {
   position: fixed;
   inset: 0;
