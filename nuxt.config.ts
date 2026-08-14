@@ -28,8 +28,13 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         { name: 'description', content: 'Todos os meus links em um só lugar' },
         { name: 'theme-color', content: '#0a0a0c' }
+      ],
+      link: [
+        { rel: 'dns-prefetch', href: 'https://t.me' },
+        { rel: 'dns-prefetch', href: 'https://privsex.com' },
+        { rel: 'preconnect', href: 'https://t.me', crossorigin: 'anonymous' },
+        { rel: 'preconnect', href: 'https://privsex.com', crossorigin: 'anonymous' }
       ]
-      // sem Google Fonts = carregamento mais rápido em 4G
     }
   },
 
