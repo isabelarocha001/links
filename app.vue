@@ -181,6 +181,10 @@ function offerFromLabel(label: string) {
     'Telegram VIP': 'telegram_vip',
     'PrivSex': 'privsex'
   }
+  const lower = label.toLowerCase()
+  if (/pr[eé]via|canal/i.test(lower)) return 'previa_telegram'
+  if (/vip/i.test(lower)) return 'telegram_vip'
+  if (/priv/i.test(lower)) return 'privsex'
   return map[label] || label.toLowerCase().replace(/\s+/g, '_').slice(0, 40)
 }
 
@@ -203,17 +207,33 @@ onMounted(async () => {
         config.bio = incomingBio
       }
       config.avatar_url = DEFAULT_BANNER
+      // Links canônicos — nunca deixar # ou URL errada do Supabase quebrar os botões
+      const CANONICAL: LinkItem[] = [
+        { label: 'Canal de prévias', icon: '📱', logo: LOGO_TG_BLUE, url: 'https://t.me/+yA5Y1pAWx5RlMWIx' },
+        { label: 'Telegram VIP', icon: '⭐', logo: LOGO_TG_PURPLE, url: 'https://t.me/wanessaavipbot?start=pressel' },
+        { label: 'PrivSex', icon: '🔥', logo: LOGO_PRIVSEX, url: 'https://privsex.com/wanessa' }
+      ]
       if (Array.isArray(data.links) && data.links.length) {
-        const byLabel = new Map(config.links.map(l => [l.label.toLowerCase(), l]))
-        config.links = data.links.map((l: LinkItem) => {
-          const key = (l.label || '').toLowerCase()
-          const base = byLabel.get(key)
+        config.links = CANONICAL.map((canon) => {
+          const match = data.links.find((l: LinkItem) => {
+            const lab = (l.label || '').toLowerCase()
+            return (
+              lab === canon.label.toLowerCase() ||
+              (canon.label.includes('prévia') && /pr[eé]via|canal/i.test(lab)) ||
+              (canon.label.includes('VIP') && /vip/i.test(lab)) ||
+              (canon.label === 'PrivSex' && /priv/i.test(lab))
+            )
+          })
+          const url = (match?.url || '').trim()
+          const bad = !url || url === '#' || url === '/' || !url.startsWith('http')
           return {
-            ...l,
-            logo: base?.logo || l.logo,
-            icon: l.icon || base?.icon || '🔗'
+            ...canon,
+            label: match?.label && match.label.length > 2 ? match.label : canon.label,
+            url: bad ? canon.url : url
           }
         })
+      } else {
+        config.links = CANONICAL
       }
     }
   } catch {}
@@ -285,7 +305,11 @@ async function doSave() {
     }
     config.links = edit.links.filter(l => l.label).map(l => ({
       ...l,
-      logo: logoMap[l.label.toLowerCase()]
+      logo: logoMap[l.label.toLowerCase()] || (
+        /pr[eé]via|canal/i.test(l.label) ? LOGO_TG_BLUE :
+        /vip/i.test(l.label) ? LOGO_TG_PURPLE :
+        /priv/i.test(l.label) ? LOGO_PRIVSEX : undefined
+      )
     }))
     saveMsg.value = 'Salvo!'
   } catch (e: any) {
@@ -296,17 +320,23 @@ async function doSave() {
 }
 
 function trackClick(link: LinkItem) {
-  $fetch('/api/track', {
-    method: 'POST',
-    body: {
-      event_name: 'cta_click',
-      label: link.label,
-      url: link.url,
-      path: '/links/wanessa',
-      offer_slug: offerFromLabel(link.label),
-      ...readUtms()
+  const body = {
+    event_name: 'cta_click',
+    label: link.label,
+    url: link.url,
+    path: '/links/wanessa',
+    offer_slug: offerFromLabel(link.label),
+    ...readUtms()
+  }
+  // sendBeacon sobrevive à navegação (mais confiável que fetch ao clicar)
+  try {
+    const blob = new Blob([JSON.stringify(body)], { type: 'application/json' })
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      navigator.sendBeacon('/api/track', blob)
+      return
     }
-  }).catch(() => {})
+  } catch {}
+  $fetch('/api/track', { method: 'POST', body }).catch(() => {})
 }
 </script>
 
