@@ -41,7 +41,7 @@
           class="link"
           target="_blank"
           rel="noopener noreferrer"
-          @click="trackClick(link)"
+          @pointerdown.passive="onLinkPointerDown(link)"
         >
           <span class="link-icon">
             <img
@@ -164,7 +164,6 @@ const edit = reactive({
   links: [] as LinkItem[]
 })
 
-/** UUID estável: localStorage + cookie via /api/track */
 function getOrCreateVisitorId(): string {
   if (typeof window === 'undefined') return ''
   try {
@@ -176,7 +175,6 @@ function getOrCreateVisitorId(): string {
           : `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`
       localStorage.setItem(VID_KEY, id)
     }
-    // espelho em cookie legível (1 ano) — ajuda se localStorage limpar
     document.cookie = `vid=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax;Secure`
     return id
   } catch {
@@ -184,7 +182,6 @@ function getOrCreateVisitorId(): string {
   }
 }
 
-/** Dia local YYYY-MM-DD (fuso do aparelho) */
 function todayKey(): string {
   const d = new Date()
   const y = d.getFullYear()
@@ -236,52 +233,52 @@ function readUtms() {
 }
 
 function offerFromLabel(label: string) {
-  const map: Record<string, string> = {
-    'Canal de prévias': 'previa_telegram',
-    'Telegram VIP': 'telegram_vip',
-    'PrivSex': 'privsex'
-  }
   const lower = label.toLowerCase()
   if (/pr[eé]via|canal/i.test(lower)) return 'previa_telegram'
   if (/vip/i.test(lower)) return 'telegram_vip'
   if (/priv/i.test(lower)) return 'privsex'
-  return map[label] || label.toLowerCase().replace(/\s+/g, '_').slice(0, 40)
+  return label.toLowerCase().replace(/\s+/g, '_').slice(0, 40)
 }
 
-/** Envia evento pro /api/track (keepalive = sobrevive ao abrir link externo) */
+/** Track sem bloquear navegação: sendBeacon primeiro, fetch keepalive de fallback */
 function track(eventName: string, extra: Record<string, any> = {}) {
   const visitor_id = getOrCreateVisitorId()
-  const body = {
+  const payload = {
     event_name: eventName,
     path: '/links/wanessa',
     visitor_id,
     ...readUtms(),
     ...extra
   }
+  const json = JSON.stringify(payload)
   try {
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([json], { type: 'application/json' })
+      if (navigator.sendBeacon('/api/track', blob)) return
+    }
     fetch('/api/track', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: json,
       keepalive: true
     }).catch(() => {})
-  } catch {
-    $fetch('/api/track', { method: 'POST', body }).catch(() => {})
-  }
+  } catch {}
+}
+
+/** Track no toque (antes do click) — <a> abre na hora, zero await */
+function onLinkPointerDown(link: LinkItem) {
+  const slug = offerFromLabel(link.label)
+  if (alreadyClickedToday(slug)) return
+  markClickedToday(slug)
+  // 1 evento só (servidor espelha cta_click)
+  track('outbound_click', { label: link.label, url: link.url, offer_slug: slug })
 }
 
 const viewedLinks = new Set<string>()
 const scrollMarks = new Set<number>()
 
 function setupLinkViews() {
-  if (typeof IntersectionObserver === 'undefined') {
-    config.links.forEach((l) => {
-      if (viewedLinks.has(l.label)) return
-      viewedLinks.add(l.label)
-      track('link_view', { label: l.label, url: l.url, offer_slug: offerFromLabel(l.label) })
-    })
-    return
-  }
+  if (typeof IntersectionObserver === 'undefined') return
   nextTick(() => {
     const nodes = document.querySelectorAll('a.link')
     const io = new IntersectionObserver(
@@ -334,7 +331,6 @@ onMounted(async () => {
   document.addEventListener('dragstart', block, true)
   document.addEventListener('contextmenu', block, true)
 
-  // garante UUID antes de qualquer track
   getOrCreateVisitorId()
 
   try {
@@ -343,9 +339,7 @@ onMounted(async () => {
       config.name = data.name || config.name
       const incomingBio = (data.bio || '').trim()
       const isGeneric = !incomingBio || /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|conteudo\s*&?\s*links/i.test(incomingBio)
-      if (!isGeneric) {
-        config.bio = incomingBio
-      }
+      if (!isGeneric) config.bio = incomingBio
       config.avatar_url = DEFAULT_BANNER
       const CANONICAL: LinkItem[] = [
         { label: 'Canal de prévias', icon: '📱', logo: LOGO_TG_BLUE, url: 'https://t.me/+yA5Y1pAWx5RlMWIx' },
@@ -377,7 +371,6 @@ onMounted(async () => {
     }
   } catch {}
 
-  // Abertura: só 1x por dia (localStorage + dedupe no servidor)
   if (!alreadyViewedToday()) {
     markViewedToday()
     track('page_view', { offer_slug: 'wanessa_links' })
@@ -455,15 +448,6 @@ async function doSave() {
   } finally {
     loading.value = false
   }
-}
-
-function trackClick(link: LinkItem) {
-  const slug = offerFromLabel(link.label)
-  // 1 clique por botão por dia (localStorage); servidor reforça dedupe
-  if (alreadyClickedToday(slug)) return
-  markClickedToday(slug)
-  track('link_click', { label: link.label, url: link.url, offer_slug: slug })
-  track('outbound_click', { label: link.label, url: link.url, offer_slug: slug })
 }
 </script>
 
@@ -649,9 +633,11 @@ function trackClick(link: LinkItem) {
   border-radius: 12px;
   font-weight: 600;
   font-size: 0.88rem;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
   position: relative;
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .link:hover {
@@ -690,7 +676,7 @@ function trackClick(link: LinkItem) {
   opacity: 0.5;
   color: #f472b6;
   font-size: 1rem;
-  transition: transform 0.18s ease, opacity 0.18s ease;
+  transition: transform 0.12s ease, opacity 0.12s ease;
 }
 
 .link:hover .link-arrow {
