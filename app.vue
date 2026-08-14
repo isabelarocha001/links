@@ -44,12 +44,9 @@
 
 <script setup lang="ts">
 const links = [
-  { label: 'Instagram', icon: '📸', url: '#' },
-  { label: 'Telegram', icon: '📱', url: '#' },
-  { label: 'Privacy', icon: '🔒', url: '#' },
-  { label: 'WhatsApp', icon: '💬', url: '#' },
-  { label: 'TikTok', icon: '🎥', url: '#' },
-  { label: 'Site / Outros', icon: '🌐', url: '#' }
+  { label: 'Prévia Telegram', icon: '📱', url: '#' },
+  { label: 'Telegram VIP', icon: '⭐', url: '#' },
+  { label: 'PrivSex', icon: '🔥', url: 'https://privsex.com' }
 ]
 </script>
 
