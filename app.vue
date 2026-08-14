@@ -188,8 +188,83 @@ function offerFromLabel(label: string) {
   return map[label] || label.toLowerCase().replace(/\s+/g, '_').slice(0, 40)
 }
 
+/** Envia evento pro /api/track (keepalive = sobrevive ao abrir link externo) */
+function track(eventName: string, extra: Record<string, any> = {}) {
+  const body = {
+    event_name: eventName,
+    path: '/links/wanessa',
+    ...readUtms(),
+    ...extra
+  }
+  try {
+    fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      keepalive: true
+    }).catch(() => {})
+  } catch {
+    $fetch('/api/track', { method: 'POST', body }).catch(() => {})
+  }
+}
+
+const viewedLinks = new Set<string>()
+const scrollMarks = new Set<number>()
+
+function setupLinkViews() {
+  if (typeof IntersectionObserver === 'undefined') {
+    config.links.forEach((l) => {
+      if (viewedLinks.has(l.label)) return
+      viewedLinks.add(l.label)
+      track('link_view', { label: l.label, url: l.url, offer_slug: offerFromLabel(l.label) })
+    })
+    return
+  }
+  nextTick(() => {
+    const nodes = document.querySelectorAll('a.link')
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return
+          const el = entry.target as HTMLElement
+          const label = el.querySelector('.link-label')?.textContent?.trim() || ''
+          if (!label || viewedLinks.has(label)) return
+          viewedLinks.add(label)
+          const link = config.links.find((l) => l.label === label)
+          track('link_view', {
+            label,
+            url: link?.url || '',
+            offer_slug: offerFromLabel(label)
+          })
+          io.unobserve(el)
+        })
+      },
+      { threshold: 0.5 }
+    )
+    nodes.forEach((n) => io.observe(n))
+  })
+}
+
+function setupScrollDepth() {
+  const report = () => {
+    const doc = document.documentElement
+    const scrollable = doc.scrollHeight - window.innerHeight
+    let pct = 100
+    if (scrollable > 20) {
+      pct = Math.min(100, Math.round((window.scrollY / scrollable) * 100))
+    }
+    for (const mark of [25, 50, 75, 100]) {
+      if (pct >= mark && !scrollMarks.has(mark)) {
+        scrollMarks.add(mark)
+        track('scroll_depth', { depth: mark, offer_slug: 'wanessa_links' })
+      }
+    }
+  }
+  window.addEventListener('scroll', report, { passive: true })
+  setTimeout(report, 400)
+}
+
 onMounted(async () => {
-  // Anti-cópia reforçado (não 100% inviolável, mas impede o "copiar" normal)
   const block = (e: Event) => { e.preventDefault(); return false }
   document.addEventListener('copy', block, true)
   document.addEventListener('cut', block, true)
@@ -207,7 +282,6 @@ onMounted(async () => {
         config.bio = incomingBio
       }
       config.avatar_url = DEFAULT_BANNER
-      // Links canônicos — nunca deixar # ou URL errada do Supabase quebrar os botões
       const CANONICAL: LinkItem[] = [
         { label: 'Canal de prévias', icon: '📱', logo: LOGO_TG_BLUE, url: 'https://t.me/+yA5Y1pAWx5RlMWIx' },
         { label: 'Telegram VIP', icon: '⭐', logo: LOGO_TG_PURPLE, url: 'https://t.me/wanessaavipbot?start=pressel' },
@@ -238,15 +312,12 @@ onMounted(async () => {
     }
   } catch {}
 
-  $fetch('/api/track', {
-    method: 'POST',
-    body: {
-      event_name: 'presell_view',
-      path: '/links/wanessa',
-      offer_slug: 'wanessa_links',
-      ...readUtms()
-    }
-  }).catch(() => {})
+  // 🌳 Eventos da árvore
+  track('session_start', { offer_slug: 'wanessa_links' })
+  track('page_view', { offer_slug: 'wanessa_links' })
+
+  setupLinkViews()
+  setupScrollDepth()
 })
 
 function openEdit() {
@@ -320,23 +391,9 @@ async function doSave() {
 }
 
 function trackClick(link: LinkItem) {
-  const body = {
-    event_name: 'cta_click',
-    label: link.label,
-    url: link.url,
-    path: '/links/wanessa',
-    offer_slug: offerFromLabel(link.label),
-    ...readUtms()
-  }
-  // sendBeacon sobrevive à navegação (mais confiável que fetch ao clicar)
-  try {
-    const blob = new Blob([JSON.stringify(body)], { type: 'application/json' })
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/track', blob)
-      return
-    }
-  } catch {}
-  $fetch('/api/track', { method: 'POST', body }).catch(() => {})
+  const slug = offerFromLabel(link.label)
+  track('link_click', { label: link.label, url: link.url, offer_slug: slug })
+  track('outbound_click', { label: link.label, url: link.url, offer_slug: slug })
 }
 </script>
 
