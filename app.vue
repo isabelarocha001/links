@@ -49,7 +49,7 @@
             <img
               v-if="link.logo"
               :src="link.logo"
-              :alt=""
+              alt=""
               class="logo-img"
               width="28"
               height="28"
@@ -308,7 +308,7 @@ function trackClick(link: LinkItem) {
   align-items: flex-start;
   padding: max(8px, env(safe-area-inset-top)) 14px max(10px, env(safe-area-inset-bottom));
   position: relative;
-  overflow: hidden; /* sem scroll */
+  overflow: hidden;
   background: #0a0a0c;
   box-sizing: border-box;
 }
@@ -356,7 +356,6 @@ function trackClick(link: LinkItem) {
   overflow: hidden;
 }
 
-/* Banner livre – altura limitada para caber tudo na tela */
 .banner-wrap {
   position: relative;
   width: 100%;
@@ -365,7 +364,6 @@ function trackClick(link: LinkItem) {
   overflow: hidden;
   border: 1px solid rgba(236, 72, 153, 0.28);
   box-shadow: 0 0 24px rgba(236, 72, 153, 0.15);
-  /* ~32-36% da viewport para sobrar espaço pros botões */
   max-height: min(34vh, 260px);
   aspect-ratio: 3 / 4;
 }
@@ -396,7 +394,6 @@ function trackClick(link: LinkItem) {
   50% { transform: translateX(-50%) scale(1.12); opacity: 0.85; }
 }
 
-/* Texto SEMPRE fora da foto */
 .identity {
   text-align: center;
   margin-top: 8px;
@@ -518,11 +515,8 @@ function trackClick(link: LinkItem) {
   flex-shrink: 0;
 }
 
-/* Telas um pouco maiores (mobile alto / tablet) */
 @media (min-height: 720px) {
-  .banner-wrap {
-    max-height: min(38vh, 300px);
-  }
+  .banner-wrap { max-height: min(38vh, 300px); }
   .name { font-size: 1.55rem; }
   .links { gap: 10px; }
   .link { padding: 13px 16px; font-size: 0.9rem; }
@@ -530,29 +524,17 @@ function trackClick(link: LinkItem) {
   .cta-choose { margin-bottom: 10px; }
 }
 
-/* Desktop / PC */
 @media (min-width: 768px) {
-  .page {
-    padding: 20px;
-    align-items: center;
-  }
-  .container {
-    max-width: 380px;
-  }
-  .banner-wrap {
-    max-height: min(36vh, 320px);
-    border-radius: 18px;
-  }
+  .page { padding: 20px; align-items: center; }
+  .container { max-width: 380px; }
+  .banner-wrap { max-height: min(36vh, 320px); border-radius: 18px; }
   .name { font-size: 1.65rem; }
   .links { gap: 11px; }
   .link { padding: 14px 18px; font-size: 0.92rem; }
 }
 
-/* Telas baixas (iPhone SE, Android pequeno) – prioriza botões */
 @media (max-height: 680px) {
-  .banner-wrap {
-    max-height: min(28vh, 200px);
-  }
+  .banner-wrap { max-height: min(28vh, 200px); }
   .identity { margin-top: 6px; margin-bottom: 4px; }
   .name { font-size: 1.25rem; }
   .tagline { font-size: 0.58rem; }
@@ -567,9 +549,7 @@ function trackClick(link: LinkItem) {
 }
 
 @media (max-height: 580px) {
-  .banner-wrap {
-    max-height: min(24vh, 160px);
-  }
+  .banner-wrap { max-height: min(24vh, 160px); }
   .name { font-size: 1.15rem; }
   .links { gap: 5px; }
   .link { padding: 8px 10px; font-size: 0.8rem; }
