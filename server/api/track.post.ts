@@ -1,11 +1,8 @@
 /**
  * Tracking da ÁRVORE DE LINKS (proxy server-side)
  *
- * Cliente NUNCA fala com telegram-metricas direto.
- *  - Origin/Referer allowlist
- *  - Rate limit por IP
- *  - Whitelist de eventos
- *  - X-Tracking-Secret só no server → pressel
+ * Responde IMEDIATO ao browser; envia ao pressel em background.
+ * Assim o clique no link não espera Supabase/Telegram.
  */
 
 const PRESSEL_WEBHOOK = 'https://telegram-metricas.vercel.app/api/pressel'
@@ -13,7 +10,6 @@ const LINK_TREE_HOST = 'wanessa-links.vercel.app'
 const LINK_TREE_PATH = '/links/wanessa'
 const LINK_TREE_SOURCE = 'wanessa_links'
 
-/** Mesmo fallback do pressel — sobrescreva com TRACKING_INGEST_SECRET na Vercel */
 const FALLBACK_SECRET =
   'trk_wanessa_ingest_9f3c2a7b1e8d4c6f0a5b7e9d2c4f6a8b'
 
@@ -73,7 +69,6 @@ function originAllowed(event: any): boolean {
     } catch {}
   }
 
-  // curl / script sem Origin nem Referer → bloqueia em prod
   if (!origin && !referer) {
     return process.env.NODE_ENV !== 'production'
   }
@@ -122,7 +117,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const secret = trackingSecret()
-
   const body = await readBody(event).catch(() => ({} as any))
   const label = String(body?.label || '').slice(0, 80)
   const url = String(body?.url || '').slice(0, 500)
@@ -186,12 +180,12 @@ export default defineEventHandler(async (event) => {
     if (!toSend.includes('cta_click')) toSend.push('cta_click')
   }
 
-  const results: any[] = []
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Tracking-Secret': secret
   }
 
+  // Fire-and-forget: NÃO await — browser recebe 200 na hora
   for (const name of toSend) {
     const payload = {
       visitor_id: visitorId,
@@ -204,29 +198,17 @@ export default defineEventHandler(async (event) => {
         mirrored_from: name !== eventName ? eventName : undefined
       }
     }
-
-    try {
-      const res = await fetch(PRESSEL_WEBHOOK, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload)
-      })
-      const data = await res.json().catch(() => ({}))
-      results.push({
-        event_name: name,
-        ok: data?.ok !== false && res.ok,
-        deduped: !!data?.deduped,
-        status: res.status
-      })
-    } catch (e: any) {
-      results.push({ event_name: name, ok: false, error: e?.message || 'webhook failed' })
-    }
+    fetch(PRESSEL_WEBHOOK, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    }).catch(() => {})
   }
 
   return {
-    ok: results.some((r) => r.ok),
+    ok: true,
     visitor_id: visitorId,
     channel: 'link_tree',
-    results
+    queued: true
   }
 })
