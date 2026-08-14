@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const supabase = useServiceSupabase()
 
-  // Rate limit: máx 5 tentativas falhas em 15 min por IP
+  // Rate limit: máx 5 falhas em 15 min por IP
   const since = new Date(Date.now() - 15 * 60 * 1000).toISOString()
   const { data: attempts } = await supabase
     .from('link_page_login_attempts')
@@ -26,37 +26,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Senha inválida' })
   }
 
-  // Validação real no banco (pgcrypto crypt)
-  const { data: ok, error } = await supabase.rpc('verify_link_page_password', {
-    p_password: password
-  })
-
-  // Fallback se a function ainda não existir: query manual
-  let valid = false
-  if (!error && ok === true) {
-    valid = true
-  } else {
-    const { data: rows } = await supabase
-      .from('link_page_auth')
-      .select('password_hash')
-      .eq('id', 'main')
-      .limit(1)
-
-    // Não dá pra comparar bcrypt no JS sem a lib — usamos SQL
-    const { data: check } = await supabase.rpc('check_password_plain', {
-      plain: password
-    }).maybeSingle?.() 
-
-    // Query direta via SQL function criada abaixo
-    valid = false
-  }
-
-  // Sempre tenta a function dedicada
-  const { data: verified } = await supabase.rpc('verify_link_admin', {
+  const { data: verified, error } = await supabase.rpc('verify_link_admin', {
     plain_password: password
   })
 
-  valid = verified === true
+  const valid = !error && verified === true
 
   await supabase.from('link_page_login_attempts').insert({
     ip,
