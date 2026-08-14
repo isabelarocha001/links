@@ -2,7 +2,6 @@
   <div class="page">
     <div class="bg-glow"></div>
 
-    <!-- Cadeado minimalista canto superior direito -->
     <button class="lock-btn" type="button" aria-label="Editar página" @click="showLogin = true">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="11" width="18" height="11" rx="2" />
@@ -36,7 +35,6 @@
       </div>
     </main>
 
-    <!-- Modal login -->
     <div v-if="showLogin && !isAdmin" class="modal" @click.self="showLogin = false">
       <div class="modal-card">
         <h2>Acesso</h2>
@@ -54,7 +52,6 @@
       </div>
     </div>
 
-    <!-- Painel edição -->
     <div v-if="isAdmin" class="modal" @click.self="isAdmin = false">
       <div class="modal-card edit">
         <h2>Editar página</h2>
@@ -111,6 +108,29 @@ const edit = reactive({
   links: [] as LinkItem[]
 })
 
+function readUtms() {
+  if (typeof window === 'undefined') return {}
+  const p = new URLSearchParams(window.location.search)
+  return {
+    utm_source: p.get('utm_source'),
+    utm_medium: p.get('utm_medium'),
+    utm_campaign: p.get('utm_campaign'),
+    utm_content: p.get('utm_content'),
+    utm_term: p.get('utm_term'),
+    src: p.get('src'),
+    sck: p.get('sck')
+  }
+}
+
+function offerFromLabel(label: string) {
+  const map: Record<string, string> = {
+    'Prévia Telegram': 'previa_telegram',
+    'Telegram VIP': 'telegram_vip',
+    'PrivSex': 'privsex'
+  }
+  return map[label] || label.toLowerCase().replace(/\s+/g, '_').slice(0, 40)
+}
+
 onMounted(async () => {
   try {
     const data = await $fetch<any>('/api/config')
@@ -121,6 +141,17 @@ onMounted(async () => {
       if (Array.isArray(data.links) && data.links.length) config.links = data.links
     }
   } catch {}
+
+  // 1 view por visitor/dia (dedupe no pressel)
+  $fetch('/api/track', {
+    method: 'POST',
+    body: {
+      event_name: 'presell_view',
+      path: '/links/wanessa',
+      offer_slug: 'wanessa_links',
+      ...readUtms()
+    }
+  }).catch(() => {})
 })
 
 function openEdit() {
@@ -181,7 +212,14 @@ async function doSave() {
 function trackClick(link: LinkItem) {
   $fetch('/api/track', {
     method: 'POST',
-    body: { label: link.label, url: link.url }
+    body: {
+      event_name: 'cta_click',
+      label: link.label,
+      url: link.url,
+      path: '/links/wanessa',
+      offer_slug: offerFromLabel(link.label),
+      ...readUtms()
+    }
   }).catch(() => {})
 }
 </script>
