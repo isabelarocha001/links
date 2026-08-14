@@ -39,6 +39,7 @@
           :key="link.label"
           :href="link.url"
           class="link"
+          :class="{ 'link-rgb': isPrevias(link.label) }"
           target="_blank"
           rel="noopener noreferrer"
           @pointerdown.passive="onLinkPointerDown(link)"
@@ -129,24 +130,9 @@ const config = reactive({
   bio: 'língua bifurcada · o resto tu descobre 👅',
   avatar_url: DEFAULT_BANNER,
   links: [
-    {
-      label: 'Canal de prévias',
-      icon: '📱',
-      logo: LOGO_TG_BLUE,
-      url: 'https://t.me/+yA5Y1pAWx5RlMWIx'
-    },
-    {
-      label: 'Telegram VIP',
-      icon: '⭐',
-      logo: LOGO_TG_PURPLE,
-      url: 'https://t.me/wanessaavipbot?start=pressel'
-    },
-    {
-      label: 'PrivSex',
-      icon: '🔥',
-      logo: LOGO_PRIVSEX,
-      url: 'https://privsex.com/wanessa'
-    }
+    { label: 'Canal de prévias', icon: '📱', logo: LOGO_TG_BLUE, url: 'https://t.me/+yA5Y1pAWx5RlMWIx' },
+    { label: 'Telegram VIP', icon: '⭐', logo: LOGO_TG_PURPLE, url: 'https://t.me/wanessaavipbot?start=pressel' },
+    { label: 'PrivSex', icon: '🔥', logo: LOGO_PRIVSEX, url: 'https://privsex.com/wanessa' }
   ] as LinkItem[]
 })
 
@@ -157,22 +143,20 @@ const loginError = ref('')
 const saveMsg = ref('')
 const saveError = ref('')
 const loading = ref(false)
-const edit = reactive({
-  name: '',
-  bio: '',
-  avatar_url: '',
-  links: [] as LinkItem[]
-})
+const edit = reactive({ name: '', bio: '', avatar_url: '', links: [] as LinkItem[] })
+
+function isPrevias(label: string) {
+  return /pr[eé]via|canal/i.test(label || '')
+}
 
 function getOrCreateVisitorId(): string {
   if (typeof window === 'undefined') return ''
   try {
     let id = localStorage.getItem(VID_KEY) || ''
     if (!id || id.length < 8) {
-      id =
-        typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`
+      id = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`
       localStorage.setItem(VID_KEY, id)
     }
     document.cookie = `vid=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax;Secure`
@@ -184,38 +168,20 @@ function getOrCreateVisitorId(): string {
 
 function todayKey(): string {
   const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function alreadyViewedToday(): boolean {
-  try {
-    return localStorage.getItem(VIEW_DAY_KEY) === todayKey()
-  } catch {
-    return false
-  }
+  try { return localStorage.getItem(VIEW_DAY_KEY) === todayKey() } catch { return false }
 }
-
 function markViewedToday() {
-  try {
-    localStorage.setItem(VIEW_DAY_KEY, todayKey())
-  } catch {}
+  try { localStorage.setItem(VIEW_DAY_KEY, todayKey()) } catch {}
 }
-
 function alreadyClickedToday(slug: string): boolean {
-  try {
-    return localStorage.getItem(CLICK_DAY_PREFIX + slug) === todayKey()
-  } catch {
-    return false
-  }
+  try { return localStorage.getItem(CLICK_DAY_PREFIX + slug) === todayKey() } catch { return false }
 }
-
 function markClickedToday(slug: string) {
-  try {
-    localStorage.setItem(CLICK_DAY_PREFIX + slug, todayKey())
-  } catch {}
+  try { localStorage.setItem(CLICK_DAY_PREFIX + slug, todayKey()) } catch {}
 }
 
 function readUtms() {
@@ -240,16 +206,9 @@ function offerFromLabel(label: string) {
   return label.toLowerCase().replace(/\s+/g, '_').slice(0, 40)
 }
 
-/** Track sem bloquear navegação: sendBeacon primeiro, fetch keepalive de fallback */
 function track(eventName: string, extra: Record<string, any> = {}) {
   const visitor_id = getOrCreateVisitorId()
-  const payload = {
-    event_name: eventName,
-    path: '/links/wanessa',
-    visitor_id,
-    ...readUtms(),
-    ...extra
-  }
+  const payload = { event_name: eventName, path: '/links/wanessa', visitor_id, ...readUtms(), ...extra }
   const json = JSON.stringify(payload)
   try {
     if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
@@ -265,12 +224,10 @@ function track(eventName: string, extra: Record<string, any> = {}) {
   } catch {}
 }
 
-/** Track no toque (antes do click) — <a> abre na hora, zero await */
 function onLinkPointerDown(link: LinkItem) {
   const slug = offerFromLabel(link.label)
   if (alreadyClickedToday(slug)) return
   markClickedToday(slug)
-  // 1 evento só (servidor espelha cta_click)
   track('outbound_click', { label: link.label, url: link.url, offer_slug: slug })
 }
 
@@ -281,25 +238,18 @@ function setupLinkViews() {
   if (typeof IntersectionObserver === 'undefined') return
   nextTick(() => {
     const nodes = document.querySelectorAll('a.link')
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
-          const el = entry.target as HTMLElement
-          const label = el.querySelector('.link-label')?.textContent?.trim() || ''
-          if (!label || viewedLinks.has(label)) return
-          viewedLinks.add(label)
-          const link = config.links.find((l) => l.label === label)
-          track('link_view', {
-            label,
-            url: link?.url || '',
-            offer_slug: offerFromLabel(label)
-          })
-          io.unobserve(el)
-        })
-      },
-      { threshold: 0.5 }
-    )
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return
+        const el = entry.target as HTMLElement
+        const label = el.querySelector('.link-label')?.textContent?.trim() || ''
+        if (!label || viewedLinks.has(label)) return
+        viewedLinks.add(label)
+        const link = config.links.find((l) => l.label === label)
+        track('link_view', { label, url: link?.url || '', offer_slug: offerFromLabel(label) })
+        io.unobserve(el)
+      })
+    }, { threshold: 0.5 })
     nodes.forEach((n) => io.observe(n))
   })
 }
@@ -309,9 +259,7 @@ function setupScrollDepth() {
     const doc = document.documentElement
     const scrollable = doc.scrollHeight - window.innerHeight
     let pct = 100
-    if (scrollable > 20) {
-      pct = Math.min(100, Math.round((window.scrollY / scrollable) * 100))
-    }
+    if (scrollable > 20) pct = Math.min(100, Math.round((window.scrollY / scrollable) * 100))
     for (const mark of [25, 50, 75, 100]) {
       if (pct >= mark && !scrollMarks.has(mark)) {
         scrollMarks.add(mark)
@@ -330,7 +278,6 @@ onMounted(async () => {
   document.addEventListener('selectstart', block, true)
   document.addEventListener('dragstart', block, true)
   document.addEventListener('contextmenu', block, true)
-
   getOrCreateVisitorId()
 
   try {
@@ -375,7 +322,6 @@ onMounted(async () => {
     markViewedToday()
     track('page_view', { offer_slug: 'wanessa_links' })
   }
-
   setupLinkViews()
   setupScrollDepth()
 })
@@ -385,19 +331,14 @@ function openEdit() {
   edit.bio = config.bio
   edit.avatar_url = config.avatar_url.startsWith('data:') || config.avatar_url.startsWith('/') ? '' : config.avatar_url
   edit.links = config.links.map(l => ({ label: l.label, icon: l.icon, url: l.url }))
-  while (edit.links.length < 3) {
-    edit.links.push({ label: '', icon: '🔗', url: '#' })
-  }
+  while (edit.links.length < 3) edit.links.push({ label: '', icon: '🔗', url: '#' })
 }
 
 async function doLogin() {
   loginError.value = ''
   loading.value = true
   try {
-    await $fetch('/api/admin/login', {
-      method: 'POST',
-      body: { password: password.value }
-    })
+    await $fetch('/api/admin/login', { method: 'POST', body: { password: password.value } })
     password.value = ''
     showLogin.value = false
     isAdmin.value = true
@@ -414,33 +355,17 @@ async function doSave() {
   saveError.value = ''
   loading.value = true
   try {
-    const payload: any = {
-      name: edit.name,
-      bio: edit.bio,
-      links: edit.links.filter(l => l.label)
-    }
+    const payload: any = { name: edit.name, bio: edit.bio, links: edit.links.filter(l => l.label) }
     if (edit.avatar_url && !edit.avatar_url.startsWith('data:') && !edit.avatar_url.startsWith('/')) {
       payload.avatar_url = edit.avatar_url
     }
-    await $fetch('/api/admin/update', {
-      method: 'POST',
-      body: payload
-    })
+    await $fetch('/api/admin/update', { method: 'POST', body: payload })
     config.name = edit.name
     config.bio = edit.bio
     if (payload.avatar_url) config.avatar_url = payload.avatar_url
-    const logoMap: Record<string, string> = {
-      'canal de prévias': LOGO_TG_BLUE,
-      'telegram vip': LOGO_TG_PURPLE,
-      'privsex': LOGO_PRIVSEX
-    }
     config.links = edit.links.filter(l => l.label).map(l => ({
       ...l,
-      logo: logoMap[l.label.toLowerCase()] || (
-        /pr[eé]via|canal/i.test(l.label) ? LOGO_TG_BLUE :
-        /vip/i.test(l.label) ? LOGO_TG_PURPLE :
-        /priv/i.test(l.label) ? LOGO_PRIVSEX : undefined
-      )
+      logo: /pr[eé]via|canal/i.test(l.label) ? LOGO_TG_BLUE : /vip/i.test(l.label) ? LOGO_TG_PURPLE : /priv/i.test(l.label) ? LOGO_PRIVSEX : undefined
     }))
     saveMsg.value = 'Salvo!'
   } catch (e: any) {
@@ -464,374 +389,165 @@ async function doSave() {
   background: #0a0a0c;
   box-sizing: border-box;
   -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
   user-select: none !important;
   -webkit-touch-callout: none !important;
   -webkit-tap-highlight-color: transparent;
 }
-
-.page ::selection,
-.page *::selection {
-  background: transparent !important;
-  color: inherit !important;
-}
-
-.page ::-moz-selection,
-.page *::-moz-selection {
-  background: transparent !important;
-  color: inherit !important;
-}
-
-.page *,
-.page *::before,
-.page *::after {
+.page ::selection, .page *::selection { background: transparent !important; color: inherit !important; }
+.page *, .page *::before, .page *::after {
   -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
   user-select: none !important;
   -webkit-user-drag: none !important;
-  -webkit-touch-callout: none !important;
 }
-
-.modal-card input {
-  -webkit-user-select: text !important;
-  -moz-user-select: text !important;
-  -ms-user-select: text !important;
-  user-select: text !important;
-}
+.modal-card input { -webkit-user-select: text !important; user-select: text !important; }
 
 .bg-glow {
-  position: absolute;
-  top: -8%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(100vw, 420px);
-  height: 280px;
+  position: absolute; top: -8%; left: 50%; transform: translateX(-50%);
+  width: min(100vw, 420px); height: 280px;
   background: radial-gradient(circle, rgba(236, 72, 153, 0.16) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
+  pointer-events: none; z-index: 0;
 }
-
 .lock-btn {
-  position: fixed;
-  top: max(8px, env(safe-area-inset-top));
-  right: 8px;
-  z-index: 50;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  position: fixed; top: max(8px, env(safe-area-inset-top)); right: 8px; z-index: 50;
+  width: 30px; height: 30px; border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.3);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
-
 .container {
-  width: 100%;
-  max-width: 360px;
-  height: 100%;
-  max-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
+  width: 100%; max-width: 360px; height: 100%; max-height: 100dvh;
+  display: flex; flex-direction: column; align-items: center;
+  position: relative; z-index: 1; overflow: hidden;
 }
-
 .banner-wrap {
-  position: relative;
-  width: 100%;
-  flex: 0 0 auto;
-  border-radius: 16px;
-  overflow: hidden;
+  position: relative; width: 100%; flex: 0 0 auto;
+  border-radius: 16px; overflow: hidden;
   border: 1px solid rgba(236, 72, 153, 0.28);
   box-shadow: 0 0 24px rgba(236, 72, 153, 0.15);
-  aspect-ratio: 480 / 623;
-  max-height: min(40vh, 320px);
-  background: #111;
+  aspect-ratio: 480 / 623; max-height: min(40vh, 320px); background: #111;
 }
-
 .banner-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 20%;
-  display: block;
-  -webkit-user-drag: none;
-  user-select: none;
-  pointer-events: none;
+  width: 100%; height: 100%; object-fit: cover; object-position: center 20%;
+  display: block; pointer-events: none;
 }
-
-.identity {
-  text-align: center;
-  margin-top: 8px;
-  margin-bottom: 6px;
-  width: 100%;
-  flex-shrink: 0;
-}
-
+.identity { text-align: center; margin-top: 8px; margin-bottom: 6px; width: 100%; flex-shrink: 0; }
 .tagline {
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #f9a8d4;
-  margin-bottom: 1px;
-  line-height: 1.2;
+  font-size: 0.62rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+  color: #f9a8d4; margin-bottom: 1px; line-height: 1.2;
 }
-
-.name {
-  font-size: 1.4rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: #fff;
-  line-height: 1.15;
-}
-
-.bio {
-  font-size: 0.78rem;
-  color: #fbcfe8;
-  margin-top: 1px;
-  line-height: 1.3;
-}
-
-.cta-choose {
-  text-align: center;
-  margin-bottom: 8px;
-  flex-shrink: 0;
-}
-
-.cta-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #fbcfe8;
-  line-height: 1.3;
-}
+.name { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.03em; color: #fff; line-height: 1.15; }
+.bio { font-size: 0.78rem; color: #fbcfe8; margin-top: 1px; line-height: 1.3; }
+.cta-choose { text-align: center; margin-bottom: 12px; flex-shrink: 0; }
+.cta-title { font-size: 0.85rem; font-weight: 600; color: #fbcfe8; line-height: 1.3; }
 
 .links {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
   flex-shrink: 0;
 }
 
 .link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 11px 14px;
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 13px 14px;
   background: linear-gradient(135deg, rgba(236, 72, 153, 0.12), rgba(192, 38, 211, 0.08));
   border: 1px solid rgba(236, 72, 153, 0.38);
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 0.88rem;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
-  position: relative;
-  overflow: hidden;
+  border-radius: 12px; font-weight: 600; font-size: 0.88rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  position: relative; overflow: hidden;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  z-index: 0;
 }
-
 .link:hover {
   transform: translateY(-1px);
   border-color: rgba(244, 114, 182, 0.65);
   box-shadow: 0 6px 18px rgba(236, 72, 153, 0.25);
 }
+.link:active { transform: scale(0.98); }
 
-.link:active {
-  transform: scale(0.98);
+/* RGB animado — Canal de prévias */
+.link-rgb {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(#121014, #121014) padding-box,
+    linear-gradient(90deg, #ff0040, #ff8c00, #ffee00, #00ff66, #00c8ff, #7a00ff, #ff00c8, #ff0040) border-box;
+  background-size: 100% 100%, 300% 100%;
+  animation: rgb-border 3s linear infinite;
+  box-shadow: 0 0 12px rgba(255, 0, 128, 0.35), 0 0 24px rgba(0, 200, 255, 0.2);
+}
+.link-rgb:hover {
+  border-color: transparent;
+  box-shadow: 0 0 16px rgba(255, 0, 128, 0.5), 0 0 32px rgba(0, 200, 255, 0.35);
+}
+@keyframes rgb-border {
+  0% { background-position: 0% 0%, 0% 50%; }
+  100% { background-position: 0% 0%, 300% 50%; }
 }
 
 .link-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 9px;
-  flex-shrink: 0;
-  overflow: hidden;
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.06); border-radius: 9px; flex-shrink: 0; overflow: hidden;
 }
-
-.logo-img {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  border-radius: 50%;
-  -webkit-user-drag: none;
-}
-
+.logo-img { width: 24px; height: 24px; object-fit: contain; border-radius: 50%; }
 .link-label { flex: 1; }
+.link-arrow { opacity: 0.5; color: #f472b6; font-size: 1rem; transition: transform 0.12s ease, opacity 0.12s ease; }
+.link:hover .link-arrow { opacity: 1; transform: translateX(3px); }
 
-.link-arrow {
-  opacity: 0.5;
-  color: #f472b6;
-  font-size: 1rem;
-  transition: transform 0.12s ease, opacity 0.12s ease;
-}
-
-.link:hover .link-arrow {
-  opacity: 1;
-  transform: translateX(3px);
-}
-
-.footer {
-  margin-top: 12px;
-  text-align: center;
-  flex-shrink: 0;
-  width: 100%;
-}
-
-.footer-note {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.4);
-  margin-bottom: 4px;
-}
-
-.footer-copy {
-  font-size: 0.62rem;
-  color: rgba(255, 255, 255, 0.28);
-  letter-spacing: 0.02em;
-  line-height: 1.35;
-}
+.footer { margin-top: 16px; text-align: center; flex-shrink: 0; width: 100%; }
+.footer-note { font-size: 0.7rem; color: rgba(255, 255, 255, 0.4); margin-bottom: 4px; }
+.footer-copy { font-size: 0.62rem; color: rgba(255, 255, 255, 0.28); letter-spacing: 0.02em; line-height: 1.35; }
 
 @media (min-height: 720px) {
   .banner-wrap { max-height: min(44vh, 360px); }
   .name { font-size: 1.55rem; }
-  .links { gap: 10px; }
-  .link { padding: 13px 16px; font-size: 0.9rem; }
+  .links { gap: 18px; }
+  .link { padding: 14px 16px; font-size: 0.9rem; }
   .identity { margin-top: 10px; margin-bottom: 8px; }
-  .cta-choose { margin-bottom: 10px; }
+  .cta-choose { margin-bottom: 14px; }
 }
-
 @media (min-width: 768px) {
   .page { padding-top: 24px; }
   .container { max-width: 380px; }
+  .links { gap: 18px; }
 }
-
 @media (max-height: 640px) {
   .banner-wrap { max-height: min(32vh, 220px); }
   .tagline { font-size: 0.55rem; }
   .name { font-size: 1.2rem; }
   .bio { font-size: 0.72rem; }
   .cta-title { font-size: 0.78rem; }
-  .link { padding: 9px 12px; font-size: 0.82rem; }
-  .links { gap: 6px; }
+  .link { padding: 10px 12px; font-size: 0.82rem; }
+  .links { gap: 12px; }
 }
 
 .modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: 16px;
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75);
+  display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px;
 }
-
 .modal-card {
-  background: #141416;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 20px;
-  width: 100%;
-  max-width: 340px;
+  background: #141416; border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px; padding: 20px; width: 100%; max-width: 340px;
 }
-
-.modal-card h2 {
-  font-size: 1.1rem;
-  margin-bottom: 12px;
-  color: #fff;
-}
-
-.modal-card label {
-  display: block;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
-  margin-bottom: 4px;
-  margin-top: 10px;
-}
-
+.modal-card h2 { font-size: 1.1rem; margin-bottom: 12px; color: #fff; }
+.modal-card label { display: block; font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 4px; margin-top: 10px; }
 .modal-card input {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
+  width: 100%; padding: 10px 12px; border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  font-size: 0.9rem;
-  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.05); color: #fff; font-size: 0.9rem; box-sizing: border-box;
 }
-
 .modal-card .btn {
-  width: 100%;
-  margin-top: 14px;
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  background: linear-gradient(135deg, #ec4899, #c026d3);
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
+  width: 100%; margin-top: 14px; padding: 12px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, #ec4899, #c026d3); color: #fff; font-weight: 600; cursor: pointer;
 }
-
-.modal-card .btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.modal-card .btn.ghost {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  margin-top: 8px;
-}
-
-.modal-card .error {
-  color: #f87171;
-  font-size: 0.8rem;
-  margin-top: 8px;
-}
-
-.modal-card .ok {
-  color: #4ade80;
-  font-size: 0.8rem;
-  margin-top: 8px;
-}
-
-.modal-card.edit .row {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.modal-card.edit .row .btn {
-  flex: 1;
-  margin-top: 0;
-}
-
-.link-edit {
-  display: grid;
-  grid-template-columns: 40px 1fr 1.2fr;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.link-edit .icon-input {
-  text-align: center;
-  padding: 8px 4px;
-}
-
-@media (max-width: 480px) {
-  .link-edit { grid-template-columns: 1fr; }
-}
+.modal-card .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.modal-card .btn.ghost { background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); margin-top: 8px; }
+.modal-card .error { color: #f87171; font-size: 0.8rem; margin-top: 8px; }
+.modal-card .ok { color: #4ade80; font-size: 0.8rem; margin-top: 8px; }
+.modal-card.edit .row { display: flex; gap: 8px; margin-top: 12px; }
+.modal-card.edit .row .btn { flex: 1; margin-top: 0; }
+.link-edit { display: grid; grid-template-columns: 40px 1fr 1.2fr; gap: 6px; margin-top: 8px; }
+.link-edit .icon-input { text-align: center; padding: 8px 4px; }
+@media (max-width: 480px) { .link-edit { grid-template-columns: 1fr; } }
 </style>
