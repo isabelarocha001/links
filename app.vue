@@ -26,13 +26,13 @@
 
       <!-- Nome e bio FORA da imagem -->
       <header class="identity">
-        <p class="tagline">🔥 só pra quem aguenta 🔥</p>
+        <p class="tagline">🔥 conteúdo adulto · 18+ 🔥</p>
         <h1 class="name">{{ config.name }}</h1>
         <p class="bio">{{ config.bio }}</p>
       </header>
 
       <div class="cta-choose">
-        <p class="cta-title">👇 Escolhe o que tu quer primeiro 👇</p>
+        <p class="cta-title">👇 Escolhe o conteúdo que tu quer 👇</p>
       </div>
 
       <div class="links">
@@ -63,7 +63,10 @@
         </a>
       </div>
 
-      <p class="footer-note">18+ · conteúdo exclusivo</p>
+    <footer class="footer">
+      <p class="footer-note">18+ · conteúdo adulto exclusivo</p>
+      <p class="footer-copy">© Todos os direitos reservados a Wanessa Borges</p>
+    </footer>
     </main>
 
     <div v-if="showLogin && !isAdmin" class="modal" @click.self="showLogin = false">
@@ -121,7 +124,7 @@ const DEFAULT_BANNER = WANESSA_BANNER
 
 const config = reactive({
   name: 'Wanessa',
-  bio: 'conteúdo quente · privacidade total 😈',
+  bio: 'Criadora de conteúdo adulto 🔥 18+',
   avatar_url: DEFAULT_BANNER,
   links: [
     {
@@ -364,25 +367,26 @@ function trackClick(link: LinkItem) {
   overflow: hidden;
   border: 1px solid rgba(236, 72, 153, 0.28);
   box-shadow: 0 0 24px rgba(236, 72, 153, 0.15);
-  max-height: min(34vh, 260px);
+  /* proporção natural da foto (~3:4), sem esticar */
   aspect-ratio: 3 / 4;
+  max-height: min(42vh, 340px);
 }
 
 .banner-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 15%;
+  object-position: center 28%;
   display: block;
 }
 
 .intimate-emoji {
   position: absolute;
-  bottom: 8%;
+  bottom: 6%;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 1.35rem;
-  filter: drop-shadow(0 0 8px rgba(255, 0, 120, 0.9));
+  font-size: 1.2rem;
+  filter: drop-shadow(0 0 6px rgba(255, 0, 120, 0.75));
   animation: pulse-emoji 1.6s ease-in-out infinite;
   pointer-events: none;
   user-select: none;
@@ -507,16 +511,28 @@ function trackClick(link: LinkItem) {
   transform: translateX(3px);
 }
 
-.footer-note {
-  margin-top: 10px;
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.35);
+.footer {
+  margin-top: 12px;
   text-align: center;
   flex-shrink: 0;
+  width: 100%;
+}
+
+.footer-note {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 4px;
+}
+
+.footer-copy {
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.28);
+  letter-spacing: 0.02em;
+  line-height: 1.35;
 }
 
 @media (min-height: 720px) {
-  .banner-wrap { max-height: min(38vh, 300px); }
+  .banner-wrap { max-height: min(44vh, 360px); }
   .name { font-size: 1.55rem; }
   .links { gap: 10px; }
   .link { padding: 13px 16px; font-size: 0.9rem; }
@@ -527,14 +543,14 @@ function trackClick(link: LinkItem) {
 @media (min-width: 768px) {
   .page { padding: 20px; align-items: center; }
   .container { max-width: 380px; }
-  .banner-wrap { max-height: min(36vh, 320px); border-radius: 18px; }
+  .banner-wrap { max-height: min(42vh, 380px); border-radius: 18px; }
   .name { font-size: 1.65rem; }
   .links { gap: 11px; }
   .link { padding: 14px 18px; font-size: 0.92rem; }
 }
 
 @media (max-height: 680px) {
-  .banner-wrap { max-height: min(28vh, 200px); }
+  .banner-wrap { max-height: min(32vh, 220px); }
   .identity { margin-top: 6px; margin-bottom: 4px; }
   .name { font-size: 1.25rem; }
   .tagline { font-size: 0.58rem; }
@@ -544,12 +560,14 @@ function trackClick(link: LinkItem) {
   .link { padding: 10px 12px; font-size: 0.84rem; }
   .link-icon { width: 28px; height: 28px; }
   .logo-img { width: 20px; height: 20px; }
-  .footer-note { margin-top: 6px; font-size: 0.62rem; }
+  .footer { margin-top: 8px; }
+  .footer-note { font-size: 0.62rem; }
+  .footer-copy { font-size: 0.55rem; }
   .cta-choose { margin-bottom: 6px; }
 }
 
 @media (max-height: 580px) {
-  .banner-wrap { max-height: min(24vh, 160px); }
+  .banner-wrap { max-height: min(28vh, 180px); }
   .name { font-size: 1.15rem; }
   .links { gap: 5px; }
   .link { padding: 8px 10px; font-size: 0.8rem; }
