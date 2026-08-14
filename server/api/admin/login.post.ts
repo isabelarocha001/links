@@ -5,16 +5,13 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const supabase = useServiceSupabase()
 
-  // Rate limit: máx 5 falhas em 15 min por IP
   const since = new Date(Date.now() - 15 * 60 * 1000).toISOString()
-  const { data: attempts } = await supabase
-    .from('link_page_login_attempts')
-    .select('id')
-    .eq('ip', ip)
-    .eq('success', false)
-    .gte('created_at', since)
+  const { data: fails } = await supabase.rpc('count_failed_logins', {
+    p_ip: ip,
+    p_since: since
+  })
 
-  if ((attempts?.length || 0) >= 5) {
+  if ((fails || 0) >= 5) {
     throw createError({
       statusCode: 429,
       statusMessage: 'Muitas tentativas. Aguarde 15 minutos.'
@@ -22,7 +19,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!password || password.length > 128) {
-    await supabase.from('link_page_login_attempts').insert({ ip, success: false })
+    await supabase.rpc('record_login_attempt', { p_ip: ip, p_success: false })
     throw createError({ statusCode: 401, statusMessage: 'Senha inválida' })
   }
 
@@ -31,11 +28,7 @@ export default defineEventHandler(async (event) => {
   })
 
   const valid = !error && verified === true
-
-  await supabase.from('link_page_login_attempts').insert({
-    ip,
-    success: valid
-  })
+  await supabase.rpc('record_login_attempt', { p_ip: ip, p_success: valid })
 
   if (!valid) {
     throw createError({ statusCode: 401, statusMessage: 'Senha inválida' })
