@@ -1,5 +1,5 @@
 <template>
-  <div class="page" @copy.prevent @cut.prevent @contextmenu.prevent>
+  <div class="page" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
 
     <button class="lock-btn" type="button" aria-label="Editar página" @click="showLogin = true">
@@ -185,6 +185,14 @@ function offerFromLabel(label: string) {
 }
 
 onMounted(async () => {
+  // Anti-cópia reforçado (não 100% inviolável, mas impede o "copiar" normal)
+  const block = (e: Event) => { e.preventDefault(); return false }
+  document.addEventListener('copy', block, true)
+  document.addEventListener('cut', block, true)
+  document.addEventListener('selectstart', block, true)
+  document.addEventListener('dragstart', block, true)
+  document.addEventListener('contextmenu', block, true)
+
   try {
     const data = await $fetch<any>('/api/config')
     if (data) {
@@ -322,6 +330,18 @@ function trackClick(link: LinkItem) {
   -webkit-tap-highlight-color: transparent;
 }
 
+.page ::selection,
+.page *::selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.page ::-moz-selection,
+.page *::-moz-selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
 .page *,
 .page *::before,
 .page *::after {
@@ -400,7 +420,7 @@ function trackClick(link: LinkItem) {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 22%;
+  object-position: center 20%;
   display: block;
   -webkit-user-drag: none;
   user-select: none;
