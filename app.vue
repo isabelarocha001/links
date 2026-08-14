@@ -120,6 +120,9 @@ import { WANESSA_BANNER } from '~/utils/banner'
 import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 
 const DEFAULT_BANNER = WANESSA_BANNER
+const VID_KEY = 'wanessa_vid'
+const VIEW_DAY_KEY = 'wanessa_view_day'
+const CLICK_DAY_PREFIX = 'wanessa_click_'
 
 const config = reactive({
   name: 'Wanessa',
@@ -161,6 +164,63 @@ const edit = reactive({
   links: [] as LinkItem[]
 })
 
+/** UUID estável: localStorage + cookie via /api/track */
+function getOrCreateVisitorId(): string {
+  if (typeof window === 'undefined') return ''
+  try {
+    let id = localStorage.getItem(VID_KEY) || ''
+    if (!id || id.length < 8) {
+      id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`
+      localStorage.setItem(VID_KEY, id)
+    }
+    // espelho em cookie legível (1 ano) — ajuda se localStorage limpar
+    document.cookie = `vid=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax;Secure`
+    return id
+  } catch {
+    return `v_${Date.now().toString(36)}`
+  }
+}
+
+/** Dia local YYYY-MM-DD (fuso do aparelho) */
+function todayKey(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function alreadyViewedToday(): boolean {
+  try {
+    return localStorage.getItem(VIEW_DAY_KEY) === todayKey()
+  } catch {
+    return false
+  }
+}
+
+function markViewedToday() {
+  try {
+    localStorage.setItem(VIEW_DAY_KEY, todayKey())
+  } catch {}
+}
+
+function alreadyClickedToday(slug: string): boolean {
+  try {
+    return localStorage.getItem(CLICK_DAY_PREFIX + slug) === todayKey()
+  } catch {
+    return false
+  }
+}
+
+function markClickedToday(slug: string) {
+  try {
+    localStorage.setItem(CLICK_DAY_PREFIX + slug, todayKey())
+  } catch {}
+}
+
 function readUtms() {
   if (typeof window === 'undefined') return {}
   const p = new URLSearchParams(window.location.search)
@@ -190,9 +250,11 @@ function offerFromLabel(label: string) {
 
 /** Envia evento pro /api/track (keepalive = sobrevive ao abrir link externo) */
 function track(eventName: string, extra: Record<string, any> = {}) {
+  const visitor_id = getOrCreateVisitorId()
   const body = {
     event_name: eventName,
     path: '/links/wanessa',
+    visitor_id,
     ...readUtms(),
     ...extra
   }
@@ -272,6 +334,9 @@ onMounted(async () => {
   document.addEventListener('dragstart', block, true)
   document.addEventListener('contextmenu', block, true)
 
+  // garante UUID antes de qualquer track
+  getOrCreateVisitorId()
+
   try {
     const data = await $fetch<any>('/api/config')
     if (data) {
@@ -312,9 +377,11 @@ onMounted(async () => {
     }
   } catch {}
 
-  // 🌳 Eventos da árvore
-  track('session_start', { offer_slug: 'wanessa_links' })
-  track('page_view', { offer_slug: 'wanessa_links' })
+  // Abertura: só 1x por dia (localStorage + dedupe no servidor)
+  if (!alreadyViewedToday()) {
+    markViewedToday()
+    track('page_view', { offer_slug: 'wanessa_links' })
+  }
 
   setupLinkViews()
   setupScrollDepth()
@@ -392,6 +459,9 @@ async function doSave() {
 
 function trackClick(link: LinkItem) {
   const slug = offerFromLabel(link.label)
+  // 1 clique por botão por dia (localStorage); servidor reforça dedupe
+  if (alreadyClickedToday(slug)) return
+  markClickedToday(slug)
   track('link_click', { label: link.label, url: link.url, offer_slug: slug })
   track('outbound_click', { label: link.label, url: link.url, offer_slug: slug })
 }
