@@ -10,29 +10,27 @@
     </button>
 
     <main class="container">
-      <!-- Banner: foto livre, sem texto por cima -->
       <div class="banner-wrap">
         <img
           :src="config.avatar_url"
           :alt="config.name"
           class="banner-img"
-          width="720"
-          height="960"
+          width="480"
+          height="624"
           fetchpriority="high"
           decoding="async"
         >
         <span class="intimate-emoji" aria-hidden="true">💦</span>
       </div>
 
-      <!-- Nome e bio FORA da imagem -->
       <header class="identity">
-        <p class="tagline">🔥 conteúdo adulto · 18+ 🔥</p>
+        <p class="tagline">🔥 só pra quem aguenta 🔥</p>
         <h1 class="name">{{ config.name }}</h1>
         <p class="bio">{{ config.bio }}</p>
       </header>
 
       <div class="cta-choose">
-        <p class="cta-title">👇 Escolhe o conteúdo que tu quer 👇</p>
+        <p class="cta-title">👇 Escolhe o que tu quer primeiro 👇</p>
       </div>
 
       <div class="links">
@@ -63,10 +61,10 @@
         </a>
       </div>
 
-    <footer class="footer">
-      <p class="footer-note">18+ · conteúdo adulto exclusivo</p>
-      <p class="footer-copy">© Todos os direitos reservados a Wanessa Borges</p>
-    </footer>
+      <footer class="footer">
+        <p class="footer-note">18+ · exclusivo</p>
+        <p class="footer-copy">© Todos os direitos reservados a Wanessa Borges</p>
+      </footer>
     </main>
 
     <div v-if="showLogin && !isAdmin" class="modal" @click.self="showLogin = false">
@@ -124,7 +122,7 @@ const DEFAULT_BANNER = WANESSA_BANNER
 
 const config = reactive({
   name: 'Wanessa',
-  bio: 'Criadora de conteúdo adulto 🔥 18+',
+  bio: 'língua bifurcada · o resto tu descobre 👅',
   avatar_url: DEFAULT_BANNER,
   links: [
     {
@@ -190,7 +188,11 @@ onMounted(async () => {
     const data = await $fetch<any>('/api/config')
     if (data) {
       config.name = data.name || config.name
-      config.bio = data.bio || config.bio
+      const incomingBio = (data.bio || '').trim()
+      // ignora bio genérica/inglesa do painel antigo
+      if (incomingBio && !/creator|conteúdo & links|content & links/i.test(incomingBio)) {
+        config.bio = incomingBio
+      }
       const av = data.avatar_url || ''
       if (av && !av.includes('pravatar') && !av.includes('placeholder') && !av.startsWith('data:')) {
         config.avatar_url = av
@@ -367,16 +369,16 @@ function trackClick(link: LinkItem) {
   overflow: hidden;
   border: 1px solid rgba(236, 72, 153, 0.28);
   box-shadow: 0 0 24px rgba(236, 72, 153, 0.15);
-  /* proporção natural da foto (~3:4), sem esticar */
   aspect-ratio: 3 / 4;
-  max-height: min(42vh, 340px);
+  max-height: min(40vh, 320px);
+  background: #0a0a0c;
 }
 
 .banner-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 28%;
+  object-position: center center;
   display: block;
 }
 
