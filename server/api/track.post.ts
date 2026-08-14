@@ -2,17 +2,20 @@
  * Tracking da ÁRVORE DE LINKS (proxy server-side)
  *
  * Cliente NUNCA fala com telegram-metricas direto.
- * Aqui:
- *  - valida Origin/Referer
- *  - rate limit por IP
- *  - whitelist de eventos
- *  - envia X-Tracking-Secret pro pressel (secret só no server)
+ *  - Origin/Referer allowlist
+ *  - Rate limit por IP
+ *  - Whitelist de eventos
+ *  - X-Tracking-Secret só no server → pressel
  */
 
 const PRESSEL_WEBHOOK = 'https://telegram-metricas.vercel.app/api/pressel'
 const LINK_TREE_HOST = 'wanessa-links.vercel.app'
 const LINK_TREE_PATH = '/links/wanessa'
 const LINK_TREE_SOURCE = 'wanessa_links'
+
+/** Mesmo fallback do pressel — sobrescreva com TRACKING_INGEST_SECRET na Vercel */
+const FALLBACK_SECRET =
+  'trk_wanessa_ingest_9f3c2a7b1e8d4c6f0a5b7e9d2c4f6a8b'
 
 const ALLOWED_ORIGINS = new Set([
   'https://wanessa-links.vercel.app',
@@ -33,9 +36,8 @@ const TREE_EVENTS = new Set([
   'pageview'
 ])
 
-/** Rate limit simples em memória (por instância serverless) */
 const hits = new Map<string, { n: number; t: number }>()
-const RATE_MAX = 40 // req / janela
+const RATE_MAX = 40
 const RATE_WINDOW_MS = 60_000
 
 function rateLimit(ip: string): boolean {
@@ -62,7 +64,6 @@ function originAllowed(event: any): boolean {
 
   if (origin && ALLOWED_ORIGINS.has(origin)) return true
 
-  // same-origin / alguns browsers sem Origin em same-site
   if (referer) {
     try {
       const u = new URL(referer)
@@ -72,8 +73,7 @@ function originAllowed(event: any): boolean {
     } catch {}
   }
 
-  // sem Origin e sem Referer = suspeito (curl/script). Em produção bloqueia.
-  // Em dev local sem header, libera.
+  // curl / script sem Origin nem Referer → bloqueia em prod
   if (!origin && !referer) {
     return process.env.NODE_ENV !== 'production'
   }
@@ -103,12 +103,11 @@ function trackingSecret(): string {
   return (
     process.env.TRACKING_INGEST_SECRET ||
     process.env.PRESSEL_INGEST_SECRET ||
-    ''
+    FALLBACK_SECRET
   ).trim()
 }
 
 export default defineEventHandler(async (event) => {
-  // Só POST
   if (getMethod(event) !== 'POST') {
     throw createError({ statusCode: 405, statusMessage: 'Method Not Allowed' })
   }
@@ -123,10 +122,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const secret = trackingSecret()
-  if (!secret && process.env.NODE_ENV === 'production') {
-    // fail-closed se não configurou secret em prod
-    throw createError({ statusCode: 503, statusMessage: 'Tracking not configured' })
-  }
 
   const body = await readBody(event).catch(() => ({} as any))
   const label = String(body?.label || '').slice(0, 80)
@@ -137,12 +132,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid event' })
   }
 
-  // Prefer cookie httpOnly (mais difícil de spoofar em massa)
   let visitorId = getCookie(event, 'vid') || ''
   const bodyVid = body?.visitor_id ? String(body.visitor_id).slice(0, 64) : ''
 
   if (!visitorId) {
-    // aceita body só se parecer UUID/estável
     if (bodyVid && bodyVid.length >= 8 && /^[a-zA-Z0-9_-]+$/.test(bodyVid)) {
       visitorId = bodyVid
     } else {
@@ -155,8 +148,6 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 365,
       path: '/'
     })
-  } else if (bodyVid && bodyVid !== visitorId) {
-    // cookie manda; ignora body divergente (anti-spoof)
   }
 
   const offerSlug =
@@ -197,9 +188,9 @@ export default defineEventHandler(async (event) => {
 
   const results: any[] = []
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'X-Tracking-Secret': secret
   }
-  if (secret) headers['X-Tracking-Secret'] = secret
 
   for (const name of toSend) {
     const payload = {
