@@ -1,12 +1,16 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
 
-  // Gera site estático (rápido e leve)
   ssr: true,
-  nitro: {
-    preset: 'static'
+
+  runtimeConfig: {
+    supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
+    adminSessionSecret: process.env.ADMIN_SESSION_SECRET || 'change-me-in-production',
+    public: {
+      supabaseUrl: process.env.SUPABASE_URL || 'https://sgolmmhbufosmtigaakx.supabase.co',
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnb2xtbWhidWZvc210aWdhYWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMzE0NTksImV4cCI6MjEwMTkwNzQ1OX0.-MDLmEa2LaW_3Y6d5mpUFML6SqjPJLPNh4Dxv1a7yC8'
+    }
   },
 
   app: {
