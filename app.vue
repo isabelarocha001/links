@@ -1,7 +1,6 @@
 <template>
   <div class="page">
-    <div class="bg-glow"></div>
-    <div class="bg-glow-bottom"></div>
+    <div class="bg-glow" aria-hidden="true"></div>
 
     <button class="lock-btn" type="button" aria-label="Editar página" @click="showLogin = true">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -11,20 +10,29 @@
     </button>
 
     <main class="container">
+      <!-- Banner: só a foto, sem texto por cima -->
       <div class="banner-wrap">
-        <img :src="config.avatar_url" :alt="config.name" class="banner-img">
-        <div class="banner-gradient"></div>
+        <img
+          :src="config.avatar_url"
+          :alt="config.name"
+          class="banner-img"
+          width="720"
+          height="960"
+          fetchpriority="high"
+          decoding="async"
+        >
         <span class="intimate-emoji" aria-hidden="true">💦</span>
-        <div class="banner-text">
-          <p class="tagline">🔥 só pra quem aguenta 🔥</p>
-          <h1 class="name">{{ config.name }}</h1>
-          <p class="bio">{{ config.bio }}</p>
-        </div>
       </div>
+
+      <!-- Nome e bio FORA da imagem -->
+      <header class="identity">
+        <p class="tagline">🔥 só pra quem aguenta 🔥</p>
+        <h1 class="name">{{ config.name }}</h1>
+        <p class="bio">{{ config.bio }}</p>
+      </header>
 
       <div class="cta-choose">
         <p class="cta-title">👇 Escolhe o que tu quer primeiro 👇</p>
-        <p class="cta-sub">três caminhos · mesmo prazer</p>
       </div>
 
       <div class="links">
@@ -38,7 +46,16 @@
           @click="trackClick(link)"
         >
           <span class="link-icon">
-            <img v-if="link.logo" :src="link.logo" :alt="link.label" class="logo-img">
+            <img
+              v-if="link.logo"
+              :src="link.logo"
+              :alt=""
+              class="logo-img"
+              width="28"
+              height="28"
+              loading="lazy"
+              decoding="async"
+            >
             <template v-else>{{ link.icon }}</template>
           </span>
           <span class="link-label">{{ link.label }}</span>
@@ -175,7 +192,6 @@ onMounted(async () => {
       if (av && !av.includes('pravatar') && !av.includes('placeholder')) {
         config.avatar_url = av
       }
-      // mantém logos padrão; só sobrescreve label/url do backend se existirem
       if (Array.isArray(data.links) && data.links.length) {
         const byLabel = new Map(config.links.map(l => [l.label.toLowerCase(), l]))
         config.links = data.links.map((l: LinkItem) => {
@@ -251,7 +267,6 @@ async function doSave() {
     config.name = edit.name
     config.bio = edit.bio
     if (payload.avatar_url) config.avatar_url = payload.avatar_url
-    // re-aplica logos conhecidos
     const logoMap: Record<string, string> = {
       'canal de prévias': LOGO_TG_BLUE,
       'telegram vip': LOGO_TG_PURPLE,
@@ -286,45 +301,32 @@ function trackClick(link: LinkItem) {
 
 <style scoped>
 .page {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 28px 16px 40px;
+  padding: 16px 16px 24px;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
   background: #0a0a0c;
 }
 
 .bg-glow {
   position: absolute;
-  top: -15%;
+  top: -10%;
   left: 50%;
   transform: translateX(-50%);
-  width: 520px;
-  height: 520px;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.22) 0%, transparent 68%);
+  width: min(100vw, 480px);
+  height: 360px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.18) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
-}
-
-.bg-glow-bottom {
-  position: absolute;
-  bottom: -80px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 280px;
-  height: 280px;
-  background: radial-gradient(circle, rgba(192, 38, 211, 0.18) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-  filter: blur(20px);
 }
 
 .lock-btn {
   position: fixed;
-  top: 14px;
-  right: 14px;
+  top: 10px;
+  right: 10px;
   z-index: 50;
   width: 32px;
   height: 32px;
@@ -336,60 +338,46 @@ function trackClick(link: LinkItem) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.lock-btn:hover {
-  color: rgba(255, 255, 255, 0.7);
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
 }
 
 .container {
   width: 100%;
-  max-width: 400px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
   position: relative;
   z-index: 1;
 }
 
+/* Banner: foto livre, altura controlada */
 .banner-wrap {
   position: relative;
   width: 100%;
-  border-radius: 24px;
+  border-radius: 18px;
   overflow: hidden;
-  border: 1px solid rgba(236, 72, 153, 0.35);
-  box-shadow: 0 0 40px rgba(236, 72, 153, 0.22);
-  margin-bottom: 20px;
+  border: 1px solid rgba(236, 72, 153, 0.3);
+  box-shadow: 0 0 28px rgba(236, 72, 153, 0.18);
+  /* mobile: ~38vh pra caber botões na tela */
+  max-height: min(38vh, 280px);
   aspect-ratio: 3 / 4;
-  max-height: 460px;
 }
 
 .banner-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: top center;
+  object-position: center top;
   display: block;
-}
-
-.banner-gradient {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.35) 45%, transparent 70%);
-  pointer-events: none;
 }
 
 .intimate-emoji {
   position: absolute;
-  bottom: 18%;
+  bottom: 10%;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 2rem;
-  filter: drop-shadow(0 0 12px rgba(255, 0, 120, 0.9));
+  font-size: 1.5rem;
+  filter: drop-shadow(0 0 10px rgba(255, 0, 120, 0.85));
   animation: pulse-emoji 1.6s ease-in-out infinite;
   pointer-events: none;
   user-select: none;
@@ -398,150 +386,151 @@ function trackClick(link: LinkItem) {
 
 @keyframes pulse-emoji {
   0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
-  50% { transform: translateX(-50%) scale(1.15); opacity: 0.85; }
+  50% { transform: translateX(-50%) scale(1.12); opacity: 0.85; }
 }
 
-.banner-text {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 20px 16px 18px;
+/* Texto FORA da foto */
+.identity {
   text-align: center;
-  z-index: 3;
+  margin-top: 12px;
+  margin-bottom: 10px;
+  width: 100%;
 }
 
 .tagline {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(251, 182, 206, 0.95);
-  margin-bottom: 4px;
+  color: #f9a8d4;
+  margin-bottom: 2px;
 }
 
 .name {
-  font-size: 1.85rem;
+  font-size: 1.55rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   color: #fff;
-  text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  line-height: 1.2;
 }
 
 .bio {
-  font-size: 0.88rem;
-  color: rgba(251, 207, 232, 0.9);
-  margin-top: 4px;
+  font-size: 0.82rem;
+  color: #fbcfe8;
+  margin-top: 2px;
 }
 
 .cta-choose {
   text-align: center;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .cta-title {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #fbcfe8;
-}
-
-.cta-sub {
-  font-size: 0.75rem;
-  color: #71717a;
-  margin-top: 4px;
 }
 
 .links {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .link {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
-  padding: 18px 20px;
+  padding: 13px 16px;
   background: linear-gradient(135deg, rgba(236, 72, 153, 0.12), rgba(192, 38, 211, 0.08));
-  backdrop-filter: blur(12px);
   border: 1px solid rgba(236, 72, 153, 0.4);
-  border-radius: 16px;
+  border-radius: 14px;
   font-weight: 600;
-  font-size: 0.95rem;
-  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.9rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
   overflow: hidden;
 }
 
-.link::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(192, 38, 211, 0.2));
-  opacity: 0;
-  transition: opacity 0.28s ease;
-}
-
 .link:hover {
-  transform: translateY(-3px) scale(1.02);
+  transform: translateY(-2px);
   border-color: rgba(244, 114, 182, 0.7);
-  box-shadow: 0 10px 32px rgba(236, 72, 153, 0.35);
+  box-shadow: 0 8px 24px rgba(236, 72, 153, 0.28);
 }
-
-.link:hover::before { opacity: 1; }
 
 .link:active {
   transform: scale(0.98);
 }
 
-.link-icon, .link-label, .link-arrow {
-  position: relative;
-  z-index: 1;
-}
-
 .link-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
+  border-radius: 10px;
   flex-shrink: 0;
   overflow: hidden;
-  font-size: 1.2rem;
 }
 
 .logo-img {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
-  display: block;
   border-radius: 50%;
 }
 
 .link-label { flex: 1; }
 
 .link-arrow {
-  opacity: 0.5;
-  transform: translateX(0);
-  transition: all 0.28s ease;
+  opacity: 0.55;
   color: #f472b6;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .link:hover .link-arrow {
   opacity: 1;
-  transform: translateX(4px);
+  transform: translateX(3px);
 }
 
 .footer-note {
-  margin-top: 28px;
-  font-size: 0.65rem;
+  margin-top: 16px;
+  font-size: 0.62rem;
   color: #52525b;
   text-align: center;
+}
+
+/* Desktop / tablet: banner um pouco maior, ainda sem scroll excessivo */
+@media (min-width: 480px) {
+  .page { padding: 24px 20px 32px; }
+  .container { max-width: 400px; }
+  .banner-wrap {
+    max-height: min(42vh, 340px);
+    border-radius: 20px;
+  }
+  .name { font-size: 1.7rem; }
+  .links { gap: 12px; }
+  .link { padding: 15px 18px; font-size: 0.95rem; }
+}
+
+@media (min-width: 768px) {
+  .banner-wrap {
+    max-height: min(40vh, 360px);
+  }
+}
+
+/* Telas baixas: banner ainda menor */
+@media (max-height: 700px) {
+  .banner-wrap { max-height: min(32vh, 220px); }
+  .identity { margin-top: 8px; margin-bottom: 6px; }
+  .name { font-size: 1.35rem; }
+  .links { gap: 8px; }
+  .link { padding: 11px 14px; }
+  .footer-note { margin-top: 10px; }
 }
 
 .modal {
@@ -573,15 +562,8 @@ function trackClick(link: LinkItem) {
   overflow-y: auto;
 }
 
-.modal-card h2 {
-  font-size: 1.1rem;
-  margin-bottom: 6px;
-}
-
-label {
-  font-size: 0.75rem;
-  color: #888;
-}
+.modal-card h2 { font-size: 1.1rem; margin-bottom: 6px; }
+label { font-size: 0.75rem; color: #888; }
 
 input {
   width: 100%;
@@ -613,29 +595,17 @@ input {
 }
 
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
 .btn.ghost {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #ccc;
 }
-
-.row {
-  display: flex;
-  gap: 8px;
-}
-
+.row { display: flex; gap: 8px; }
 .row .btn { flex: 1; }
-
 .error { color: #ff6b6b; font-size: 0.85rem; }
 .ok { color: #6bffb0; font-size: 0.85rem; }
 
 @media (max-width: 480px) {
-  .page { padding: 20px 12px 32px; }
-  .banner-wrap { max-height: 420px; border-radius: 20px; }
-  .name { font-size: 1.6rem; }
-  .links { gap: 14px; }
-  .link { padding: 16px 18px; }
   .link-edit { grid-template-columns: 1fr; }
 }
 </style>
