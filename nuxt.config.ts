@@ -5,11 +5,18 @@ export default defineNuxtConfig({
   ssr: true,
 
   runtimeConfig: {
-    supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
-    adminSessionSecret: process.env.ADMIN_SESSION_SECRET || 'change-me-in-production',
+    // Prefer env vars on Vercel. Fallbacks only for first deploy.
+    supabaseServiceKey:
+      process.env.SUPABASE_SERVICE_KEY ||
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnb2xtbWhidWZvc210aWdhYWt4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjMzMTQ1OSwiZXhwIjoyMTAxOTA3NDU5fQ.mLI9yoIaBvNBvu5RiBh5M5INDz9ygQMy20GLUuq6srA',
+    adminSessionSecret:
+      process.env.ADMIN_SESSION_SECRET || 'wanessa-links-session-secret-change-me',
     public: {
-      supabaseUrl: process.env.SUPABASE_URL || 'https://sgolmmhbufosmtigaakx.supabase.co',
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnb2xtbWhidWZvc210aWdhYWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMzE0NTksImV4cCI6MjEwMTkwNzQ1OX0.-MDLmEa2LaW_3Y6d5mpUFML6SqjPJLPNh4Dxv1a7yC8'
+      supabaseUrl:
+        process.env.SUPABASE_URL || 'https://sgolmmhbufosmtigaakx.supabase.co',
+      supabaseAnonKey:
+        process.env.SUPABASE_ANON_KEY ||
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnb2xtbWhidWZvc210aWdhYWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMzE0NTksImV4cCI6MjEwMTkwNzQ1OX0.-MDLmEa2LaW_3Y6d5mpUFML6SqjPJLPNh4Dxv1a7yC8'
     }
   },
 
