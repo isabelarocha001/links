@@ -10,21 +10,19 @@
     </button>
 
     <main class="container">
-      <!-- Banner: foto livre, sem texto por cima -->
       <div class="banner-wrap">
         <img
           :src="config.avatar_url"
           :alt="config.name"
           class="banner-img"
-          width="160"
-          height="207"
+          width="480"
+          height="623"
           fetchpriority="high"
           decoding="async"
+          draggable="false"
         >
-        <span class="intimate-emoji" aria-hidden="true">💦</span>
       </div>
 
-      <!-- Nome e bio FORA da imagem -->
       <header class="identity">
         <p class="tagline">🔥 só pra quem aguenta 🔥</p>
         <h1 class="name">{{ config.name }}</h1>
@@ -55,6 +53,7 @@
               height="28"
               loading="lazy"
               decoding="async"
+              draggable="false"
             >
             <template v-else>{{ link.icon }}</template>
           </span>
@@ -63,10 +62,10 @@
         </a>
       </div>
 
-    <footer class="footer">
-      <p class="footer-note">18+ · exclusivo</p>
-      <p class="footer-copy">© Todos os direitos reservados a Wanessa Borges</p>
-    </footer>
+      <footer class="footer">
+        <p class="footer-note">18+ · exclusivo</p>
+        <p class="footer-copy">© Todos os direitos reservados a Wanessa Borges</p>
+      </footer>
     </main>
 
     <div v-if="showLogin && !isAdmin" class="modal" @click.self="showLogin = false">
@@ -191,15 +190,12 @@ onMounted(async () => {
     if (data) {
       config.name = data.name || config.name
       const incomingBio = (data.bio || '').trim()
-      // ignora bio genérica antiga ("Creator • Conteúdo & Links" etc)
       const isGeneric = !incomingBio || /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|conteudo\s*&?\s*links/i.test(incomingBio)
       if (!isGeneric) {
         config.bio = incomingBio
       }
-      // Sempre usa o banner local embutido (evita 404 / pravatar / URL quebrada do painel)
       config.avatar_url = DEFAULT_BANNER
       const av = (data.avatar_url || '').trim()
-      // só aceita URL externa https válida (não data:, não relative, não placeholder)
       if (av.startsWith('https://') && !av.includes('pravatar') && !av.includes('placeholder') && av.length > 20) {
         config.avatar_url = av
       }
@@ -322,6 +318,9 @@ function trackClick(link: LinkItem) {
   overflow: hidden;
   background: #0a0a0c;
   box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .bg-glow {
@@ -375,8 +374,8 @@ function trackClick(link: LinkItem) {
   overflow: hidden;
   border: 1px solid rgba(236, 72, 153, 0.28);
   box-shadow: 0 0 24px rgba(236, 72, 153, 0.15);
-  aspect-ratio: 160 / 207;
-  max-height: min(38vh, 300px);
+  aspect-ratio: 480 / 623;
+  max-height: min(40vh, 320px);
   background: #0a0a0c;
 }
 
@@ -384,26 +383,11 @@ function trackClick(link: LinkItem) {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 30%;
+  object-position: center 28%;
   display: block;
-}
-
-.intimate-emoji {
-  position: absolute;
-  bottom: 6%;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1.2rem;
-  filter: drop-shadow(0 0 6px rgba(255, 0, 120, 0.75));
-  animation: pulse-emoji 1.6s ease-in-out infinite;
-  pointer-events: none;
+  -webkit-user-drag: none;
   user-select: none;
-  z-index: 2;
-}
-
-@keyframes pulse-emoji {
-  0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
-  50% { transform: translateX(-50%) scale(1.12); opacity: 0.85; }
+  pointer-events: none;
 }
 
 .identity {
@@ -503,6 +487,7 @@ function trackClick(link: LinkItem) {
   height: 24px;
   object-fit: contain;
   border-radius: 50%;
+  -webkit-user-drag: none;
 }
 
 .link-label { flex: 1; }
