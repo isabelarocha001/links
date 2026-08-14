@@ -1,50 +1,47 @@
-# 🔗 Página de Links (Leve & Rápida)
+# 🔗 Wanessa Links
 
-Alternativa leve ao Beacons / Linktree.
+Página de links com **Nuxt 3** (Vue) — sem React.
 
-**Tecnologia:** HTML + CSS puro (zero JavaScript, zero React)
+## ✨ Stack
 
-## ✨ Por que essa versão?
+- Nuxt 3
+- Vue 3
+- CSS puro (design glass + gradiente)
+- Geração estática (rápido)
 
-- Carrega **extremamente rápido**
-- Funciona perfeitamente no Instagram / TikTok
-- Fácil de editar
-- Gratuita para sempre (pode hospedar no GitHub Pages ou Vercel)
+## 🚀 Desenvolvimento local
 
-## 🚀 Como usar
-
-1. Edite o arquivo `index.html`
-2. Troque:
-   - A foto de perfil (`src` da tag `<img>`)
-   - Nome e bio
-   - Os links (coloque as URLs reais no `href`)
-3. Salve e faça commit
-
-## 🌐 Publicar no GitHub Pages
-
-1. Vá em **Settings** → **Pages**
-2. Em **Source** escolha a branch `main`
-3. Clique em **Save**
-4. Sua página vai ficar em:
-   `https://isabelarocha001.github.io/links`
-
-## 🎨 Personalização rápida
-
-No arquivo `style.css` você pode mudar as cores no `:root`:
-
-```css
---bg: #0f0f0f;          /* fundo */
---card: #1a1a1a;        /* botões */
---accent: #ff4d6d;      /* cor de hover */
+```bash
+npm install
+npm run dev
 ```
+
+## 🌐 Deploy
+
+Já conectado na Vercel: **https://wanessa-links.vercel.app**
+
+Para atualizar: só faça push na branch `main`.
+
+## ✏️ Editar links
+
+Abra `app.vue` e altere o array `links`:
+
+```ts
+const links = [
+  { label: 'Instagram', icon: '📸', url: 'https://instagram.com/seuuser' },
+  // ...
+]
+```
+
+Também troque a foto e o nome no template.
 
 ## 📁 Estrutura
 
 ```
 links/
-├── index.html      ← página principal
-├── style.css       ← estilos
+├── app.vue           ← página principal
+├── nuxt.config.ts
+├── assets/css/
+├── package.json
 └── README.md
 ```
-
-Feito com ❤️ para carregar rápido.
