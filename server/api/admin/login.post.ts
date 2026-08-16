@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs'
+
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const password = String(body?.password || '')
@@ -23,11 +25,22 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Senha inválida' })
   }
 
-  const { data: verified, error } = await supabase.rpc('verify_link_admin', {
-    plain_password: password
-  })
+  // Busca o hash no Supabase (nunca hardcode a senha no código)
+  const { data: authRow, error: fetchError } = await supabase
+    .from('link_page_auth')
+    .select('password_hash')
+    .eq('id', 'main')
+    .single()
 
-  const valid = !error && verified === true
+  let valid = false
+  if (!fetchError && authRow?.password_hash) {
+    try {
+      valid = await bcrypt.compare(password, authRow.password_hash)
+    } catch {
+      valid = false
+    }
+  }
+
   await supabase.rpc('record_login_attempt', { p_ip: ip, p_success: valid })
 
   if (!valid) {
