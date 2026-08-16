@@ -2,7 +2,7 @@
   <div class="page" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
 
-    <button class="lock-btn" type="button" aria-label="Editar página" @click="showLogin = true">
+    <button class="lock-btn" type="button" aria-label="Editar página" @click="openLogin">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="11" width="18" height="11" rx="2" />
         <path d="M7 11V7a5 5 0 0 1 10 0v4" />
@@ -10,9 +10,9 @@
     </button>
 
     <main class="container">
-      <div class="banner-wrap">
+      <div v-if="displayBanner" class="banner-wrap">
         <img
-          :src="config.avatar_url"
+          :src="displayBanner"
           :alt="config.name"
           class="banner-img"
           width="480"
@@ -35,8 +35,8 @@
 
       <div class="links">
         <a
-          v-for="link in config.links"
-          :key="link.label"
+          v-for="link in visibleLinks"
+          :key="link.label + link.url"
           :href="link.url"
           class="link"
           :class="{ 'link-rgb': isPrevias(link.label) }"
@@ -69,58 +69,110 @@
       </footer>
     </main>
 
-    <div v-if="showLogin && !isAdmin" class="modal" @click.self="showLogin = false">
-      <div class="modal-card">
-        <h2>Acesso</h2>
-        <input
-          v-model="password"
-          type="password"
-          placeholder="Senha"
-          autocomplete="current-password"
-          @keyup.enter="doLogin"
-        >
-        <p v-if="loginError" class="error">{{ loginError }}</p>
-        <button type="button" class="btn" :disabled="loading" @click="doLogin">
-          {{ loading ? '...' : 'Entrar' }}
-        </button>
-      </div>
-    </div>
-
-    <div v-if="isAdmin" class="modal" @click.self="isAdmin = false">
-      <div class="modal-card edit">
-        <h2>Editar página</h2>
-        <label>Nome</label>
-        <input v-model="edit.name" type="text">
-        <label>Bio</label>
-        <input v-model="edit.bio" type="text">
-        <label>Banner / Avatar URL</label>
-        <input v-model="edit.avatar_url" type="url">
-
-        <div v-for="(l, i) in edit.links" :key="i" class="link-edit">
-          <input v-model="l.icon" class="icon-input" placeholder="🔥">
-          <input v-model="l.label" placeholder="Label">
-          <input v-model="l.url" placeholder="https://...">
-        </div>
-
-        <p v-if="saveMsg" class="ok">{{ saveMsg }}</p>
-        <p v-if="saveError" class="error">{{ saveError }}</p>
-
-        <div class="row">
-          <button type="button" class="btn" :disabled="loading" @click="doSave">Salvar</button>
-          <button type="button" class="btn ghost" @click="isAdmin = false">Fechar</button>
+    <!-- Login -->
+    <Teleport to="body">
+      <div v-if="showLogin && !isAdmin" class="modal" @click.self="showLogin = false">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+          <h2 id="login-title">Acesso admin</h2>
+          <label class="sr-only" for="admin-pass">Senha</label>
+          <input
+            id="admin-pass"
+            ref="passInput"
+            v-model="password"
+            type="password"
+            placeholder="Senha"
+            autocomplete="current-password"
+            @keyup.enter="doLogin"
+          >
+          <p v-if="loginError" class="error">{{ loginError }}</p>
+          <button type="button" class="btn primary" :disabled="loading" @click="doLogin">
+            {{ loading ? 'Entrando...' : 'Entrar' }}
+          </button>
+          <button type="button" class="btn ghost" @click="showLogin = false">Cancelar</button>
         </div>
       </div>
-    </div>
+    </Teleport>
+
+    <!-- Painel admin -->
+    <Teleport to="body">
+      <div v-if="isAdmin" class="modal" @click.self="closeAdmin">
+        <div class="modal-card edit" role="dialog" aria-modal="true">
+          <div class="modal-head">
+            <h2>Editar página</h2>
+            <button type="button" class="icon-x" aria-label="Fechar" @click="closeAdmin">×</button>
+          </div>
+
+          <label>Nome</label>
+          <input v-model="edit.name" type="text" maxlength="80">
+
+          <label>Bio</label>
+          <input v-model="edit.bio" type="text" maxlength="160">
+
+          <label>Banner (URL da imagem)</label>
+          <input v-model="edit.avatar_url" type="url" placeholder="https://... ou deixe vazio">
+          <div class="banner-actions">
+            <button type="button" class="btn small ghost" @click="edit.avatar_url = ''">
+              Remover banner
+            </button>
+            <button type="button" class="btn small ghost" @click="edit.avatar_url = DEFAULT_BANNER_HINT">
+              Usar banner padrão
+            </button>
+          </div>
+          <div v-if="edit.avatar_url && !edit.avatar_url.startsWith('data:')" class="preview-banner">
+            <img :src="edit.avatar_url" alt="Prévia" @error="onPreviewError">
+          </div>
+          <p v-if="previewError" class="error">Não foi possível carregar a imagem desta URL</p>
+
+          <div class="links-head">
+            <label>Links</label>
+            <button type="button" class="btn small" @click="addLink">+ Adicionar link</button>
+          </div>
+
+          <div v-for="(l, i) in edit.links" :key="i" class="link-edit" :class="{ disabled: l.enabled === false }">
+            <div class="link-edit-row">
+              <input v-model="l.icon" class="icon-input" placeholder="🔥" title="Ícone">
+              <input v-model="l.label" placeholder="Título do botão">
+            </div>
+            <input v-model="l.url" placeholder="https://...">
+            <div class="link-edit-actions">
+              <label class="toggle">
+                <input type="checkbox" :checked="l.enabled !== false" @change="l.enabled = ($event.target as HTMLInputElement).checked">
+                <span>{{ l.enabled === false ? 'Desativado (não aparece)' : 'Ativo' }}</span>
+              </label>
+              <button type="button" class="btn small danger" @click="removeLink(i)">Remover</button>
+            </div>
+          </div>
+
+          <p v-if="saveMsg" class="ok">{{ saveMsg }}</p>
+          <p v-if="saveError" class="error">{{ saveError }}</p>
+
+          <div class="row">
+            <button type="button" class="btn primary" :disabled="loading" @click="doSave">
+              {{ loading ? 'Salvando...' : 'Salvar' }}
+            </button>
+            <button type="button" class="btn ghost" @click="closeAdmin">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-type LinkItem = { label: string; icon: string; url: string; logo?: string }
+type LinkItem = {
+  label: string
+  icon: string
+  url: string
+  logo?: string
+  enabled?: boolean
+}
 
 import { WANESSA_BANNER } from '~/utils/banner'
 import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 
 const DEFAULT_BANNER = WANESSA_BANNER
+// dica só no painel (não grava data URL gigante)
+const DEFAULT_BANNER_HINT = ''
 const VID_KEY = 'wanessa_vid'
 const VIEW_DAY_KEY = 'wanessa_view_day'
 const CLICK_DAY_PREFIX = 'wanessa_click_'
@@ -128,11 +180,11 @@ const CLICK_DAY_PREFIX = 'wanessa_click_'
 const config = reactive({
   name: 'Wanessa',
   bio: 'língua bifurcada · o resto tu descobre 👅',
-  avatar_url: DEFAULT_BANNER,
+  avatar_url: DEFAULT_BANNER as string,
   links: [
-    { label: 'Canal de prévias', icon: '📱', logo: LOGO_TG_BLUE, url: 'https://t.me/+yA5Y1pAWx5RlMWIx' },
-    { label: 'Telegram VIP', icon: '⭐', logo: LOGO_TG_PURPLE, url: 'https://t.me/wanessaavipbot?start=pressel' },
-    { label: 'PrivSex', icon: '🔥', logo: LOGO_PRIVSEX, url: 'https://privsex.com/wanessa' }
+    { label: 'Canal de prévias', icon: '📱', logo: LOGO_TG_BLUE, url: 'https://t.me/+yA5Y1pAWx5RlMWIx', enabled: true },
+    { label: 'Telegram VIP', icon: '⭐', logo: LOGO_TG_PURPLE, url: 'https://t.me/wanessaavipbot?start=pressel', enabled: true },
+    { label: 'PrivSex', icon: '🔥', logo: LOGO_PRIVSEX, url: 'https://privsex.com/wanessa', enabled: true }
   ] as LinkItem[]
 })
 
@@ -143,7 +195,24 @@ const loginError = ref('')
 const saveMsg = ref('')
 const saveError = ref('')
 const loading = ref(false)
-const edit = reactive({ name: '', bio: '', avatar_url: '', links: [] as LinkItem[] })
+const previewError = ref(false)
+const passInput = ref<HTMLInputElement | null>(null)
+const edit = reactive({
+  name: '',
+  bio: '',
+  avatar_url: '',
+  links: [] as LinkItem[]
+})
+
+const visibleLinks = computed(() =>
+  config.links.filter((l) => l.enabled !== false && l.label)
+)
+
+const displayBanner = computed(() => {
+  const url = (config.avatar_url || '').trim()
+  if (!url) return DEFAULT_BANNER
+  return url
+})
 
 function isPrevias(label: string) {
   return /pr[eé]via|canal/i.test(label || '')
@@ -271,6 +340,15 @@ function setupScrollDepth() {
   setTimeout(report, 400)
 }
 
+function attachLogo(l: LinkItem): LinkItem {
+  const lab = (l.label || '').toLowerCase()
+  let logo: string | undefined
+  if (/pr[eé]via|canal/i.test(lab)) logo = LOGO_TG_BLUE
+  else if (/vip/i.test(lab)) logo = LOGO_TG_PURPLE
+  else if (/priv/i.test(lab)) logo = LOGO_PRIVSEX
+  return { ...l, logo, enabled: l.enabled !== false }
+}
+
 onMounted(async () => {
   const block = (e: Event) => { e.preventDefault(); return false }
   document.addEventListener('copy', block, true)
@@ -287,33 +365,23 @@ onMounted(async () => {
       const incomingBio = (data.bio || '').trim()
       const isGeneric = !incomingBio || /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|conteudo\s*&?\s*links/i.test(incomingBio)
       if (!isGeneric) config.bio = incomingBio
-      config.avatar_url = DEFAULT_BANNER
-      const CANONICAL: LinkItem[] = [
-        { label: 'Canal de prévias', icon: '📱', logo: LOGO_TG_BLUE, url: 'https://t.me/+yA5Y1pAWx5RlMWIx' },
-        { label: 'Telegram VIP', icon: '⭐', logo: LOGO_TG_PURPLE, url: 'https://t.me/wanessaavipbot?start=pressel' },
-        { label: 'PrivSex', icon: '🔥', logo: LOGO_PRIVSEX, url: 'https://privsex.com/wanessa' }
-      ]
-      if (Array.isArray(data.links) && data.links.length) {
-        config.links = CANONICAL.map((canon) => {
-          const match = data.links.find((l: LinkItem) => {
-            const lab = (l.label || '').toLowerCase()
-            return (
-              lab === canon.label.toLowerCase() ||
-              (canon.label.includes('prévia') && /pr[eé]via|canal/i.test(lab)) ||
-              (canon.label.includes('VIP') && /vip/i.test(lab)) ||
-              (canon.label === 'PrivSex' && /priv/i.test(lab))
-            )
-          })
-          const url = (match?.url || '').trim()
-          const bad = !url || url === '#' || url === '/' || !url.startsWith('http')
-          return {
-            ...canon,
-            label: match?.label && match.label.length > 2 ? match.label : canon.label,
-            url: bad ? canon.url : url
-          }
-        })
+
+      const savedAvatar = (data.avatar_url || '').trim()
+      if (savedAvatar && !savedAvatar.startsWith('data:')) {
+        config.avatar_url = savedAvatar
       } else {
-        config.links = CANONICAL
+        config.avatar_url = DEFAULT_BANNER
+      }
+
+      if (Array.isArray(data.links) && data.links.length) {
+        config.links = data.links
+          .filter((l: any) => l && l.label)
+          .map((l: any) => attachLogo({
+            label: String(l.label || ''),
+            icon: String(l.icon || '🔗'),
+            url: String(l.url || '#'),
+            enabled: l.enabled !== false
+          }))
       }
     }
   } catch {}
@@ -326,13 +394,49 @@ onMounted(async () => {
   setupScrollDepth()
 })
 
+function openLogin() {
+  password.value = ''
+  loginError.value = ''
+  showLogin.value = true
+  nextTick(() => passInput.value?.focus())
+}
+
 function openEdit() {
   edit.name = config.name
   edit.bio = config.bio
-  edit.avatar_url = config.avatar_url.startsWith('data:') || config.avatar_url.startsWith('/') ? '' : config.avatar_url
-  edit.links = config.links.map(l => ({ label: l.label, icon: l.icon, url: l.url }))
-  while (edit.links.length < 3) edit.links.push({ label: '', icon: '🔗', url: '#' })
+  const av = config.avatar_url || ''
+  edit.avatar_url = av.startsWith('data:') ? '' : av
+  edit.links = config.links.map((l) => ({
+    label: l.label,
+    icon: l.icon,
+    url: l.url,
+    enabled: l.enabled !== false
+  }))
+  if (!edit.links.length) {
+    edit.links.push({ label: '', icon: '🔗', url: '', enabled: true })
+  }
+  previewError.value = false
 }
+
+function closeAdmin() {
+  isAdmin.value = false
+  saveMsg.value = ''
+  saveError.value = ''
+}
+
+function addLink() {
+  edit.links.push({ label: '', icon: '🔗', url: '', enabled: true })
+}
+
+function removeLink(i: number) {
+  edit.links.splice(i, 1)
+}
+
+function onPreviewError() {
+  previewError.value = true
+}
+
+watch(() => edit.avatar_url, () => { previewError.value = false })
 
 async function doLogin() {
   loginError.value = ''
@@ -355,19 +459,28 @@ async function doSave() {
   saveError.value = ''
   loading.value = true
   try {
-    const payload: any = { name: edit.name, bio: edit.bio, links: edit.links.filter(l => l.label) }
-    if (edit.avatar_url && !edit.avatar_url.startsWith('data:') && !edit.avatar_url.startsWith('/')) {
-      payload.avatar_url = edit.avatar_url
+    const payload = {
+      name: edit.name,
+      bio: edit.bio,
+      avatar_url: (edit.avatar_url || '').trim(),
+      links: edit.links
+        .filter((l) => l.label.trim())
+        .map((l) => ({
+          label: l.label.trim(),
+          icon: l.icon || '🔗',
+          url: l.url || '#',
+          enabled: l.enabled !== false
+        }))
     }
     await $fetch('/api/admin/update', { method: 'POST', body: payload })
-    config.name = edit.name
-    config.bio = edit.bio
-    if (payload.avatar_url) config.avatar_url = payload.avatar_url
-    config.links = edit.links.filter(l => l.label).map(l => ({
-      ...l,
-      logo: /pr[eé]via|canal/i.test(l.label) ? LOGO_TG_BLUE : /vip/i.test(l.label) ? LOGO_TG_PURPLE : /priv/i.test(l.label) ? LOGO_PRIVSEX : undefined
-    }))
+
+    config.name = payload.name
+    config.bio = payload.bio
+    config.avatar_url = payload.avatar_url || DEFAULT_BANNER
+    config.links = payload.links.map((l) => attachLogo(l))
+
     saveMsg.value = 'Salvo!'
+    setTimeout(() => { saveMsg.value = '' }, 2500)
   } catch (e: any) {
     saveError.value = e?.data?.statusMessage || 'Erro ao salvar'
   } finally {
@@ -399,7 +512,6 @@ async function doSave() {
   user-select: none !important;
   -webkit-user-drag: none !important;
 }
-.modal-card input { -webkit-user-select: text !important; user-select: text !important; }
 
 .bg-glow {
   position: absolute; top: -8%; left: 50%; transform: translateX(-50%);
@@ -467,7 +579,6 @@ async function doSave() {
 }
 .link:active { transform: scale(0.98); }
 
-/* RGB animado — Canal de prévias */
 .link-rgb {
   border: 2px solid transparent;
   background:
@@ -521,33 +632,206 @@ async function doSave() {
   .link { padding: 10px 12px; font-size: 0.82rem; }
   .links { gap: 12px; }
 }
+</style>
 
+<style>
+/* Modal global (Teleport no body) — centralizado em qualquer tela */
 .modal {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75);
-  display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.78);
+  box-sizing: border-box;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .modal-card {
-  background: #141416; border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px; padding: 20px; width: 100%; max-width: 340px;
-}
-.modal-card h2 { font-size: 1.1rem; margin-bottom: 12px; color: #fff; }
-.modal-card label { display: block; font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 4px; margin-top: 10px; }
-.modal-card input {
-  width: 100%; padding: 10px 12px; border-radius: 10px;
+  background: #141416;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05); color: #fff; font-size: 0.9rem; box-sizing: border-box;
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+  max-height: min(90dvh, 720px);
+  overflow-y: auto;
+  margin: auto;
+  box-sizing: border-box;
+  color: #fff;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.modal-card input,
+.modal-card textarea {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+.modal-card h2 {
+  font-size: 1.15rem;
+  margin: 0 0 14px;
+  color: #fff;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.modal-head h2 { margin: 0; }
+.icon-x {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.modal-card label {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 12px 0 4px;
+}
+.modal-card input[type="text"],
+.modal-card input[type="password"],
+.modal-card input[type="url"] {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.9rem;
+  box-sizing: border-box;
 }
 .modal-card .btn {
-  width: 100%; margin-top: 14px; padding: 12px; border-radius: 10px; border: none;
-  background: linear-gradient(135deg, #ec4899, #c026d3); color: #fff; font-weight: 600; cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
-.modal-card .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.modal-card .btn.ghost { background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); margin-top: 8px; }
+.modal-card .btn.primary {
+  background: linear-gradient(135deg, #ec4899, #c026d3);
+  color: #fff;
+}
+.modal-card .btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.modal-card .btn.small {
+  width: auto;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  margin-top: 0;
+}
+.modal-card .btn.danger {
+  background: rgba(248, 113, 113, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+}
+.modal-card .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .modal-card .error { color: #f87171; font-size: 0.8rem; margin-top: 8px; }
 .modal-card .ok { color: #4ade80; font-size: 0.8rem; margin-top: 8px; }
-.modal-card.edit .row { display: flex; gap: 8px; margin-top: 12px; }
-.modal-card.edit .row .btn { flex: 1; margin-top: 0; }
-.link-edit { display: grid; grid-template-columns: 40px 1fr 1.2fr; gap: 6px; margin-top: 8px; }
-.link-edit .icon-input { text-align: center; padding: 8px 4px; }
-@media (max-width: 480px) { .link-edit { grid-template-columns: 1fr; } }
+.modal-card .row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.modal-card .row .btn { flex: 1; margin-top: 0; }
+
+.banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.preview-banner {
+  margin-top: 10px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  max-height: 140px;
+}
+.preview-banner img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+
+.links-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+.links-head label { margin: 0; }
+
+.link-edit {
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 10px;
+  background: rgba(255,255,255,0.03);
+}
+.link-edit.disabled {
+  opacity: 0.55;
+  border-style: dashed;
+}
+.link-edit-row {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.link-edit .icon-input {
+  text-align: center;
+  padding: 8px 4px;
+}
+.link-edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.7);
+  margin: 0 !important;
+  cursor: pointer;
+}
+.toggle input { width: auto !important; accent-color: #ec4899; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
+
+@media (max-width: 480px) {
+  .modal-card { max-width: 100%; padding: 16px; }
+}
 </style>

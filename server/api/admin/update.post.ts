@@ -9,14 +9,20 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const name = String(body?.name || '').trim().slice(0, 80)
   const bio = String(body?.bio || '').trim().slice(0, 160)
-  const avatar_url = String(body?.avatar_url || '').trim().slice(0, 500)
+  // string vazia = remover banner customizado
+  const avatar_url = body?.avatar_url === null || body?.avatar_url === undefined
+    ? ''
+    : String(body.avatar_url).trim().slice(0, 500)
   const links = Array.isArray(body?.links) ? body.links.slice(0, 20) : []
 
-  const cleanLinks = links.map((l: any) => ({
-    label: String(l?.label || '').slice(0, 60),
-    icon: String(l?.icon || '🔗').slice(0, 8),
-    url: String(l?.url || '#').slice(0, 500)
-  })).filter((l: any) => l.label)
+  const cleanLinks = links
+    .map((l: any) => ({
+      label: String(l?.label || '').slice(0, 60),
+      icon: String(l?.icon || '🔗').slice(0, 8),
+      url: String(l?.url || '#').slice(0, 500),
+      enabled: l?.enabled === false ? false : true
+    }))
+    .filter((l: any) => l.label)
 
   if (!name) {
     throw createError({ statusCode: 400, statusMessage: 'Nome obrigatório' })
