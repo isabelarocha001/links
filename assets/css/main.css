@@ -12,11 +12,11 @@ html {
   -moz-osx-font-smoothing: grayscale;
   text-size-adjust: 100%;
   height: 100%;
-  overflow: hidden; /* sem scroll na página */
+  overflow: hidden;
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: #0a0a0c;
   color: #fff;
   min-height: 100%;
