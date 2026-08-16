@@ -657,12 +657,33 @@ async function doSave() {
 }
 .identity { text-align: center; margin-top: 8px; margin-bottom: 6px; width: 100%; flex-shrink: 0; }
 .tagline {
-  font-size: 0.62rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
-  color: #f9a8d4; margin-bottom: 2px; line-height: 1.2;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f6339a;
+  margin-bottom: 4px;
+  line-height: 1.3;
 }
-.bio { font-size: 0.78rem; color: #fbcfe8; margin-top: 2px; line-height: 1.3; }
-.cta-choose { text-align: center; margin-bottom: 12px; flex-shrink: 0; }
-.cta-title { font-size: 0.85rem; font-weight: 600; color: #fbcfe8; line-height: 1.3; }
+.bio {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.88);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.cta-choose { text-align: center; margin-bottom: 14px; flex-shrink: 0; }
+.cta-title {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f6339a;
+  line-height: 1.35;
+}
 
 .links {
   width: 100%;
@@ -678,12 +699,14 @@ async function doSave() {
   gap: 8px;
 }
 .link-intro {
-  font-size: 0.78rem;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.8rem;
   font-weight: 500;
-  color: #f9a8d4;
-  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.45;
   text-align: center;
-  padding: 0 4px;
+  padding: 0 6px;
+  letter-spacing: 0.01em;
 }
 .links-skeleton .skel {
   height: 56px;
@@ -739,7 +762,7 @@ async function doSave() {
   background: rgba(255, 255, 255, 0.06); border-radius: 9px; flex-shrink: 0; overflow: hidden;
 }
 .logo-img { width: 24px; height: 24px; object-fit: contain; border-radius: 50%; }
-.link-label { flex: 1; font-weight: 600; line-height: 1.2; }
+.link-label { flex: 1; font-family: Inter, system-ui, sans-serif; font-weight: 700; line-height: 1.2; color: #fff; letter-spacing: 0.01em; }
 .link-arrow { opacity: 0.5; color: #f472b6; font-size: 1rem; flex-shrink: 0; transition: transform 0.12s ease, opacity 0.12s ease; }
 .link:hover .link-arrow { opacity: 1; transform: translateX(3px); }
 
