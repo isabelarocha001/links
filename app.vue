@@ -7,15 +7,20 @@
     <main class="container">
       <div v-if="configReady && displayBanner && !bannerHidden" class="banner-wrap">
         <img :src="displayBanner" alt="" class="banner-img" width="480" height="623" fetchpriority="high" decoding="async" draggable="false">
-        <div class="banner-fire" aria-hidden="true">
-          <span class="flame f1"></span><span class="flame f2"></span><span class="flame f3"></span><span class="flame f4"></span><span class="flame f5"></span><span class="flame f6"></span><span class="flame f7"></span>
+        <div class="banner-fire-frame" aria-hidden="true">
+          <span class="fire-edge fire-left"></span>
+          <span class="fire-edge fire-right"></span>
+          <span class="fire-edge fire-top"></span>
+          <span class="fire-edge fire-bottom"></span>
         </div>
       </div>
-      <header class="identity">
-        <p class="tagline">🔥 só pra quem aguenta 🔥</p>
+
+      <header v-if="config.bio" class="identity">
         <p class="bio">{{ config.bio }}</p>
       </header>
+
       <div class="cta-choose"><p class="cta-title">👇 Escolhe o que tu quer primeiro 👇</p></div>
+
       <div v-if="configReady" class="links">
         <div v-for="link in visibleLinks" :key="link.label + '|' + link.url" class="link-block">
           <p v-if="link.desc" class="link-intro">{{ link.desc }}</p>
@@ -30,12 +35,14 @@
         </div>
       </div>
       <div v-else class="links links-skeleton" aria-hidden="true"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+
       <footer class="footer">
         <p class="footer-note">18+ · exclusivo</p>
         <p class="footer-copy">© Todos os direitos reservados</p>
       </footer>
     </main>
   </div>
+
   <ClientOnly>
     <Teleport to="body">
       <div v-if="showLogin && !isAdmin" class="wl-overlay" @click.self="showLogin = false">
@@ -96,7 +103,7 @@ const HIDDEN_BANNER_TOKEN = '__HIDDEN__'
 const VID_KEY = 'wanessa_vid'
 const VIEW_DAY_KEY = 'wanessa_view_day'
 const CLICK_DAY_PREFIX = 'wanessa_click_'
-const config = reactive({ name: 'Wanessa', bio: 'prévias grátis · exclusivos + chat · quem sabe a gente se encontra 👅', avatar_url: DEFAULT_BANNER as string, links: [] as LinkItem[] })
+const config = reactive({ name: 'Wanessa', bio: '', avatar_url: DEFAULT_BANNER as string, links: [] as LinkItem[] })
 const configReady = ref(false)
 const bannerHidden = ref(false)
 const showLogin = ref(false)
@@ -203,8 +210,9 @@ function applyServerConfig(data: any) {
   if (!data) return
   config.name = data.name || config.name
   const incomingBio = (data.bio || '').trim()
-  const isGeneric = !incomingBio || /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|conteudo\s*&?\s*links/i.test(incomingBio)
-  if (!isGeneric) config.bio = incomingBio
+  const isGeneric = /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|conteudo\s*&?\s*links/i.test(incomingBio)
+  if (isGeneric) config.bio = ''
+  else config.bio = incomingBio
   const savedAvatar = (data.avatar_url || '').trim()
   if (savedAvatar === HIDDEN_BANNER_TOKEN) { bannerHidden.value = true; config.avatar_url = HIDDEN_BANNER_TOKEN }
   else if (savedAvatar && !savedAvatar.startsWith('data:')) { bannerHidden.value = false; config.avatar_url = savedAvatar }
@@ -284,18 +292,31 @@ async function doSave() {
 .container { width: 100%; max-width: 360px; height: 100%; max-height: 100dvh; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; overflow: hidden; }
 .banner-wrap { position: relative; width: 100%; flex: 0 0 auto; border-radius: 16px; overflow: hidden; border: 1px solid rgba(236, 72, 153, 0.28); box-shadow: 0 0 24px rgba(236, 72, 153, 0.15); aspect-ratio: 480 / 623; max-height: min(40vh, 320px); background: #111; }
 .banner-img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; pointer-events: none; }
-.banner-fire { position: absolute; left: 0; right: 0; bottom: -2px; height: 42%; pointer-events: none; z-index: 2; overflow: hidden; background: linear-gradient(to top, rgba(10, 10, 12, 0.55) 0%, transparent 55%); }
-.flame { position: absolute; bottom: 0; width: 18%; height: 100%; border-radius: 50% 50% 20% 20%; background: radial-gradient(ellipse at bottom, #ffeb3b 0%, #ff9800 28%, #ff3d00 55%, transparent 72%); filter: blur(6px); opacity: 0.75; transform-origin: center bottom; animation: flicker 1.1s ease-in-out infinite; mix-blend-mode: screen; }
-.f1 { left: 2%; animation-duration: 1.05s; animation-delay: 0s; height: 95%; }
-.f2 { left: 16%; animation-duration: 1.25s; animation-delay: 0.15s; height: 80%; width: 14%; }
-.f3 { left: 30%; animation-duration: 0.95s; animation-delay: 0.08s; height: 100%; }
-.f4 { left: 44%; animation-duration: 1.35s; animation-delay: 0.22s; height: 88%; width: 16%; }
-.f5 { left: 58%; animation-duration: 1.1s; animation-delay: 0.05s; height: 92%; }
-.f6 { left: 72%; animation-duration: 1.2s; animation-delay: 0.18s; height: 78%; width: 14%; }
-.f7 { left: 84%; animation-duration: 1.0s; animation-delay: 0.12s; height: 96%; }
-@keyframes flicker { 0%, 100% { transform: scaleY(1) scaleX(1); opacity: 0.7; } 25% { transform: scaleY(1.12) scaleX(0.92); opacity: 0.9; } 50% { transform: scaleY(0.92) scaleX(1.08); opacity: 0.65; } 75% { transform: scaleY(1.08) scaleX(0.96); opacity: 0.85; } }
+.banner-fire-frame { position: absolute; inset: 0; pointer-events: none; z-index: 2; border-radius: 16px; overflow: hidden; }
+.fire-edge { position: absolute; pointer-events: none; mix-blend-mode: screen; }
+.fire-left, .fire-right {
+  top: 0; bottom: 0; width: 14px;
+  background: linear-gradient(to top, #ff3d00 0%, #ff9800 35%, #ffeb3b 55%, #ff9800 75%, #ff3d00 100%);
+  filter: blur(5px); opacity: 0.85; animation: fire-side 1.15s ease-in-out infinite;
+}
+.fire-left { left: 0; }
+.fire-right { right: 0; animation-delay: 0.2s; }
+.fire-top, .fire-bottom {
+  left: 0; right: 0; height: 12px;
+  background: linear-gradient(to right, #ff3d00 0%, #ff9800 20%, #ffeb3b 50%, #ff9800 80%, #ff3d00 100%);
+  filter: blur(5px); opacity: 0.8; animation: fire-edge 1.2s ease-in-out infinite;
+}
+.fire-top { top: 0; }
+.fire-bottom { bottom: 0; animation-delay: 0.15s; }
+@keyframes fire-side {
+  0%, 100% { opacity: 0.7; filter: blur(5px); transform: scaleX(1); }
+  50% { opacity: 1; filter: blur(7px); transform: scaleX(1.25); }
+}
+@keyframes fire-edge {
+  0%, 100% { opacity: 0.65; filter: blur(5px); transform: scaleY(1); }
+  50% { opacity: 0.95; filter: blur(7px); transform: scaleY(1.3); }
+}
 .identity { text-align: center; margin-top: 8px; margin-bottom: 6px; width: 100%; flex-shrink: 0; }
-.tagline { font-family: Inter, system-ui, sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #f6339a; margin-bottom: 4px; line-height: 1.3; }
 .bio { font-family: Inter, system-ui, sans-serif; font-size: 0.88rem; font-weight: 500; color: rgba(255, 255, 255, 0.88); margin-top: 4px; line-height: 1.4; }
 .cta-choose { text-align: center; margin-bottom: 14px; flex-shrink: 0; }
 .cta-title { font-family: Inter, system-ui, sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #f6339a; line-height: 1.35; }
@@ -326,7 +347,7 @@ async function doSave() {
 .footer-copy { font-size: 0.62rem; color: rgba(255, 255, 255, 0.28); letter-spacing: 0.02em; line-height: 1.35; }
 @media (min-height: 720px) { .banner-wrap { max-height: min(44vh, 360px); } .links { gap: 16px; } .link { padding: 13px 16px; font-size: 0.9rem; } .identity { margin-top: 10px; margin-bottom: 8px; } .cta-choose { margin-bottom: 14px; } }
 @media (min-width: 768px) { .page { padding-top: 24px; } .container { max-width: 380px; } .links { gap: 16px; } }
-@media (max-height: 640px) { .banner-wrap { max-height: min(32vh, 220px); } .tagline { font-size: 0.55rem; } .bio { font-size: 0.72rem; } .cta-title { font-size: 0.78rem; } .link { padding: 10px 12px; font-size: 0.82rem; } .links { gap: 10px; } }
+@media (max-height: 640px) { .banner-wrap { max-height: min(32vh, 220px); } .bio { font-size: 0.72rem; } .cta-title { font-size: 0.78rem; } .link { padding: 10px 12px; font-size: 0.82rem; } .links { gap: 10px; } }
 </style>
 
 <style>
