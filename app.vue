@@ -1,5 +1,13 @@
 <template>
-  <div class="page" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
+  <div
+    class="page"
+    :class="{ 'page--locked': showLogin || isAdmin }"
+    @copy.prevent
+    @cut.prevent
+    @contextmenu.prevent
+    @selectstart.prevent
+    @dragstart.prevent
+  >
     <div class="bg-glow" aria-hidden="true"></div>
 
     <button class="lock-btn" type="button" aria-label="Editar página" @click="openLogin">
@@ -68,13 +76,19 @@
         <p class="footer-copy">© Todos os direitos reservados a Wanessa Borges</p>
       </footer>
     </main>
+  </div>
 
-    <!-- Login -->
+  <!-- FORA do .page — garante que fique por cima de tudo -->
+  <ClientOnly>
     <Teleport to="body">
-      <div v-if="showLogin && !isAdmin" class="modal" @click.self="showLogin = false">
-        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <div
+        v-if="showLogin && !isAdmin"
+        class="wl-overlay"
+        @click.self="showLogin = false"
+      >
+        <div class="wl-card" role="dialog" aria-modal="true" aria-labelledby="login-title" @click.stop>
           <h2 id="login-title">Acesso admin</h2>
-          <label class="sr-only" for="admin-pass">Senha</label>
+          <label class="wl-sr" for="admin-pass">Senha</label>
           <input
             id="admin-pass"
             ref="passInput"
@@ -84,78 +98,90 @@
             autocomplete="current-password"
             @keyup.enter="doLogin"
           >
-          <p v-if="loginError" class="error">{{ loginError }}</p>
-          <button type="button" class="btn primary" :disabled="loading" @click="doLogin">
+          <p v-if="loginError" class="wl-error">{{ loginError }}</p>
+          <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doLogin">
             {{ loading ? 'Entrando...' : 'Entrar' }}
           </button>
-          <button type="button" class="btn ghost" @click="showLogin = false">Cancelar</button>
+          <button type="button" class="wl-btn wl-btn-ghost" @click="showLogin = false">Cancelar</button>
         </div>
       </div>
     </Teleport>
 
-    <!-- Painel admin -->
     <Teleport to="body">
-      <div v-if="isAdmin" class="modal" @click.self="closeAdmin">
-        <div class="modal-card edit" role="dialog" aria-modal="true">
-          <div class="modal-head">
+      <div
+        v-if="isAdmin"
+        class="wl-overlay"
+        @click.self="closeAdmin"
+      >
+        <div class="wl-card wl-card-edit" role="dialog" aria-modal="true" @click.stop>
+          <div class="wl-head">
             <h2>Editar página</h2>
-            <button type="button" class="icon-x" aria-label="Fechar" @click="closeAdmin">×</button>
+            <button type="button" class="wl-x" aria-label="Fechar" @click="closeAdmin">×</button>
           </div>
 
-          <label>Nome</label>
-          <input v-model="edit.name" type="text" maxlength="80">
+          <label class="wl-label">Nome</label>
+          <input v-model="edit.name" type="text" maxlength="80" class="wl-input">
 
-          <label>Bio</label>
-          <input v-model="edit.bio" type="text" maxlength="160">
+          <label class="wl-label">Bio</label>
+          <input v-model="edit.bio" type="text" maxlength="160" class="wl-input">
 
-          <label>Banner (URL da imagem)</label>
-          <input v-model="edit.avatar_url" type="url" placeholder="https://... ou deixe vazio">
-          <div class="banner-actions">
-            <button type="button" class="btn small ghost" @click="edit.avatar_url = ''">
+          <label class="wl-label">Banner (URL da imagem)</label>
+          <input v-model="edit.avatar_url" type="url" class="wl-input" placeholder="https://... ou deixe vazio">
+          <div class="wl-banner-actions">
+            <button type="button" class="wl-btn wl-btn-sm wl-btn-ghost" @click="edit.avatar_url = ''">
               Remover banner
             </button>
-            <button type="button" class="btn small ghost" @click="edit.avatar_url = DEFAULT_BANNER_HINT">
+            <button type="button" class="wl-btn wl-btn-sm wl-btn-ghost" @click="edit.avatar_url = ''">
               Usar banner padrão
             </button>
           </div>
-          <div v-if="edit.avatar_url && !edit.avatar_url.startsWith('data:')" class="preview-banner">
+          <div v-if="edit.avatar_url && !edit.avatar_url.startsWith('data:')" class="wl-preview">
             <img :src="edit.avatar_url" alt="Prévia" @error="onPreviewError">
           </div>
-          <p v-if="previewError" class="error">Não foi possível carregar a imagem desta URL</p>
+          <p v-if="previewError" class="wl-error">Não foi possível carregar a imagem desta URL</p>
 
-          <div class="links-head">
-            <label>Links</label>
-            <button type="button" class="btn small" @click="addLink">+ Adicionar link</button>
+          <div class="wl-links-head">
+            <span class="wl-label" style="margin:0">Links</span>
+            <button type="button" class="wl-btn wl-btn-sm wl-btn-primary" @click="addLink">+ Adicionar</button>
           </div>
 
-          <div v-for="(l, i) in edit.links" :key="i" class="link-edit" :class="{ disabled: l.enabled === false }">
-            <div class="link-edit-row">
-              <input v-model="l.icon" class="icon-input" placeholder="🔥" title="Ícone">
-              <input v-model="l.label" placeholder="Título do botão">
+          <div
+            v-for="(l, i) in edit.links"
+            :key="i"
+            class="wl-link-edit"
+            :class="{ 'is-off': l.enabled === false }"
+          >
+            <div class="wl-link-row">
+              <input v-model="l.icon" class="wl-input wl-icon" placeholder="🔥" title="Ícone">
+              <input v-model="l.label" class="wl-input" placeholder="Título do botão">
             </div>
-            <input v-model="l.url" placeholder="https://...">
-            <div class="link-edit-actions">
-              <label class="toggle">
-                <input type="checkbox" :checked="l.enabled !== false" @change="l.enabled = ($event.target as HTMLInputElement).checked">
-                <span>{{ l.enabled === false ? 'Desativado (não aparece)' : 'Ativo' }}</span>
+            <input v-model="l.url" class="wl-input" placeholder="https://...">
+            <div class="wl-link-actions">
+              <label class="wl-toggle">
+                <input
+                  type="checkbox"
+                  :checked="l.enabled !== false"
+                  @change="l.enabled = ($event.target as HTMLInputElement).checked"
+                >
+                <span>{{ l.enabled === false ? 'Desativado' : 'Ativo' }}</span>
               </label>
-              <button type="button" class="btn small danger" @click="removeLink(i)">Remover</button>
+              <button type="button" class="wl-btn wl-btn-sm wl-btn-danger" @click="removeLink(i)">Remover</button>
             </div>
           </div>
 
-          <p v-if="saveMsg" class="ok">{{ saveMsg }}</p>
-          <p v-if="saveError" class="error">{{ saveError }}</p>
+          <p v-if="saveMsg" class="wl-ok">{{ saveMsg }}</p>
+          <p v-if="saveError" class="wl-error">{{ saveError }}</p>
 
-          <div class="row">
-            <button type="button" class="btn primary" :disabled="loading" @click="doSave">
+          <div class="wl-row">
+            <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doSave">
               {{ loading ? 'Salvando...' : 'Salvar' }}
             </button>
-            <button type="button" class="btn ghost" @click="closeAdmin">Fechar</button>
+            <button type="button" class="wl-btn wl-btn-ghost" @click="closeAdmin">Fechar</button>
           </div>
         </div>
       </div>
     </Teleport>
-  </div>
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">
@@ -171,8 +197,6 @@ import { WANESSA_BANNER } from '~/utils/banner'
 import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 
 const DEFAULT_BANNER = WANESSA_BANNER
-// dica só no painel (não grava data URL gigante)
-const DEFAULT_BANNER_HINT = ''
 const VID_KEY = 'wanessa_vid'
 const VIEW_DAY_KEY = 'wanessa_view_day'
 const CLICK_DAY_PREFIX = 'wanessa_click_'
@@ -498,6 +522,7 @@ async function doSave() {
   align-items: flex-start;
   padding: max(8px, env(safe-area-inset-top)) 14px max(10px, env(safe-area-inset-bottom));
   position: relative;
+  z-index: 1;
   overflow: hidden;
   background: #0a0a0c;
   box-sizing: border-box;
@@ -505,6 +530,10 @@ async function doSave() {
   user-select: none !important;
   -webkit-touch-callout: none !important;
   -webkit-tap-highlight-color: transparent;
+}
+.page--locked {
+  pointer-events: none;
+  filter: brightness(0.35);
 }
 .page ::selection, .page *::selection { background: transparent !important; color: inherit !important; }
 .page *, .page *::before, .page *::after {
@@ -526,6 +555,7 @@ async function doSave() {
   background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.3);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
+.page--locked .lock-btn { pointer-events: none; }
 .container {
   width: 100%; max-width: 360px; height: 100%; max-height: 100dvh;
   display: flex; flex-direction: column; align-items: center;
@@ -635,80 +665,92 @@ async function doSave() {
 </style>
 
 <style>
-/* Modal global (Teleport no body) — centralizado em qualquer tela */
-.modal {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.78);
-  box-sizing: border-box;
-  overflow-y: auto;
+/* Overlay admin — SEMPRE por cima de tudo */
+.wl-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  z-index: 2147483646 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+  margin: 0 !important;
+  background: rgba(0, 0, 0, 0.85) !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
+  isolation: isolate;
+  pointer-events: auto !important;
 }
-.modal-card {
-  background: #141416;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  max-height: min(90dvh, 720px);
-  overflow-y: auto;
-  margin: auto;
-  box-sizing: border-box;
-  color: #fff;
-  -webkit-user-select: text;
-  user-select: text;
+.wl-card {
+  position: relative !important;
+  z-index: 2147483647 !important;
+  background: #141416 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 16px !important;
+  padding: 20px !important;
+  width: 100% !important;
+  max-width: 400px !important;
+  max-height: min(88dvh, 720px) !important;
+  overflow-y: auto !important;
+  margin: auto !important;
+  box-sizing: border-box !important;
+  color: #fff !important;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75) !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  pointer-events: auto !important;
 }
-.modal-card input,
-.modal-card textarea {
+.wl-card input,
+.wl-card textarea,
+.wl-card button {
+  pointer-events: auto !important;
   -webkit-user-select: text !important;
   user-select: text !important;
 }
-.modal-card h2 {
+.wl-card h2 {
   font-size: 1.15rem;
   margin: 0 0 14px;
   color: #fff;
 }
-.modal-head {
+.wl-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
 }
-.modal-head h2 { margin: 0; }
-.icon-x {
+.wl-head h2 { margin: 0; }
+.wl-x {
   background: transparent;
   border: none;
-  color: rgba(255,255,255,0.5);
-  font-size: 1.6rem;
+  color: rgba(255,255,255,0.55);
+  font-size: 1.7rem;
   line-height: 1;
   cursor: pointer;
   padding: 0 4px;
 }
-.modal-card label {
+.wl-label {
   display: block;
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.5);
   margin: 12px 0 4px;
 }
-.modal-card input[type="text"],
-.modal-card input[type="password"],
-.modal-card input[type="url"] {
-  width: 100%;
-  padding: 11px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  font-size: 0.9rem;
-  box-sizing: border-box;
+.wl-input {
+  width: 100% !important;
+  padding: 11px 12px !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #fff !important;
+  font-size: 0.9rem !important;
+  box-sizing: border-box !important;
 }
-.modal-card .btn {
+.wl-btn {
   width: 100%;
   margin-top: 10px;
   padding: 12px;
@@ -718,90 +760,89 @@ async function doSave() {
   cursor: pointer;
   font-size: 0.9rem;
 }
-.modal-card .btn.primary {
+.wl-btn-primary {
   background: linear-gradient(135deg, #ec4899, #c026d3);
   color: #fff;
 }
-.modal-card .btn.ghost {
+.wl-btn-ghost {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #fff;
 }
-.modal-card .btn.small {
+.wl-btn-sm {
   width: auto;
   padding: 6px 12px;
   font-size: 0.78rem;
   margin-top: 0;
 }
-.modal-card .btn.danger {
+.wl-btn-danger {
   background: rgba(248, 113, 113, 0.15);
   border: 1px solid rgba(248, 113, 113, 0.4);
   color: #fca5a5;
 }
-.modal-card .btn:disabled {
+.wl-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
-.modal-card .error { color: #f87171; font-size: 0.8rem; margin-top: 8px; }
-.modal-card .ok { color: #4ade80; font-size: 0.8rem; margin-top: 8px; }
-.modal-card .row {
+.wl-error { color: #f87171; font-size: 0.8rem; margin-top: 8px; }
+.wl-ok { color: #4ade80; font-size: 0.8rem; margin-top: 8px; }
+.wl-row {
   display: flex;
   gap: 8px;
   margin-top: 14px;
 }
-.modal-card .row .btn { flex: 1; margin-top: 0; }
+.wl-row .wl-btn { flex: 1; margin-top: 0; }
 
-.banner-actions {
+.wl-banner-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
 }
-.preview-banner {
+.wl-preview {
   margin-top: 10px;
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.1);
   max-height: 140px;
 }
-.preview-banner img {
+.wl-preview img {
   width: 100%;
   height: 140px;
   object-fit: cover;
   display: block;
 }
 
-.links-head {
+.wl-links-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: 16px;
   margin-bottom: 4px;
 }
-.links-head label { margin: 0; }
 
-.link-edit {
+.wl-link-edit {
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 12px;
   padding: 10px;
   margin-top: 10px;
   background: rgba(255,255,255,0.03);
 }
-.link-edit.disabled {
+.wl-link-edit.is-off {
   opacity: 0.55;
   border-style: dashed;
 }
-.link-edit-row {
+.wl-link-row {
   display: grid;
   grid-template-columns: 48px 1fr;
   gap: 6px;
   margin-bottom: 6px;
 }
-.link-edit .icon-input {
-  text-align: center;
-  padding: 8px 4px;
+.wl-icon {
+  text-align: center !important;
+  padding: 8px 4px !important;
 }
-.link-edit-actions {
+.wl-link-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -809,7 +850,7 @@ async function doSave() {
   margin-top: 8px;
   flex-wrap: wrap;
 }
-.toggle {
+.wl-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -818,9 +859,12 @@ async function doSave() {
   margin: 0 !important;
   cursor: pointer;
 }
-.toggle input { width: auto !important; accent-color: #ec4899; }
+.wl-toggle input {
+  width: auto !important;
+  accent-color: #ec4899;
+}
 
-.sr-only {
+.wl-sr {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -832,6 +876,6 @@ async function doSave() {
 }
 
 @media (max-width: 480px) {
-  .modal-card { max-width: 100%; padding: 16px; }
+  .wl-card { max-width: 100%; padding: 16px; }
 }
 </style>
