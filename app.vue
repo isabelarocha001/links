@@ -27,8 +27,7 @@
       <div v-else class="links links-skeleton" aria-hidden="true"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
 
       <footer class="footer">
-        <p class="footer-note">18+ · exclusivo</p>
-        <p class="footer-copy">© Todos os direitos reservados</p>
+        <p class="footer-copy">© Wanessa Borges</p>
       </footer>
     </main>
   </div>
@@ -280,7 +279,7 @@ async function doSave() {
 .bio { font-family: Inter, system-ui, sans-serif; font-size: 0.88rem; font-weight: 500; color: rgba(255, 255, 255, 0.88); margin-top: 4px; line-height: 1.4; }
 .cta-choose { text-align: center; margin-top: 0; margin-bottom: 18px; flex-shrink: 0; }
 .cta-title { font-family: Inter, system-ui, sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #f6339a; line-height: 1.35; }
-.links { width: 100%; display: flex; flex-direction: column; gap: 18px; flex-shrink: 0; }
+.links { width: 100%; display: flex; flex-direction: column; gap: 28px; flex-shrink: 0; }
 .link-block { width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22); }
 .link-intro {
   font-family: Inter, system-ui, sans-serif;
@@ -312,12 +311,11 @@ async function doSave() {
 .link-label { flex: 1; font-family: Inter, system-ui, sans-serif; font-weight: 700; line-height: 1.2; color: #fff; letter-spacing: 0.01em; }
 .link-arrow { opacity: 0.5; color: #f472b6; font-size: 1rem; flex-shrink: 0; transition: transform 0.12s ease, opacity 0.12s ease; }
 .link:hover .link-arrow { opacity: 1; transform: translateX(3px); }
-.footer { margin-top: 12px; text-align: center; flex-shrink: 0; width: 100%; }
-.footer-note { font-size: 0.7rem; color: rgba(255, 255, 255, 0.4); margin-bottom: 4px; }
+.footer { margin-top: 20px; text-align: center; flex-shrink: 0; width: 100%; }
 .footer-copy { font-size: 0.62rem; color: rgba(255, 255, 255, 0.28); letter-spacing: 0.02em; line-height: 1.35; }
-@media (min-height: 720px) { .links { gap: 18px; } .link { padding: 13px 16px; font-size: 0.9rem; } .cta-choose { margin-bottom: 20px; } }
-@media (min-width: 768px) { .container { max-width: 380px; } .links { gap: 18px; } }
-@media (max-height: 640px) { .bio { font-size: 0.72rem; } .cta-title { font-size: 0.78rem; } .link { padding: 10px 12px; font-size: 0.82rem; } .links { gap: 14px; } }
+@media (min-height: 720px) { .links { gap: 28px; } .link { padding: 13px 16px; font-size: 0.9rem; } .cta-choose { margin-bottom: 20px; } }
+@media (min-width: 768px) { .container { max-width: 380px; } .links { gap: 28px; } }
+@media (max-height: 640px) { .bio { font-size: 0.72rem; } .cta-title { font-size: 0.78rem; } .link { padding: 10px 12px; font-size: 0.82rem; } .links { gap: 22px; } }
 </style>
 
 <style>
