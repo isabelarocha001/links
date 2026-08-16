@@ -76,7 +76,7 @@
           <div v-for="(l, i) in edit.links" :key="i" class="wl-link-edit" :class="{ 'is-off': l.enabled === false }">
             <div class="wl-link-row"><input v-model="l.icon" class="wl-input wl-icon" placeholder="🔥" title="Ícone"><input v-model="l.label" class="wl-input" placeholder="Título do botão"></div>
             <input v-model="l.url" class="wl-input" placeholder="https://...">
-            <input v-model="l.desc" class="wl-input" placeholder="Texto explicativo ACIMA do botão" maxlength="220">
+            <textarea v-model="l.desc" class="wl-input wl-textarea" placeholder="Texto explicativo ACIMA do botão (use Enter para quebrar linha)" maxlength="300" rows="4"></textarea>
             <div class="wl-link-actions">
               <label class="wl-toggle"><input type="checkbox" :checked="l.enabled !== false" @change="l.enabled = ($event.target as HTMLInputElement).checked"><span>{{ l.enabled === false ? 'Desativado (some da página)' : 'Ativo' }}</span></label>
               <button type="button" class="wl-btn wl-btn-sm wl-btn-danger" @click="removeLink(i)">Remover</button>
@@ -210,8 +210,8 @@ function applyServerConfig(data: any) {
   if (!data) return
   config.name = data.name || config.name
   const incomingBio = (data.bio || '').trim()
-  const isGeneric = /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|conteudo\s*&?\s*links/i.test(incomingBio)
-  if (isGeneric) config.bio = ''
+  const isGeneric = /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|conteudo\s*&?\s*links|língua\s*bifurcada|resto\s*tu\s*descobre/i.test(incomingBio)
+  if (!incomingBio || isGeneric) config.bio = ''
   else config.bio = incomingBio
   const savedAvatar = (data.avatar_url || '').trim()
   if (savedAvatar === HIDDEN_BANNER_TOKEN) { bannerHidden.value = true; config.avatar_url = HIDDEN_BANNER_TOKEN }
@@ -292,29 +292,53 @@ async function doSave() {
 .container { width: 100%; max-width: 360px; height: 100%; max-height: 100dvh; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; overflow: hidden; }
 .banner-wrap { position: relative; width: 100%; flex: 0 0 auto; border-radius: 16px; overflow: hidden; border: 1px solid rgba(236, 72, 153, 0.28); box-shadow: 0 0 24px rgba(236, 72, 153, 0.15); aspect-ratio: 480 / 623; max-height: min(40vh, 320px); background: #111; }
 .banner-img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; pointer-events: none; }
-.banner-fire-frame { position: absolute; inset: 0; pointer-events: none; z-index: 2; border-radius: 16px; overflow: hidden; }
-.fire-edge { position: absolute; pointer-events: none; mix-blend-mode: screen; }
+.banner-fire-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.fire-edge {
+  position: absolute;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
 .fire-left, .fire-right {
-  top: 0; bottom: 0; width: 14px;
-  background: linear-gradient(to top, #ff3d00 0%, #ff9800 35%, #ffeb3b 55%, #ff9800 75%, #ff3d00 100%);
-  filter: blur(5px); opacity: 0.85; animation: fire-side 1.15s ease-in-out infinite;
+  top: 6%;
+  bottom: 6%;
+  width: 5px;
+  border-radius: 4px;
+  filter: blur(3px);
+  animation: fire-color 4.5s ease-in-out infinite, fire-side 1.4s ease-in-out infinite;
 }
-.fire-left { left: 0; }
-.fire-right { right: 0; animation-delay: 0.2s; }
+.fire-left { left: 2px; }
+.fire-right { right: 2px; animation-delay: 0s, 0.25s; }
 .fire-top, .fire-bottom {
-  left: 0; right: 0; height: 12px;
-  background: linear-gradient(to right, #ff3d00 0%, #ff9800 20%, #ffeb3b 50%, #ff9800 80%, #ff3d00 100%);
-  filter: blur(5px); opacity: 0.8; animation: fire-edge 1.2s ease-in-out infinite;
+  left: 6%;
+  right: 6%;
+  height: 4px;
+  border-radius: 4px;
+  filter: blur(3px);
+  animation: fire-color 4.5s ease-in-out infinite, fire-edge 1.4s ease-in-out infinite;
 }
-.fire-top { top: 0; }
-.fire-bottom { bottom: 0; animation-delay: 0.15s; }
+.fire-top { top: 2px; animation-delay: 1.1s, 0.1s; }
+.fire-bottom { bottom: 2px; animation-delay: 2.2s, 0.2s; }
+@keyframes fire-color {
+  0%, 100% { background: linear-gradient(90deg, #ff6a00, #ff3d00, #ffb300); }
+  25% { background: linear-gradient(90deg, #a855f7, #7c3aed, #c084fc); }
+  50% { background: linear-gradient(90deg, #ef4444, #dc2626, #f87171); }
+  75% { background: linear-gradient(90deg, #3b82f6, #2563eb, #60a5fa); }
+}
 @keyframes fire-side {
-  0%, 100% { opacity: 0.7; filter: blur(5px); transform: scaleX(1); }
-  50% { opacity: 1; filter: blur(7px); transform: scaleX(1.25); }
+  0%, 100% { opacity: 0.4; transform: scaleX(1); }
+  50% { opacity: 0.75; transform: scaleX(1.35); }
 }
 @keyframes fire-edge {
-  0%, 100% { opacity: 0.65; filter: blur(5px); transform: scaleY(1); }
-  50% { opacity: 0.95; filter: blur(7px); transform: scaleY(1.3); }
+  0%, 100% { opacity: 0.4; transform: scaleY(1); }
+  50% { opacity: 0.75; transform: scaleY(1.4); }
 }
 .identity { text-align: center; margin-top: 8px; margin-bottom: 6px; width: 100%; flex-shrink: 0; }
 .bio { font-family: Inter, system-ui, sans-serif; font-size: 0.88rem; font-weight: 500; color: rgba(255, 255, 255, 0.88); margin-top: 4px; line-height: 1.4; }
@@ -322,7 +346,17 @@ async function doSave() {
 .cta-title { font-family: Inter, system-ui, sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #f6339a; line-height: 1.35; }
 .links { width: 100%; display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; }
 .link-block { width: 100%; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25); }
-.link-intro { font-family: Inter, system-ui, sans-serif; font-size: 0.8rem; font-weight: 500; color: rgba(255, 255, 255, 0.82); line-height: 1.45; text-align: center; padding: 0 4px; letter-spacing: 0.01em; }
+.link-intro {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.55;
+  text-align: center;
+  padding: 0 4px;
+  letter-spacing: 0.01em;
+  white-space: pre-line;
+}
 .links-skeleton .skel { height: 56px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
 .link { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.12), rgba(192, 38, 211, 0.08)); border: 1px solid rgba(236, 72, 153, 0.38); border-radius: 12px; font-weight: 600; font-size: 0.88rem; transition: transform 0.12s ease, box-shadow 0.12s ease; position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; touch-action: manipulation; z-index: 0; }
@@ -361,6 +395,7 @@ async function doSave() {
 .wl-label { display: block; font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); margin: 12px 0 4px; }
 .wl-muted { font-size: 0.8rem; color: rgba(255,255,255,0.4); margin: 6px 0; }
 .wl-input { width: 100% !important; padding: 11px 12px !important; border-radius: 10px !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; background: rgba(255, 255, 255, 0.06) !important; color: #fff !important; font-size: 0.9rem !important; box-sizing: border-box !important; }
+.wl-textarea { resize: vertical; min-height: 72px; line-height: 1.4; font-family: inherit; }
 .wl-input:disabled { opacity: 0.4; }
 .wl-btn { width: 100%; margin-top: 10px; padding: 12px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
 .wl-btn-primary { background: linear-gradient(135deg, #ec4899, #c026d3); color: #fff; }
