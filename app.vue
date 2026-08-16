@@ -65,7 +65,10 @@
             >
             <template v-else>{{ link.icon }}</template>
           </span>
-          <span class="link-label">{{ link.label }}</span>
+          <span class="link-text">
+            <span class="link-label">{{ link.label }}</span>
+            <span v-if="link.desc" class="link-desc">{{ link.desc }}</span>
+          </span>
           <span class="link-arrow">→</span>
         </a>
       </div>
@@ -123,7 +126,7 @@
           </div>
 
           <label class="wl-label">Bio</label>
-          <input v-model="edit.bio" type="text" maxlength="160" class="wl-input">
+          <input v-model="edit.bio" type="text" maxlength="200" class="wl-input">
 
           <label class="wl-label">Banner atual</label>
           <div v-if="!edit.hideBanner" class="wl-preview">
@@ -177,6 +180,7 @@
               <input v-model="l.label" class="wl-input" placeholder="Título do botão">
             </div>
             <input v-model="l.url" class="wl-input" placeholder="https://...">
+            <input v-model="l.desc" class="wl-input" placeholder="Descrição curta (aparece no botão)" maxlength="220">
             <div class="wl-link-actions">
               <label class="wl-toggle">
                 <input
@@ -210,6 +214,7 @@ type LinkItem = {
   label: string
   icon: string
   url: string
+  desc?: string
   logo?: string
   enabled?: boolean
 }
@@ -225,7 +230,7 @@ const CLICK_DAY_PREFIX = 'wanessa_click_'
 
 const config = reactive({
   name: 'Wanessa',
-  bio: 'língua bifurcada · o resto tu descobre 👅',
+  bio: 'prévias grátis · exclusivos + chat · quem sabe a gente se encontra 👅',
   avatar_url: DEFAULT_BANNER as string,
   links: [] as LinkItem[]
 })
@@ -431,6 +436,7 @@ function applyServerConfig(data: any) {
         label: String(l.label || ''),
         icon: String(l.icon || '🔗'),
         url: String(l.url || '#'),
+        desc: String(l.desc || ''),
         enabled: l.enabled !== false
       }))
   }
@@ -479,10 +485,11 @@ function openEdit() {
     label: l.label,
     icon: l.icon,
     url: l.url,
+    desc: l.desc || '',
     enabled: l.enabled !== false
   }))
   if (!edit.links.length) {
-    edit.links.push({ label: '', icon: '🔗', url: '', enabled: true })
+    edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true })
   }
   previewError.value = false
 }
@@ -510,7 +517,7 @@ function onAvatarInput() {
 }
 
 function addLink() {
-  edit.links.push({ label: '', icon: '🔗', url: '', enabled: true })
+  edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true })
 }
 
 function removeLink(i: number) {
@@ -555,6 +562,7 @@ async function doSave() {
           label: l.label.trim(),
           icon: l.icon || '🔗',
           url: l.url || '#',
+          desc: (l.desc || '').trim(),
           enabled: l.enabled !== false
         }))
     }
@@ -658,11 +666,11 @@ async function doSave() {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   flex-shrink: 0;
 }
 .links-skeleton .skel {
-  height: 48px;
+  height: 56px;
   border-radius: 12px;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.06);
@@ -675,7 +683,7 @@ async function doSave() {
 
 .link {
   display: flex; align-items: center; gap: 10px; width: 100%;
-  padding: 13px 14px;
+  padding: 12px 14px;
   background: linear-gradient(135deg, rgba(236, 72, 153, 0.12), rgba(192, 38, 211, 0.08));
   border: 1px solid rgba(236, 72, 153, 0.38);
   border-radius: 12px; font-weight: 600; font-size: 0.88rem;
@@ -715,8 +723,15 @@ async function doSave() {
   background: rgba(255, 255, 255, 0.06); border-radius: 9px; flex-shrink: 0; overflow: hidden;
 }
 .logo-img { width: 24px; height: 24px; object-fit: contain; border-radius: 50%; }
-.link-label { flex: 1; }
-.link-arrow { opacity: 0.5; color: #f472b6; font-size: 1rem; transition: transform 0.12s ease, opacity 0.12s ease; }
+.link-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.link-label { font-weight: 600; line-height: 1.2; }
+.link-desc {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: rgba(251, 207, 232, 0.72);
+  line-height: 1.25;
+}
+.link-arrow { opacity: 0.5; color: #f472b6; font-size: 1rem; flex-shrink: 0; transition: transform 0.12s ease, opacity 0.12s ease; }
 .link:hover .link-arrow { opacity: 1; transform: translateX(3px); }
 
 .footer { margin-top: 16px; text-align: center; flex-shrink: 0; width: 100%; }
@@ -725,15 +740,15 @@ async function doSave() {
 
 @media (min-height: 720px) {
   .banner-wrap { max-height: min(44vh, 360px); }
-  .links { gap: 18px; }
-  .link { padding: 14px 16px; font-size: 0.9rem; }
+  .links { gap: 16px; }
+  .link { padding: 13px 16px; font-size: 0.9rem; }
   .identity { margin-top: 10px; margin-bottom: 8px; }
   .cta-choose { margin-bottom: 14px; }
 }
 @media (min-width: 768px) {
   .page { padding-top: 24px; }
   .container { max-width: 380px; }
-  .links { gap: 18px; }
+  .links { gap: 16px; }
 }
 @media (max-height: 640px) {
   .banner-wrap { max-height: min(32vh, 220px); }
@@ -741,7 +756,8 @@ async function doSave() {
   .bio { font-size: 0.72rem; }
   .cta-title { font-size: 0.78rem; }
   .link { padding: 10px 12px; font-size: 0.82rem; }
-  .links { gap: 12px; }
+  .link-desc { font-size: 0.62rem; }
+  .links { gap: 10px; }
 }
 </style>
 
