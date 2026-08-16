@@ -18,7 +18,7 @@
     </button>
 
     <main class="container">
-      <div v-if="displayBanner" class="banner-wrap">
+      <div v-if="configReady && displayBanner && !bannerHidden" class="banner-wrap">
         <img
           :src="displayBanner"
           :alt="config.name"
@@ -41,10 +41,11 @@
         <p class="cta-title">👇 Escolhe o que tu quer primeiro 👇</p>
       </div>
 
-      <div class="links">
+      <!-- Só renderiza links DEPOIS de carregar o config do servidor -->
+      <div v-if="configReady" class="links">
         <a
           v-for="link in visibleLinks"
-          :key="link.label + link.url"
+          :key="link.label + '|' + link.url"
           :href="link.url"
           class="link"
           :class="{ 'link-rgb': isPrevias(link.label) }"
@@ -70,6 +71,11 @@
           <span class="link-arrow">→</span>
         </a>
       </div>
+      <div v-else class="links links-skeleton" aria-hidden="true">
+        <div class="skel"></div>
+        <div class="skel"></div>
+        <div class="skel"></div>
+      </div>
 
       <footer class="footer">
         <p class="footer-note">18+ · exclusivo</p>
@@ -78,7 +84,6 @@
     </main>
   </div>
 
-  <!-- FORA do .page — garante que fique por cima de tudo -->
   <ClientOnly>
     <Teleport to="body">
       <div
@@ -125,20 +130,41 @@
           <label class="wl-label">Bio</label>
           <input v-model="edit.bio" type="text" maxlength="160" class="wl-input">
 
-          <label class="wl-label">Banner (URL da imagem)</label>
-          <input v-model="edit.avatar_url" type="url" class="wl-input" placeholder="https://... ou deixe vazio">
+          <label class="wl-label">Banner atual</label>
+          <div v-if="!edit.hideBanner" class="wl-preview">
+            <img :src="editPreviewBanner" alt="Banner atual">
+          </div>
+          <p v-else class="wl-muted">Banner oculto na página</p>
+
           <div class="wl-banner-actions">
-            <button type="button" class="wl-btn wl-btn-sm wl-btn-ghost" @click="edit.avatar_url = ''">
-              Remover banner
+            <button
+              type="button"
+              class="wl-btn wl-btn-sm"
+              :class="edit.hideBanner ? 'wl-btn-primary' : 'wl-btn-danger'"
+              @click="toggleHideBanner"
+            >
+              {{ edit.hideBanner ? 'Mostrar banner' : 'Remover / ocultar banner' }}
             </button>
-            <button type="button" class="wl-btn wl-btn-sm wl-btn-ghost" @click="edit.avatar_url = ''">
-              Usar banner padrão
+            <button
+              v-if="!edit.hideBanner && edit.avatar_url"
+              type="button"
+              class="wl-btn wl-btn-sm wl-btn-ghost"
+              @click="restoreDefaultBanner"
+            >
+              Voltar ao banner padrão
             </button>
           </div>
-          <div v-if="edit.avatar_url && !edit.avatar_url.startsWith('data:')" class="wl-preview">
-            <img :src="edit.avatar_url" alt="Prévia" @error="onPreviewError">
-          </div>
-          <p v-if="previewError" class="wl-error">Não foi possível carregar a imagem desta URL</p>
+
+          <label class="wl-label">Trocar banner (cole URL da imagem)</label>
+          <input
+            v-model="edit.avatar_url"
+            type="url"
+            class="wl-input"
+            placeholder="https://exemplo.com/foto.jpg"
+            :disabled="edit.hideBanner"
+            @input="onAvatarInput"
+          >
+          <p v-if="previewError" class="wl-error">Não foi possível carregar esta URL</p>
 
           <div class="wl-links-head">
             <span class="wl-label" style="margin:0">Links</span>
@@ -163,7 +189,7 @@
                   :checked="l.enabled !== false"
                   @change="l.enabled = ($event.target as HTMLInputElement).checked"
                 >
-                <span>{{ l.enabled === false ? 'Desativado' : 'Ativo' }}</span>
+                <span>{{ l.enabled === false ? 'Desativado (some da página)' : 'Ativo' }}</span>
               </label>
               <button type="button" class="wl-btn wl-btn-sm wl-btn-danger" @click="removeLink(i)">Remover</button>
             </div>
@@ -197,6 +223,7 @@ import { WANESSA_BANNER } from '~/utils/banner'
 import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 
 const DEFAULT_BANNER = WANESSA_BANNER
+const HIDDEN_BANNER_TOKEN = '__HIDDEN__'
 const VID_KEY = 'wanessa_vid'
 const VIEW_DAY_KEY = 'wanessa_view_day'
 const CLICK_DAY_PREFIX = 'wanessa_click_'
@@ -205,12 +232,11 @@ const config = reactive({
   name: 'Wanessa',
   bio: 'língua bifurcada · o resto tu descobre 👅',
   avatar_url: DEFAULT_BANNER as string,
-  links: [
-    { label: 'Canal de prévias', icon: '📱', logo: LOGO_TG_BLUE, url: 'https://t.me/+yA5Y1pAWx5RlMWIx', enabled: true },
-    { label: 'Telegram VIP', icon: '⭐', logo: LOGO_TG_PURPLE, url: 'https://t.me/wanessaavipbot?start=pressel', enabled: true },
-    { label: 'PrivSex', icon: '🔥', logo: LOGO_PRIVSEX, url: 'https://privsex.com/wanessa', enabled: true }
-  ] as LinkItem[]
+  links: [] as LinkItem[]
 })
+
+const configReady = ref(false)
+const bannerHidden = ref(false)
 
 const showLogin = ref(false)
 const isAdmin = ref(false)
@@ -221,10 +247,12 @@ const saveError = ref('')
 const loading = ref(false)
 const previewError = ref(false)
 const passInput = ref<HTMLInputElement | null>(null)
+
 const edit = reactive({
   name: '',
   bio: '',
-  avatar_url: '',
+  avatar_url: '' as string,
+  hideBanner: false,
   links: [] as LinkItem[]
 })
 
@@ -233,9 +261,18 @@ const visibleLinks = computed(() =>
 )
 
 const displayBanner = computed(() => {
+  if (bannerHidden.value) return ''
   const url = (config.avatar_url || '').trim()
-  if (!url) return DEFAULT_BANNER
+  if (!url || url === HIDDEN_BANNER_TOKEN) return DEFAULT_BANNER
   return url
+})
+
+/** Prévia no painel: URL custom, ou padrão embutido */
+const editPreviewBanner = computed(() => {
+  if (edit.hideBanner) return ''
+  const url = (edit.avatar_url || '').trim()
+  if (url && !url.startsWith('data:')) return url
+  return DEFAULT_BANNER
 })
 
 function isPrevias(label: string) {
@@ -373,7 +410,49 @@ function attachLogo(l: LinkItem): LinkItem {
   return { ...l, logo, enabled: l.enabled !== false }
 }
 
-onMounted(async () => {
+function applyServerConfig(data: any) {
+  if (!data) return
+
+  config.name = data.name || config.name
+  const incomingBio = (data.bio || '').trim()
+  const isGeneric = !incomingBio || /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|conteudo\s*&?\s*links/i.test(incomingBio)
+  if (!isGeneric) config.bio = incomingBio
+
+  const savedAvatar = (data.avatar_url || '').trim()
+  if (savedAvatar === HIDDEN_BANNER_TOKEN) {
+    bannerHidden.value = true
+    config.avatar_url = HIDDEN_BANNER_TOKEN
+  } else if (savedAvatar && !savedAvatar.startsWith('data:')) {
+    bannerHidden.value = false
+    config.avatar_url = savedAvatar
+  } else {
+    bannerHidden.value = false
+    config.avatar_url = DEFAULT_BANNER
+  }
+
+  if (Array.isArray(data.links) && data.links.length) {
+    config.links = data.links
+      .filter((l: any) => l && l.label)
+      .map((l: any) => attachLogo({
+        label: String(l.label || ''),
+        icon: String(l.icon || '🔗'),
+        url: String(l.url || '#'),
+        enabled: l.enabled !== false
+      }))
+  }
+}
+
+// Carrega no setup (SSR + client) — evita flash dos botões desativados
+const { data: remoteConfig } = await useAsyncData('link-page-config', () =>
+  $fetch<any>('/api/config').catch(() => null)
+)
+
+if (remoteConfig.value) {
+  applyServerConfig(remoteConfig.value)
+}
+configReady.value = true
+
+onMounted(() => {
   const block = (e: Event) => { e.preventDefault(); return false }
   document.addEventListener('copy', block, true)
   document.addEventListener('cut', block, true)
@@ -381,34 +460,6 @@ onMounted(async () => {
   document.addEventListener('dragstart', block, true)
   document.addEventListener('contextmenu', block, true)
   getOrCreateVisitorId()
-
-  try {
-    const data = await $fetch<any>('/api/config')
-    if (data) {
-      config.name = data.name || config.name
-      const incomingBio = (data.bio || '').trim()
-      const isGeneric = !incomingBio || /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|conteudo\s*&?\s*links/i.test(incomingBio)
-      if (!isGeneric) config.bio = incomingBio
-
-      const savedAvatar = (data.avatar_url || '').trim()
-      if (savedAvatar && !savedAvatar.startsWith('data:')) {
-        config.avatar_url = savedAvatar
-      } else {
-        config.avatar_url = DEFAULT_BANNER
-      }
-
-      if (Array.isArray(data.links) && data.links.length) {
-        config.links = data.links
-          .filter((l: any) => l && l.label)
-          .map((l: any) => attachLogo({
-            label: String(l.label || ''),
-            icon: String(l.icon || '🔗'),
-            url: String(l.url || '#'),
-            enabled: l.enabled !== false
-          }))
-      }
-    }
-  } catch {}
 
   if (!alreadyViewedToday()) {
     markViewedToday()
@@ -428,8 +479,10 @@ function openLogin() {
 function openEdit() {
   edit.name = config.name
   edit.bio = config.bio
+  edit.hideBanner = bannerHidden.value
   const av = config.avatar_url || ''
-  edit.avatar_url = av.startsWith('data:') ? '' : av
+  // campo de URL só mostra se for URL real (não data: embutido)
+  edit.avatar_url = av.startsWith('data:') || av === HIDDEN_BANNER_TOKEN ? '' : av
   edit.links = config.links.map((l) => ({
     label: l.label,
     icon: l.icon,
@@ -448,6 +501,22 @@ function closeAdmin() {
   saveError.value = ''
 }
 
+function toggleHideBanner() {
+  edit.hideBanner = !edit.hideBanner
+  if (edit.hideBanner) previewError.value = false
+}
+
+function restoreDefaultBanner() {
+  edit.avatar_url = ''
+  edit.hideBanner = false
+  previewError.value = false
+}
+
+function onAvatarInput() {
+  previewError.value = false
+  if (edit.avatar_url.trim()) edit.hideBanner = false
+}
+
 function addLink() {
   edit.links.push({ label: '', icon: '🔗', url: '', enabled: true })
 }
@@ -455,12 +524,6 @@ function addLink() {
 function removeLink(i: number) {
   edit.links.splice(i, 1)
 }
-
-function onPreviewError() {
-  previewError.value = true
-}
-
-watch(() => edit.avatar_url, () => { previewError.value = false })
 
 async function doLogin() {
   loginError.value = ''
@@ -483,10 +546,17 @@ async function doSave() {
   saveError.value = ''
   loading.value = true
   try {
+    let avatarToSave = ''
+    if (edit.hideBanner) {
+      avatarToSave = HIDDEN_BANNER_TOKEN
+    } else {
+      avatarToSave = (edit.avatar_url || '').trim()
+    }
+
     const payload = {
       name: edit.name,
       bio: edit.bio,
-      avatar_url: (edit.avatar_url || '').trim(),
+      avatar_url: avatarToSave,
       links: edit.links
         .filter((l) => l.label.trim())
         .map((l) => ({
@@ -500,7 +570,18 @@ async function doSave() {
 
     config.name = payload.name
     config.bio = payload.bio
-    config.avatar_url = payload.avatar_url || DEFAULT_BANNER
+
+    if (payload.avatar_url === HIDDEN_BANNER_TOKEN) {
+      bannerHidden.value = true
+      config.avatar_url = HIDDEN_BANNER_TOKEN
+    } else if (payload.avatar_url) {
+      bannerHidden.value = false
+      config.avatar_url = payload.avatar_url
+    } else {
+      bannerHidden.value = false
+      config.avatar_url = DEFAULT_BANNER
+    }
+
     config.links = payload.links.map((l) => attachLogo(l))
 
     saveMsg.value = 'Salvo!'
@@ -589,6 +670,17 @@ async function doSave() {
   gap: 16px;
   flex-shrink: 0;
 }
+.links-skeleton .skel {
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.85; }
+}
 
 .link {
   display: flex; align-items: center; gap: 10px; width: 100%;
@@ -665,21 +757,13 @@ async function doSave() {
 </style>
 
 <style>
-/* Overlay admin — SEMPRE por cima de tudo */
 .wl-overlay {
   position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: 100dvh !important;
+  top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+  width: 100vw !important; height: 100dvh !important;
   z-index: 2147483646 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 16px !important;
-  margin: 0 !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  padding: 16px !important; margin: 0 !important;
   background: rgba(0, 0, 0, 0.85) !important;
   box-sizing: border-box !important;
   overflow-y: auto !important;
@@ -706,175 +790,79 @@ async function doSave() {
   user-select: text !important;
   pointer-events: auto !important;
 }
-.wl-card input,
-.wl-card textarea,
-.wl-card button {
+.wl-card input, .wl-card textarea, .wl-card button {
   pointer-events: auto !important;
   -webkit-user-select: text !important;
   user-select: text !important;
 }
-.wl-card h2 {
-  font-size: 1.15rem;
-  margin: 0 0 14px;
-  color: #fff;
-}
-.wl-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
+.wl-card h2 { font-size: 1.15rem; margin: 0 0 14px; color: #fff; }
+.wl-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .wl-head h2 { margin: 0; }
 .wl-x {
-  background: transparent;
-  border: none;
-  color: rgba(255,255,255,0.55);
-  font-size: 1.7rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0 4px;
+  background: transparent; border: none; color: rgba(255,255,255,0.55);
+  font-size: 1.7rem; line-height: 1; cursor: pointer; padding: 0 4px;
 }
 .wl-label {
-  display: block;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  display: block; font-size: 0.75rem; color: rgba(255, 255, 255, 0.5);
   margin: 12px 0 4px;
 }
+.wl-muted { font-size: 0.8rem; color: rgba(255,255,255,0.4); margin: 6px 0; }
 .wl-input {
-  width: 100% !important;
-  padding: 11px 12px !important;
-  border-radius: 10px !important;
+  width: 100% !important; padding: 11px 12px !important; border-radius: 10px !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: #fff !important;
-  font-size: 0.9rem !important;
-  box-sizing: border-box !important;
+  background: rgba(255, 255, 255, 0.06) !important; color: #fff !important;
+  font-size: 0.9rem !important; box-sizing: border-box !important;
 }
+.wl-input:disabled { opacity: 0.4; }
 .wl-btn {
-  width: 100%;
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.9rem;
+  width: 100%; margin-top: 10px; padding: 12px; border-radius: 10px; border: none;
+  font-weight: 600; cursor: pointer; font-size: 0.9rem;
 }
-.wl-btn-primary {
-  background: linear-gradient(135deg, #ec4899, #c026d3);
-  color: #fff;
-}
-.wl-btn-ghost {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
-}
-.wl-btn-sm {
-  width: auto;
-  padding: 6px 12px;
-  font-size: 0.78rem;
-  margin-top: 0;
-}
+.wl-btn-primary { background: linear-gradient(135deg, #ec4899, #c026d3); color: #fff; }
+.wl-btn-ghost { background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; }
+.wl-btn-sm { width: auto; padding: 6px 12px; font-size: 0.78rem; margin-top: 0; }
 .wl-btn-danger {
   background: rgba(248, 113, 113, 0.15);
   border: 1px solid rgba(248, 113, 113, 0.4);
   color: #fca5a5;
 }
-.wl-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
+.wl-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .wl-error { color: #f87171; font-size: 0.8rem; margin-top: 8px; }
 .wl-ok { color: #4ade80; font-size: 0.8rem; margin-top: 8px; }
-.wl-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 14px;
-}
+.wl-row { display: flex; gap: 8px; margin-top: 14px; }
 .wl-row .wl-btn { flex: 1; margin-top: 0; }
-
-.wl-banner-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
+.wl-banner-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .wl-preview {
-  margin-top: 10px;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.1);
-  max-height: 140px;
+  margin-top: 6px; border-radius: 10px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1); max-height: 140px; background: #0a0a0c;
 }
-.wl-preview img {
-  width: 100%;
-  height: 140px;
-  object-fit: cover;
-  display: block;
-}
-
+.wl-preview img { width: 100%; height: 140px; object-fit: cover; display: block; }
 .wl-links-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 16px;
-  margin-bottom: 4px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 16px; margin-bottom: 4px;
 }
-
 .wl-link-edit {
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 12px;
-  padding: 10px;
-  margin-top: 10px;
-  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+  padding: 10px; margin-top: 10px; background: rgba(255,255,255,0.03);
 }
-.wl-link-edit.is-off {
-  opacity: 0.55;
-  border-style: dashed;
-}
+.wl-link-edit.is-off { opacity: 0.55; border-style: dashed; }
 .wl-link-row {
-  display: grid;
-  grid-template-columns: 48px 1fr;
-  gap: 6px;
-  margin-bottom: 6px;
+  display: grid; grid-template-columns: 48px 1fr; gap: 6px; margin-bottom: 6px;
 }
-.wl-icon {
-  text-align: center !important;
-  padding: 8px 4px !important;
-}
+.wl-icon { text-align: center !important; padding: 8px 4px !important; }
 .wl-link-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
-  flex-wrap: wrap;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-top: 8px; flex-wrap: wrap;
 }
 .wl-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
-  color: rgba(255,255,255,0.7);
-  margin: 0 !important;
-  cursor: pointer;
+  display: flex; align-items: center; gap: 6px; font-size: 0.78rem;
+  color: rgba(255,255,255,0.7); margin: 0 !important; cursor: pointer;
 }
-.wl-toggle input {
-  width: auto !important;
-  accent-color: #ec4899;
-}
-
+.wl-toggle input { width: auto !important; accent-color: #ec4899; }
 .wl-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0,0,0,0);
-  border: 0;
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); border: 0;
 }
-
 @media (max-width: 480px) {
   .wl-card { max-width: 100%; padding: 16px; }
 }
