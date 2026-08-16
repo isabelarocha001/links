@@ -21,7 +21,7 @@
       <div v-if="configReady && displayBanner && !bannerHidden" class="banner-wrap">
         <img
           :src="displayBanner"
-          :alt="config.name"
+          alt=""
           class="banner-img"
           width="480"
           height="623"
@@ -33,7 +33,6 @@
 
       <header class="identity">
         <p class="tagline">🔥 só pra quem aguenta 🔥</p>
-        <h1 class="name">{{ config.name }}</h1>
         <p class="bio">{{ config.bio }}</p>
       </header>
 
@@ -41,7 +40,6 @@
         <p class="cta-title">👇 Escolhe o que tu quer primeiro 👇</p>
       </div>
 
-      <!-- Só renderiza links DEPOIS de carregar o config do servidor -->
       <div v-if="configReady" class="links">
         <a
           v-for="link in visibleLinks"
@@ -79,7 +77,7 @@
 
       <footer class="footer">
         <p class="footer-note">18+ · exclusivo</p>
-        <p class="footer-copy">© Todos os direitos reservados a Wanessa Borges</p>
+        <p class="footer-copy">© Todos os direitos reservados</p>
       </footer>
     </main>
   </div>
@@ -123,9 +121,6 @@
             <h2>Editar página</h2>
             <button type="button" class="wl-x" aria-label="Fechar" @click="closeAdmin">×</button>
           </div>
-
-          <label class="wl-label">Nome</label>
-          <input v-model="edit.name" type="text" maxlength="80" class="wl-input">
 
           <label class="wl-label">Bio</label>
           <input v-model="edit.bio" type="text" maxlength="160" class="wl-input">
@@ -267,7 +262,6 @@ const displayBanner = computed(() => {
   return url
 })
 
-/** Prévia no painel: URL custom, ou padrão embutido */
 const editPreviewBanner = computed(() => {
   if (edit.hideBanner) return ''
   const url = (edit.avatar_url || '').trim()
@@ -442,7 +436,6 @@ function applyServerConfig(data: any) {
   }
 }
 
-// Carrega no setup (SSR + client) — evita flash dos botões desativados
 const { data: remoteConfig } = await useAsyncData('link-page-config', () =>
   $fetch<any>('/api/config').catch(() => null)
 )
@@ -481,7 +474,6 @@ function openEdit() {
   edit.bio = config.bio
   edit.hideBanner = bannerHidden.value
   const av = config.avatar_url || ''
-  // campo de URL só mostra se for URL real (não data: embutido)
   edit.avatar_url = av.startsWith('data:') || av === HIDDEN_BANNER_TOKEN ? '' : av
   edit.links = config.links.map((l) => ({
     label: l.label,
@@ -554,7 +546,7 @@ async function doSave() {
     }
 
     const payload = {
-      name: edit.name,
+      name: edit.name || config.name || 'Wanessa',
       bio: edit.bio,
       avatar_url: avatarToSave,
       links: edit.links
@@ -656,10 +648,9 @@ async function doSave() {
 .identity { text-align: center; margin-top: 8px; margin-bottom: 6px; width: 100%; flex-shrink: 0; }
 .tagline {
   font-size: 0.62rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
-  color: #f9a8d4; margin-bottom: 1px; line-height: 1.2;
+  color: #f9a8d4; margin-bottom: 2px; line-height: 1.2;
 }
-.name { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.03em; color: #fff; line-height: 1.15; }
-.bio { font-size: 0.78rem; color: #fbcfe8; margin-top: 1px; line-height: 1.3; }
+.bio { font-size: 0.78rem; color: #fbcfe8; margin-top: 2px; line-height: 1.3; }
 .cta-choose { text-align: center; margin-bottom: 12px; flex-shrink: 0; }
 .cta-title { font-size: 0.85rem; font-weight: 600; color: #fbcfe8; line-height: 1.3; }
 
@@ -734,7 +725,6 @@ async function doSave() {
 
 @media (min-height: 720px) {
   .banner-wrap { max-height: min(44vh, 360px); }
-  .name { font-size: 1.55rem; }
   .links { gap: 18px; }
   .link { padding: 14px 16px; font-size: 0.9rem; }
   .identity { margin-top: 10px; margin-bottom: 8px; }
@@ -748,7 +738,6 @@ async function doSave() {
 @media (max-height: 640px) {
   .banner-wrap { max-height: min(32vh, 220px); }
   .tagline { font-size: 0.55rem; }
-  .name { font-size: 1.2rem; }
   .bio { font-size: 0.72rem; }
   .cta-title { font-size: 0.78rem; }
   .link { padding: 10px 12px; font-size: 0.82rem; }
@@ -833,10 +822,22 @@ async function doSave() {
 .wl-row .wl-btn { flex: 1; margin-top: 0; }
 .wl-banner-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .wl-preview {
-  margin-top: 6px; border-radius: 10px; overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.1); max-height: 140px; background: #0a0a0c;
+  margin-top: 6px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #0a0a0c;
+  width: 100%;
 }
-.wl-preview img { width: 100%; height: 140px; object-fit: cover; display: block; }
+.wl-preview img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 480 / 623;
+  object-fit: contain;
+  object-position: center top;
+  display: block;
+  background: #0a0a0c;
+}
 .wl-links-head {
   display: flex; align-items: center; justify-content: space-between;
   margin-top: 16px; margin-bottom: 4px;
