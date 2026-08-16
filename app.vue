@@ -252,17 +252,33 @@ async function doSave() {
 </script>
 
 <style scoped>
-.page { min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; padding: max(8px, env(safe-area-inset-top)) 14px max(12px, env(safe-area-inset-bottom)); position: relative; z-index: 1; overflow-x: hidden; overflow-y: auto; background: #0a0a0c; box-sizing: border-box; -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; -webkit-tap-highlight-color: transparent; }
+.page {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+  position: relative;
+  z-index: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #0a0a0c;
+  box-sizing: border-box;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
 .page--locked { pointer-events: none; filter: brightness(0.35); }
 .page ::selection, .page *::selection { background: transparent !important; color: inherit !important; }
 .page *, .page *::before, .page *::after { -webkit-user-select: none !important; user-select: none !important; -webkit-user-drag: none !important; }
-.bg-glow { position: absolute; top: -8%; left: 50%; transform: translateX(-50%); width: min(100vw, 420px); height: 280px; background: radial-gradient(circle, rgba(236, 72, 153, 0.16) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+.bg-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(100vw, 420px); height: 280px; background: radial-gradient(circle, rgba(236, 72, 153, 0.16) 0%, transparent 70%); pointer-events: none; z-index: 0; }
 .lock-btn { position: fixed; top: max(8px, env(safe-area-inset-top)); right: 8px; z-index: 50; width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .page--locked .lock-btn { pointer-events: none; }
-.container { width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; padding-top: 28px; }
-.identity { text-align: center; margin-top: 8px; margin-bottom: 6px; width: 100%; flex-shrink: 0; }
+.container { width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; }
+.identity { text-align: center; margin-top: 0; margin-bottom: 6px; width: 100%; flex-shrink: 0; }
 .bio { font-family: Inter, system-ui, sans-serif; font-size: 0.88rem; font-weight: 500; color: rgba(255, 255, 255, 0.88); margin-top: 4px; line-height: 1.4; }
-.cta-choose { text-align: center; margin-top: 6px; margin-bottom: 18px; flex-shrink: 0; }
+.cta-choose { text-align: center; margin-top: 0; margin-bottom: 18px; flex-shrink: 0; }
 .cta-title { font-family: Inter, system-ui, sans-serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #f6339a; line-height: 1.35; }
 .links { width: 100%; display: flex; flex-direction: column; gap: 18px; flex-shrink: 0; }
 .link-block { width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22); }
@@ -299,8 +315,8 @@ async function doSave() {
 .footer { margin-top: 12px; text-align: center; flex-shrink: 0; width: 100%; }
 .footer-note { font-size: 0.7rem; color: rgba(255, 255, 255, 0.4); margin-bottom: 4px; }
 .footer-copy { font-size: 0.62rem; color: rgba(255, 255, 255, 0.28); letter-spacing: 0.02em; line-height: 1.35; }
-@media (min-height: 720px) { .links { gap: 18px; } .link { padding: 13px 16px; font-size: 0.9rem; } .identity { margin-top: 10px; margin-bottom: 8px; } .cta-choose { margin-bottom: 20px; } }
-@media (min-width: 768px) { .page { padding-top: 24px; } .container { max-width: 380px; } .links { gap: 18px; } }
+@media (min-height: 720px) { .links { gap: 18px; } .link { padding: 13px 16px; font-size: 0.9rem; } .cta-choose { margin-bottom: 20px; } }
+@media (min-width: 768px) { .container { max-width: 380px; } .links { gap: 18px; } }
 @media (max-height: 640px) { .bio { font-size: 0.72rem; } .cta-title { font-size: 0.78rem; } .link { padding: 10px 12px; font-size: 0.82rem; } .links { gap: 14px; } }
 </style>
 
