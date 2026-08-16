@@ -6,7 +6,7 @@
  */
 
 const PRESSEL_WEBHOOK = 'https://telegram-metricas.vercel.app/api/pressel'
-const LINK_TREE_HOST = 'wanessa-links.vercel.app'
+const LINK_TREE_HOST = 'wanessabsx.vercel.app'
 const LINK_TREE_PATH = '/links/wanessa'
 const LINK_TREE_SOURCE = 'wanessa_links'
 
@@ -14,6 +14,8 @@ const FALLBACK_SECRET =
   'trk_wanessa_ingest_9f3c2a7b1e8d4c6f0a5b7e9d2c4f6a8b'
 
 const ALLOWED_ORIGINS = new Set([
+  'https://wanessabsx.vercel.app',
+  'https://www.wanessabsx.vercel.app',
   'https://wanessa-links.vercel.app',
   'https://www.wanessa-links.vercel.app',
   'http://localhost:3000',
@@ -66,6 +68,7 @@ function originAllowed(event: any): boolean {
       const base = `${u.protocol}//${u.host}`
       if (ALLOWED_ORIGINS.has(base)) return true
       if (u.hostname === LINK_TREE_HOST) return true
+      if (u.hostname === 'wanessa-links.vercel.app') return true
     } catch {}
   }
 
