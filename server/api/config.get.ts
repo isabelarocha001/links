@@ -12,9 +12,9 @@ export default defineEventHandler(async () => {
     avatar_url: '',
     highlight_label: 'PrivSex',
     links: [
-      { label: 'Canal de prévias', icon: '📱', url: 'https://t.me/+yA5Y1pAWx5RlMWIx' },
+      { label: 'PrivSex', icon: '🔥', url: 'https://privsex.com/wanessa' },
       { label: 'Telegram VIP', icon: '⭐', url: 'https://t.me/wanessaavipbot?start=pressel' },
-      { label: 'PrivSex', icon: '🔥', url: 'https://privsex.com/wanessa' }
+      { label: 'Canal de prévias', icon: '📱', url: 'https://t.me/+yA5Y1pAWx5RlMWIx' }
     ]
   }
 
