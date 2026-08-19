@@ -2,7 +2,7 @@ export default defineEventHandler(async () => {
   const supabase = useAnonSupabase()
   const { data, error } = await supabase
     .from('link_page_config')
-    .select('name, bio, avatar_url, links, updated_at')
+    .select('name, bio, avatar_url, links, highlight_label, updated_at')
     .eq('id', 'main')
     .single()
 
@@ -10,6 +10,7 @@ export default defineEventHandler(async () => {
     name: 'Wanessa',
     bio: 'língua bifurcada · o resto tu descobre 👅',
     avatar_url: '',
+    highlight_label: 'PrivSex',
     links: [
       { label: 'Canal de prévias', icon: '📱', url: 'https://t.me/+yA5Y1pAWx5RlMWIx' },
       { label: 'Telegram VIP', icon: '⭐', url: 'https://t.me/wanessaavipbot?start=pressel' },
@@ -25,6 +26,11 @@ export default defineEventHandler(async () => {
   const bio = (data.bio || '').trim()
   if (!bio || /creator|conteúdo\s*&?\s*links|content\s*&?\s*links/i.test(bio)) {
     data.bio = DEFAULT.bio
+  }
+
+  // Garante highlight (fallback PrivSex)
+  if (!data.highlight_label || !String(data.highlight_label).trim()) {
+    data.highlight_label = 'PrivSex'
   }
 
   return data
