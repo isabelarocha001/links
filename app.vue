@@ -14,7 +14,7 @@
       <div v-if="configReady" class="links">
         <div v-for="link in visibleLinks" :key="link.label + '|' + link.url" class="link-block">
           <p v-if="link.desc" class="link-intro">{{ link.desc }}</p>
-          <a :href="link.url" class="link" :class="{ 'link-rgb link-pulse': isPrevias(link.label) }" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onLinkPointerDown(link)">
+          <a :href="link.url" class="link" :class="{ 'link-rgb link-pulse': isHighlighted(link.label) }" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onLinkPointerDown(link)">
             <span class="link-icon">
               <img v-if="link.logo" :src="link.logo" alt="" class="logo-img" width="28" height="28" loading="lazy" decoding="async" draggable="false">
               <template v-else>{{ link.icon }}</template>
@@ -51,6 +51,14 @@
           <div class="wl-head"><h2>Editar página</h2><button type="button" class="wl-x" aria-label="Fechar" @click="closeAdmin">×</button></div>
           <label class="wl-label">Bio</label>
           <input v-model="edit.bio" type="text" maxlength="200" class="wl-input">
+
+          <label class="wl-label">Botão em destaque (RGB + pulse)</label>
+          <select v-model="edit.highlight_label" class="wl-input wl-select">
+            <option value="">Nenhum</option>
+            <option v-for="l in edit.links.filter(x => x.label.trim())" :key="l.label" :value="l.label">{{ l.label }}</option>
+          </select>
+          <p class="wl-hint">O botão escolhido fica com borda RGB animada + pulse pra chamar atenção no olhar.</p>
+
           <div class="wl-links-head"><span class="wl-label" style="margin:0">Links</span><button type="button" class="wl-btn wl-btn-sm wl-btn-primary" @click="addLink">+ Adicionar</button></div>
           <div v-for="(l, i) in edit.links" :key="i" class="wl-link-edit" :class="{ 'is-off': l.enabled === false }">
             <div class="wl-link-row"><input v-model="l.icon" class="wl-input wl-icon" placeholder="🔥" title="Ícone"><input v-model="l.label" class="wl-input" placeholder="Título do botão"></div>
@@ -82,7 +90,9 @@ const HIDDEN_BANNER_TOKEN = '__HIDDEN__'
 const VID_KEY = 'wanessa_vid'
 const VIEW_DAY_KEY = 'wanessa_view_day'
 const CLICK_DAY_PREFIX = 'wanessa_click_'
-const config = reactive({ name: 'Wanessa', bio: '', avatar_url: '' as string, links: [] as LinkItem[] })
+/** Padrão: PrivSex em destaque (RGB) */
+const DEFAULT_HIGHLIGHT = 'PrivSex'
+const config = reactive({ name: 'Wanessa', bio: '', avatar_url: '' as string, links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT })
 const configReady = ref(false)
 const bannerHidden = ref(true)
 const showLogin = ref(false)
@@ -94,11 +104,15 @@ const saveError = ref('')
 const loading = ref(false)
 const previewError = ref(false)
 const passInput = ref<HTMLInputElement | null>(null)
-const edit = reactive({ name: '', bio: '', avatar_url: '' as string, hideBanner: true, links: [] as LinkItem[] })
+const edit = reactive({ name: '', bio: '', avatar_url: '' as string, hideBanner: true, links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT })
 const visibleLinks = computed(() => config.links.filter((l) => l.enabled !== false && l.label))
 const displayBanner = computed(() => '')
 const editPreviewBanner = computed(() => '')
-function isPrevias(label: string) { return /pr[eé]via|canal/i.test(label || '') }
+function isHighlighted(label: string) {
+  const target = (config.highlight_label || DEFAULT_HIGHLIGHT).trim().toLowerCase()
+  if (!target || !label) return false
+  return label.trim().toLowerCase() === target
+}
 function getOrCreateVisitorId(): string {
   if (typeof window === 'undefined') return ''
   try {
@@ -194,6 +208,9 @@ function applyServerConfig(data: any) {
   else config.bio = incomingBio
   bannerHidden.value = true
   config.avatar_url = ''
+  // highlight: do servidor, senão PrivSex
+  const hl = String(data.highlight_label || '').trim()
+  config.highlight_label = hl || DEFAULT_HIGHLIGHT
   if (Array.isArray(data.links) && data.links.length) {
     config.links = data.links.filter((l: any) => l && l.label).map((l: any) => attachLogo({ label: String(l.label || ''), icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled: l.enabled !== false }))
   }
@@ -216,13 +233,27 @@ onMounted(() => {
 function openLogin() { password.value = ''; loginError.value = ''; showLogin.value = true; nextTick(() => passInput.value?.focus()) }
 function openEdit() {
   edit.name = config.name; edit.bio = config.bio; edit.hideBanner = true; edit.avatar_url = ''
+  edit.highlight_label = config.highlight_label || DEFAULT_HIGHLIGHT
   edit.links = config.links.map((l) => ({ label: l.label, icon: l.icon, url: l.url, desc: l.desc || '', enabled: l.enabled !== false }))
   if (!edit.links.length) edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true })
+  // se o highlight atual não existir mais na lista, fallback PrivSex
+  const labels = edit.links.map(l => l.label.trim()).filter(Boolean)
+  if (edit.highlight_label && !labels.some(l => l.toLowerCase() === edit.highlight_label.toLowerCase())) {
+    const priv = labels.find(l => /priv/i.test(l))
+    edit.highlight_label = priv || labels[0] || DEFAULT_HIGHLIGHT
+  }
   previewError.value = false
 }
 function closeAdmin() { isAdmin.value = false; saveMsg.value = ''; saveError.value = '' }
 function addLink() { edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true }) }
-function removeLink(i: number) { edit.links.splice(i, 1) }
+function removeLink(i: number) {
+  const removed = edit.links[i]?.label
+  edit.links.splice(i, 1)
+  if (removed && edit.highlight_label && removed.trim().toLowerCase() === edit.highlight_label.trim().toLowerCase()) {
+    const priv = edit.links.find(l => /priv/i.test(l.label || ''))
+    edit.highlight_label = priv?.label || edit.links[0]?.label || ''
+  }
+}
 async function doLogin() {
   loginError.value = ''; loading.value = true
   try {
@@ -238,10 +269,12 @@ async function doSave() {
       name: edit.name || config.name || 'Wanessa',
       bio: edit.bio,
       avatar_url: HIDDEN_BANNER_TOKEN,
+      highlight_label: (edit.highlight_label || '').trim() || DEFAULT_HIGHLIGHT,
       links: edit.links.filter((l) => l.label.trim()).map((l) => ({ label: l.label.trim(), icon: l.icon || '🔗', url: l.url || '#', desc: (l.desc || '').trim(), enabled: l.enabled !== false }))
     }
     await $fetch('/api/admin/update', { method: 'POST', body: payload })
     config.name = payload.name; config.bio = payload.bio
+    config.highlight_label = payload.highlight_label
     bannerHidden.value = true; config.avatar_url = ''
     config.links = payload.links.map((l) => attachLogo(l))
     saveMsg.value = 'Salvo!'; setTimeout(() => { saveMsg.value = '' }, 2500)
@@ -339,13 +372,16 @@ async function doSave() {
 <style>
 .wl-overlay { position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100dvh !important; z-index: 2147483646 !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: 16px !important; margin: 0 !important; background: rgba(0, 0, 0, 0.85) !important; box-sizing: border-box !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; isolation: isolate; pointer-events: auto !important; }
 .wl-card { position: relative !important; z-index: 2147483647 !important; background: #141416 !important; border: 1px solid rgba(255, 255, 255, 0.14) !important; border-radius: 16px !important; padding: 20px !important; width: 100% !important; max-width: 400px !important; max-height: min(88dvh, 720px) !important; overflow-y: auto !important; margin: auto !important; box-sizing: border-box !important; color: #fff !important; box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75) !important; -webkit-user-select: text !important; user-select: text !important; pointer-events: auto !important; }
-.wl-card input, .wl-card textarea, .wl-card button { pointer-events: auto !important; -webkit-user-select: text !important; user-select: text !important; }
+.wl-card input, .wl-card textarea, .wl-card button, .wl-card select { pointer-events: auto !important; -webkit-user-select: text !important; user-select: text !important; }
 .wl-card h2 { font-size: 1.15rem; margin: 0 0 14px; color: #fff; }
 .wl-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .wl-head h2 { margin: 0; }
 .wl-x { background: transparent; border: none; color: rgba(255,255,255,0.55); font-size: 1.7rem; line-height: 1; cursor: pointer; padding: 0 4px; }
 .wl-label { display: block; font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); margin: 12px 0 4px; }
 .wl-input { width: 100% !important; padding: 11px 12px !important; border-radius: 10px !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; background: rgba(255, 255, 255, 0.06) !important; color: #fff !important; font-size: 0.9rem !important; box-sizing: border-box !important; }
+.wl-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff99' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px !important; cursor: pointer; }
+.wl-select option { background: #1a1a1e; color: #fff; }
+.wl-hint { font-size: 0.72rem; color: rgba(255,255,255,0.4); margin: 4px 0 0; line-height: 1.35; }
 .wl-textarea { resize: vertical; min-height: 72px; line-height: 1.45; font-family: inherit; }
 .wl-btn { width: 100%; margin-top: 10px; padding: 12px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
 .wl-btn-primary { background: linear-gradient(135deg, #ec4899, #c026d3); color: #fff; }
