@@ -8,11 +8,14 @@
 <script setup lang="ts">
 /**
  * Pressel = redirecionador direto para o Canal de prévias (Telegram).
- * Tracking é disparado ANTES do redirect, com pequena espera para o beacon sair.
+ * - Tracking com dedupe diário (não conta 2x o mesmo lead no mesmo dia)
+ * - Pequena espera antes do redirect para o beacon sair
  */
 
 const TARGET = 'https://t.me/+yA5Y1pAWx5RlMWIx'
 const VID_KEY = 'wanessa_vid'
+const VIEW_DAY_KEY = 'wanessa_view_day'
+const CLICK_DAY_KEY = 'wanessa_click_previa_telegram'
 
 function getOrCreateVisitorId(): string {
   if (typeof window === 'undefined') return ''
@@ -30,6 +33,39 @@ function getOrCreateVisitorId(): string {
   } catch {
     return `v_${Date.now().toString(36)}`
   }
+}
+
+function todayKey(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function alreadyViewedToday(): boolean {
+  try {
+    return localStorage.getItem(VIEW_DAY_KEY) === todayKey()
+  } catch {
+    return false
+  }
+}
+
+function markViewedToday() {
+  try {
+    localStorage.setItem(VIEW_DAY_KEY, todayKey())
+  } catch {}
+}
+
+function alreadyClickedToday(): boolean {
+  try {
+    return localStorage.getItem(CLICK_DAY_KEY) === todayKey()
+  } catch {
+    return false
+  }
+}
+
+function markClickedToday() {
+  try {
+    localStorage.setItem(CLICK_DAY_KEY, todayKey())
+  } catch {}
 }
 
 function readUtms() {
@@ -64,7 +100,6 @@ function track(eventName: string, extra: Record<string, any> = {}) {
       const blob = new Blob([json], { type: 'application/json' })
       if (navigator.sendBeacon('/api/track', blob)) return true
     }
-    // fallback
     fetch('/api/track', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -82,22 +117,28 @@ function goRedirect() {
 }
 
 onMounted(() => {
-  // 1) gera visitor
   getOrCreateVisitorId()
 
-  // 2) dispara tracking (sempre — sem filtro de "já viu hoje")
-  track('page_view', { offer_slug: 'previa_telegram' })
-  track('outbound_click', {
-    label: 'Canal de prévias',
-    url: TARGET,
-    offer_slug: 'previa_telegram'
-  })
+  // page_view: só 1x por dia por browser
+  if (!alreadyViewedToday()) {
+    markViewedToday()
+    track('page_view', { offer_slug: 'previa_telegram' })
+  }
 
-  // 3) espera um pouco para o beacon sair, depois redireciona
+  // outbound_click: só 1x por dia por browser
+  if (!alreadyClickedToday()) {
+    markClickedToday()
+    track('outbound_click', {
+      label: 'Canal de prévias',
+      url: TARGET,
+      offer_slug: 'previa_telegram'
+    })
+  }
+
+  // espera o beacon sair, depois redireciona
   setTimeout(goRedirect, 280)
 })
 
-// Fallback meta refresh um pouco mais lento (caso JS falhe)
 useHead({
   meta: [
     { 'http-equiv': 'refresh', content: `1;url=${TARGET}` }
