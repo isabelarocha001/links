@@ -1,21 +1,51 @@
 <template>
   <div class="redirect-page">
-    <p class="msg">Abrindo o canal de prévias…</p>
-    <p class="sub">Se não abrir automaticamente, <a :href="TARGET" rel="noopener noreferrer">clique aqui</a>.</p>
+    <div class="card">
+      <img
+        class="photo"
+        src="/model.jpg"
+        alt="Wanessa"
+        width="320"
+        height="480"
+        decoding="async"
+      />
+
+      <div class="tg-row">
+        <span class="tg-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
+            <circle cx="12" cy="12" r="12" fill="#2AABEE"/>
+            <path d="M17.6 7.2c.2-.8-.5-1.2-1.1-.9L5.8 10.4c-.7.3-.7.8-.1 1l2.8.9 1.1 3.4c.1.4.4.5.7.3l1.6-1.4 3.1 2.3c.4.2.8 0 .9-.5l1.8-8.2z" fill="#fff"/>
+            <path d="M9.7 13.1l-.4 2.2c-.1.4.2.5.4.3l1.2-1.1" fill="#fff" opacity=".9"/>
+          </svg>
+        </span>
+        <span class="tg-label">Canal de prévias</span>
+      </div>
+
+      <p class="timer-label">Abrindo em <strong>{{ seconds }}</strong>s…</p>
+      <div class="bar">
+        <div class="bar-fill" :style="{ width: progress + '%' }"></div>
+      </div>
+
+      <a class="manual" :href="TARGET" rel="noopener noreferrer">Abrir agora →</a>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 /**
- * Pressel = redirecionador direto para o Canal de prévias (Telegram).
- * - Tracking com dedupe diário (não conta 2x o mesmo lead no mesmo dia)
- * - Pequena espera antes do redirect para o beacon sair
+ * Pressel com foto + ícone Telegram + timer.
+ * Redirect automático para o Canal de prévias.
+ * Tracking com dedupe diário.
  */
 
 const TARGET = 'https://t.me/+yA5Y1pAWx5RlMWIx'
+const COUNTDOWN_SEC = 3
 const VID_KEY = 'wanessa_vid'
 const VIEW_DAY_KEY = 'wanessa_view_day'
 const CLICK_DAY_KEY = 'wanessa_click_previa_telegram'
+
+const seconds = ref(COUNTDOWN_SEC)
+const progress = ref(0)
 
 function getOrCreateVisitorId(): string {
   if (typeof window === 'undefined') return ''
@@ -41,31 +71,16 @@ function todayKey(): string {
 }
 
 function alreadyViewedToday(): boolean {
-  try {
-    return localStorage.getItem(VIEW_DAY_KEY) === todayKey()
-  } catch {
-    return false
-  }
+  try { return localStorage.getItem(VIEW_DAY_KEY) === todayKey() } catch { return false }
 }
-
 function markViewedToday() {
-  try {
-    localStorage.setItem(VIEW_DAY_KEY, todayKey())
-  } catch {}
+  try { localStorage.setItem(VIEW_DAY_KEY, todayKey()) } catch {}
 }
-
 function alreadyClickedToday(): boolean {
-  try {
-    return localStorage.getItem(CLICK_DAY_KEY) === todayKey()
-  } catch {
-    return false
-  }
+  try { return localStorage.getItem(CLICK_DAY_KEY) === todayKey() } catch { return false }
 }
-
 function markClickedToday() {
-  try {
-    localStorage.setItem(CLICK_DAY_KEY, todayKey())
-  } catch {}
+  try { localStorage.setItem(CLICK_DAY_KEY, todayKey()) } catch {}
 }
 
 function readUtms() {
@@ -119,13 +134,10 @@ function goRedirect() {
 onMounted(() => {
   getOrCreateVisitorId()
 
-  // page_view: só 1x por dia por browser
   if (!alreadyViewedToday()) {
     markViewedToday()
     track('page_view', { offer_slug: 'previa_telegram' })
   }
-
-  // outbound_click: só 1x por dia por browser
   if (!alreadyClickedToday()) {
     markClickedToday()
     track('outbound_click', {
@@ -135,15 +147,28 @@ onMounted(() => {
     })
   }
 
-  // espera o beacon sair, depois redireciona
-  setTimeout(goRedirect, 280)
+  const totalMs = COUNTDOWN_SEC * 1000
+  const started = Date.now()
+  const tick = () => {
+    const elapsed = Date.now() - started
+    const left = Math.max(0, totalMs - elapsed)
+    seconds.value = Math.ceil(left / 1000)
+    progress.value = Math.min(100, (elapsed / totalMs) * 100)
+    if (left <= 0) {
+      goRedirect()
+      return
+    }
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
 })
 
 useHead({
+  title: 'Wanessa — Canal de prévias',
   meta: [
-    { 'http-equiv': 'refresh', content: `1;url=${TARGET}` }
-  ],
-  title: 'Wanessa — Canal de prévias'
+    // fallback se JS falhar
+    { 'http-equiv': 'refresh', content: `${COUNTDOWN_SEC + 2};url=${TARGET}` }
+  ]
 })
 </script>
 
@@ -151,26 +176,87 @@ useHead({
 .redirect-page {
   min-height: 100dvh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: #0a0a0c;
-  color: #fff;
+  padding: 20px 14px;
+  box-sizing: border-box;
+}
+.card {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.photo {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  background: #151518;
+}
+.tg-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.tg-icon {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(42, 171, 238, 0.35);
+}
+.tg-label {
   font-family: Inter, system-ui, sans-serif;
-  padding: 24px;
-  text-align: center;
-}
-.msg {
+  font-weight: 700;
   font-size: 1.05rem;
-  font-weight: 600;
-  margin-bottom: 10px;
+  color: #fff;
+  letter-spacing: 0.01em;
 }
-.sub {
+.timer-label {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 2px 0 0;
+}
+.timer-label strong {
+  color: #2AABEE;
+  font-variant-numeric: tabular-nums;
+}
+.bar {
+  width: 100%;
+  max-width: 220px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2AABEE, #229ED9);
+  transition: width 0.08s linear;
+}
+.manual {
+  margin-top: 6px;
+  font-family: Inter, system-ui, sans-serif;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.55);
-}
-.sub a {
+  font-weight: 600;
   color: #f472b6;
+  text-decoration: none;
+  opacity: 0.9;
+}
+.manual:hover {
   text-decoration: underline;
+  opacity: 1;
 }
 </style>
