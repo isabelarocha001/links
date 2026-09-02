@@ -14,7 +14,7 @@
 .wa-status-online { color: #25d366; }
 .wa-status-typing { color: #25d366; font-style: italic; }
 .wa-avatar-wrap { position: relative; flex-shrink: 0; }
-.wa-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(37, 211, 102, 0.45); background: #2a3942; }
+.wa-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; object-position: center top; border: 2px solid rgba(37, 211, 102, 0.45); background: #2a3942; }
 .wa-online-dot { position: absolute; right: 1px; bottom: 1px; width: 10px; height: 10px; border-radius: 50%; background: #25d366; border: 2px solid #1f2c34; }
 .wa-chat { flex: 1; overflow-y: auto; padding: 12px 10px 16px; background-color: #0b141a; background-image: linear-gradient(rgba(11,20,26,0.92), rgba(11,20,26,0.92)), url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); display: flex; flex-direction: column; gap: 6px; }
 .wa-day { align-self: center; background: #182229; color: #8696a0; font-size: 0.68rem; padding: 4px 10px; border-radius: 8px; margin: 4px 0 10px; }
@@ -129,7 +129,7 @@
   align-items: center;
   gap: 14px;
   width: 100%;
-  max-width: 340px;
+  max-width: 360px;
   margin: 0 auto 14px;
   padding: 14px 16px;
   border-radius: 14px;
@@ -137,47 +137,54 @@
   border: 1px solid rgba(192, 132, 252, 0.28);
   box-shadow: 0 8px 28px rgba(0,0,0,0.35);
   text-align: left;
+  box-sizing: border-box;
 }
 .ig-avatar {
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(192, 132, 252, 0.45);
+  object-position: center 20%;
+  border: 2px solid rgba(192, 132, 252, 0.5);
   flex-shrink: 0;
   background: #1a0f24;
+  display: block;
 }
 .ig-info { flex: 1; min-width: 0; }
 .ig-user {
   margin: 0 0 2px;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: #f5f0ff;
   letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ig-name {
   margin: 0 0 8px;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: rgba(245, 240, 255, 0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ig-stats {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  font-size: 0.7rem;
+  flex-wrap: nowrap;
+  gap: 8px 12px;
+  font-size: 0.68rem;
   color: rgba(245, 240, 255, 0.55);
+  overflow: hidden;
+}
+.ig-stats span {
+  white-space: nowrap;
 }
 .ig-stats b {
   color: #e9d5ff;
   font-weight: 700;
-}
-.bio-name {
-  margin: 0 0 4px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #e9d5ff;
 }
 .bio-meta {
   margin: 0 0 12px;
@@ -191,4 +198,9 @@
   line-height: 1.5;
   color: rgba(245, 240, 255, 0.55);
   max-width: 320px;
+}
+@media (max-width: 380px) {
+  .ig-card { gap: 10px; padding: 12px; }
+  .ig-avatar { width: 56px; height: 56px; min-width: 56px; min-height: 56px; }
+  .ig-stats { gap: 6px 8px; font-size: 0.64rem; }
 }
