@@ -1,7 +1,7 @@
 <template>
   <div
     class="page"
-    :class="{ 'page--locked': showLogin || isAdmin }"
+    :class="{ 'page--locked': showLogin || isAdmin, 'page--ready': pageReady }"
     @copy.prevent
     @cut.prevent
     @contextmenu.prevent
@@ -20,9 +20,9 @@
 
     <main class="container">
       <!-- HERO LUXURY -->
-      <header class="hero">
+      <header class="hero reveal reveal-1">
         <div class="photo-stage">
-          <div class="photo-frame">
+          <div class="photo-frame power-aura">
             <img
               v-for="(src, i) in gallery"
               :key="src + i"
@@ -34,6 +34,7 @@
             />
             <div class="photo-shine" aria-hidden="true"></div>
             <div class="photo-vignette" aria-hidden="true"></div>
+            <div class="power-ring" aria-hidden="true"></div>
           </div>
           <div class="photo-dots" aria-hidden="true">
             <span
@@ -49,14 +50,17 @@
           <p class="eyebrow">Modelo de Luxo</p>
           <h1 class="name">{{ config.name || 'Wanessa' }}</h1>
           <p class="tagline">{{ config.bio || 'Exclusividade. Elegância. Nível que poucos alcançam.' }}</p>
+          <p class="power-label">Instinto superior</p>
           <div class="accent-line" aria-hidden="true"></div>
         </div>
       </header>
 
-      <!-- CARDS PRINCIPAIS: PrivSex | Telegram -->
+      <p class="choose-label reveal reveal-2">O lead escolhe</p>
+
+      <!-- CARDS PRINCIPAIS empilhados -->
       <section class="main-cards" v-if="configReady">
         <a
-          class="lux-card lux-card--left"
+          class="lux-card lux-card--left reveal reveal-3"
           :href="privsexUrl"
           target="_blank"
           rel="noopener noreferrer"
@@ -76,7 +80,7 @@
         </a>
 
         <a
-          class="lux-card lux-card--right"
+          class="lux-card lux-card--right reveal reveal-4"
           :href="telegramPublicUrl"
           target="_blank"
           rel="noopener noreferrer"
@@ -97,7 +101,7 @@
       </section>
 
       <!-- VIP BOT -->
-      <section class="vip-block" v-if="configReady">
+      <section class="vip-block reveal reveal-5" v-if="configReady">
         <a
           class="vip-card"
           :href="vipBotUrl"
@@ -117,8 +121,8 @@
         </a>
       </section>
 
-      <!-- CONTATO DIRETO (opcional) -->
-      <section class="direct-section">
+      <!-- CONTATO DIRETO -->
+      <section class="direct-section reveal reveal-6">
         <p class="direct-label">Contato direto · apenas para quem deseja algo além</p>
         <div class="direct-stack">
           <a
@@ -152,7 +156,7 @@
         </div>
       </section>
 
-      <footer class="footer">
+      <footer class="footer reveal reveal-7">
         <p class="footer-copy">© Wanessa · Experiência exclusiva</p>
       </footer>
     </main>
@@ -269,7 +273,6 @@ const VID_KEY = 'wanessa_vid'
 const VIEW_DAY_KEY = 'wanessa_view_day'
 const CLICK_DAY_PREFIX = 'wanessa_click_'
 
-// URLs fixas de luxo
 const privsexUrl = 'https://privsex.com/wanessa'
 const telegramPublicUrl = 'https://t.me/+yA5Y1pAWx5RlMWIx'
 const vipBotUrl = 'https://t.me/wanessaavipbot?start=Pressel'
@@ -279,14 +282,10 @@ const telegramPrivateUrl = 'https://t.me/wanessabsx'
 const logoPriv = LOGO_PRIVSEX
 const logoTg = LOGO_TG_BLUE
 
-// Galeria — adicione mais fotos em /public (ex: model2.jpg, model3.jpg)
-const gallery = [
-  '/model.jpg',
-  '/model.jpg',
-  '/model.jpg',
-]
+const gallery = ['/model.jpg', '/model.jpg', '/model.jpg']
 
 const photoIndex = ref(0)
+const pageReady = ref(false)
 let photoTimer: ReturnType<typeof setInterval> | null = null
 
 const DEFAULT_LINKS: LinkItem[] = [
@@ -476,7 +475,10 @@ onMounted(() => {
     track('page_view', { offer_slug: 'wanessa_links' })
   }
 
-  // Animação de troca de fotos (estilo algoritmo)
+  requestAnimationFrame(() => {
+    pageReady.value = true
+  })
+
   photoTimer = setInterval(() => {
     photoIndex.value = (photoIndex.value + 1) % gallery.length
   }, 4200)
@@ -643,11 +645,34 @@ useHead({
   margin: 0 auto;
 }
 
+/* ===== REVEAL / SUPER PODER ===== */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px) scale(0.96);
+  filter: blur(6px);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.page--ready .reveal {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+.reveal-1 { transition-delay: 0.05s; }
+.reveal-2 { transition-delay: 0.22s; }
+.reveal-3 { transition-delay: 0.38s; }
+.reveal-4 { transition-delay: 0.52s; }
+.reveal-5 { transition-delay: 0.66s; }
+.reveal-6 { transition-delay: 0.8s; }
+.reveal-7 { transition-delay: 0.92s; }
+
 /* ===== HERO ===== */
 .hero {
   width: 100%;
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 18px;
 }
 
 .photo-stage {
@@ -669,6 +694,44 @@ useHead({
     0 0 0 1px rgba(0, 0, 0, 0.5),
     0 20px 50px rgba(0, 0, 0, 0.5),
     0 0 40px rgba(168, 85, 247, 0.15);
+}
+
+.power-aura {
+  animation: aura-pulse 3.2s ease-in-out infinite;
+}
+@keyframes aura-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.5),
+      0 20px 50px rgba(0, 0, 0, 0.5),
+      0 0 30px rgba(168, 85, 247, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.5),
+      0 20px 50px rgba(0, 0, 0, 0.5),
+      0 0 55px rgba(192, 132, 252, 0.45),
+      0 0 90px rgba(168, 85, 247, 0.2);
+  }
+}
+
+.power-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#1a0f24, #1a0f24) padding-box,
+    linear-gradient(135deg, rgba(192, 132, 252, 0.6), transparent 40%, rgba(168, 85, 247, 0.5)) border-box;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.7;
+  animation: ring-spin 8s linear infinite;
+}
+@keyframes ring-spin {
+  0% { filter: hue-rotate(0deg); opacity: 0.55; }
+  50% { filter: hue-rotate(25deg); opacity: 0.9; }
+  100% { filter: hue-rotate(0deg); opacity: 0.55; }
 }
 
 .hero-photo {
@@ -762,18 +825,43 @@ useHead({
   margin: 0 auto;
   max-width: 300px;
 }
+.power-label {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #e9d5ff;
+  text-shadow: 0 0 18px rgba(192, 132, 252, 0.55);
+  animation: power-text 2.8s ease-in-out infinite;
+}
+@keyframes power-text {
+  0%, 100% { opacity: 0.7; letter-spacing: 0.18em; }
+  50% { opacity: 1; letter-spacing: 0.28em; text-shadow: 0 0 28px rgba(192, 132, 252, 0.85); }
+}
 .accent-line {
   width: 48px;
   height: 1px;
-  margin: 16px auto 0;
+  margin: 14px auto 0;
   background: linear-gradient(90deg, transparent, #c084fc, transparent);
 }
 
-/* ===== MAIN CARDS ===== */
+.choose-label {
+  width: 100%;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(192, 132, 252, 0.75);
+  margin: 0 0 14px;
+}
+
+/* ===== MAIN CARDS — empilhados ===== */
 .main-cards {
   width: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -782,14 +870,14 @@ useHead({
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 16px 14px 14px;
+  padding: 18px 16px 16px;
   border-radius: 16px;
   background: linear-gradient(165deg, rgba(40, 20, 55, 0.95), rgba(24, 12, 36, 0.98));
   border: 1px solid rgba(168, 85, 247, 0.28);
   text-decoration: none;
   overflow: hidden;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-  min-height: 148px;
+  min-height: auto;
 }
 .lux-card:hover {
   transform: translateY(-3px);
@@ -852,7 +940,7 @@ useHead({
 }
 
 .card-title {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #f5f0ff;
   margin: 0 0 4px;
@@ -860,16 +948,16 @@ useHead({
   z-index: 1;
 }
 .card-desc {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: rgba(245, 240, 255, 0.55);
-  line-height: 1.35;
+  line-height: 1.4;
   margin: 0 0 auto;
   position: relative;
   z-index: 1;
   flex: 1;
 }
 .card-cta {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: #c084fc;
   margin-top: 12px;
@@ -1015,9 +1103,8 @@ useHead({
   .page { align-items: center; }
 }
 @media (max-width: 360px) {
-  .main-cards { gap: 8px; }
-  .lux-card { padding: 12px 10px; min-height: 136px; }
-  .card-title { font-size: 0.95rem; }
+  .lux-card { padding: 14px 12px; }
+  .card-title { font-size: 1rem; }
   .name { font-size: 1.6rem; }
   .direct-btn { font-size: 0.8rem; padding: 12px 14px; }
 }
