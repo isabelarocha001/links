@@ -62,13 +62,7 @@
 
         <div class="wa-composer">
           <button type="button" class="wa-emoji" disabled aria-hidden="true">😊</button>
-          <input
-            class="wa-input"
-            type="text"
-            disabled
-            placeholder="Responda pelos botões acima"
-            readonly
-          />
+          <input class="wa-input" type="text" disabled placeholder="Responda pelos botões acima" readonly />
           <button type="button" class="wa-send" disabled aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
@@ -141,10 +135,20 @@
           </div>
         </section>
         <footer class="bio-block">
-          <img class="bio-ig" :src="igProfileSrc" alt="Instagram · wanessabsx_" draggable="false" />
-          <p class="bio-name">Wanessa</p>
+          <div class="ig-card">
+            <img class="ig-avatar" :src="igProfileSrc" alt="" width="72" height="72" draggable="false" />
+            <div class="ig-info">
+              <p class="ig-user">wanessabsx_</p>
+              <p class="ig-name">Wanessa Borges</p>
+              <div class="ig-stats">
+                <span><b>22</b> posts</span>
+                <span><b>32,2 mil</b> seguidores</span>
+                <span><b>53</b> seguindo</span>
+              </div>
+            </div>
+          </div>
           <p class="bio-meta">Criadora de conteúdo · Catarinense · 22 anos</p>
-          <p class="bio-text">Presença digital com mais de 30 mil pessoas acompanhando no Instagram. O que você encontra aqui é o que não cabe por lá.</p>
+          <p class="bio-text">Presença digital com mais de 30 mil pessoas. O que você encontra aqui é o que não cabe no Instagram.</p>
         </footer>
       </template>
     </main>
@@ -234,19 +238,16 @@ function nowTime() {
   const d = new Date()
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
-
 function scrollChat() {
   nextTick(() => {
     const el = chatBox.value
     if (el) el.scrollTop = el.scrollHeight
   })
 }
-
 function pushMsg(from: 'her' | 'me', text: string) {
   chatMessages.value.push({ from, text, time: nowTime() })
   scrollChat()
 }
-
 function typeThenAsk(text: string, delay = 900) {
   isTyping.value = true
   scrollChat()
@@ -256,14 +257,12 @@ function typeThenAsk(text: string, delay = 900) {
     pushMsg('her', text)
   }, delay)
 }
-
 const questionText = (g: 1 | 2 | 3 | 4) => {
   if (g === 1) return 'Oi 😊 Você já pagou por conteúdo de alguma criadora?'
   if (g === 2) return 'Você costuma ver só as prévias grátis ou já tem costume de entrar no VIP?'
   if (g === 3) return 'Você já me conhece pelo Instagram?'
   return 'Você já assinou Privacy, PrivSex ou VIP de alguma criadora?'
 }
-
 const quizOptions = computed(() => {
   if (gate.value === 1) return [{ key: 'yes', label: 'Sim, já paguei', variant: 'wa-quick--yes' }, { key: 'no', label: 'Nunca paguei', variant: 'wa-quick--no' }]
   if (gate.value === 2) return [{ key: 'vip', label: 'Já entro / quero VIP', variant: 'wa-quick--yes' }, { key: 'previas', label: 'Só vejo prévia grátis', variant: 'wa-quick--no' }]
@@ -271,7 +270,6 @@ const quizOptions = computed(() => {
   if (gate.value === 4) return [{ key: 'yes', label: 'Sim, já assinei', variant: 'wa-quick--yes' }, { key: 'no', label: 'Nunca assinei nada', variant: 'wa-quick--no' }]
   return []
 })
-
 function setGate(next: 1 | 2 | 3 | 4 | 'pass' | 'reject', persistServer = false) {
   gate.value = next
   try { localStorage.setItem(GATE_KEY, String(next)) } catch {}
@@ -289,12 +287,10 @@ function setGate(next: 1 | 2 | 3 | 4 | 'pass' | 'reject', persistServer = false)
     })
   }
 }
-
 function answerQuiz(key: string) {
   if (isTyping.value) return
   const label = quizOptions.value.find((o) => o.key === key)?.label || key
   pushMsg('me', label)
-
   if (gate.value === 1) {
     quizAnswers.value.q1 = key === 'yes' ? 'pagou_sim' : 'pagou_nao'
     const next = key === 'yes' ? 3 : 2
@@ -335,7 +331,6 @@ function answerQuiz(key: string) {
     }
   }
 }
-
 const DEFAULT_LINKS: LinkItem[] = [
   { label: 'PrivSex', icon: '🔥', url: privsexUrl, enabled: true },
   { label: 'Telegram VIP', icon: '⭐', url: vipBotUrl, enabled: true },
@@ -352,7 +347,6 @@ const saveError = ref('')
 const loading = ref(false)
 const passInput = ref<HTMLInputElement | null>(null)
 const edit = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT })
-
 function getOrCreateVisitorId(): string {
   if (typeof window === 'undefined') return ''
   try {
@@ -424,31 +418,24 @@ function applyServerConfig(data: any) {
     config.links = data.links.filter((l: any) => l && l.label).map((l: any) => attachLogo({ label: String(l.label || ''), icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled: l.enabled !== false }))
   } else config.links = DEFAULT_LINKS.map(attachLogo)
 }
-
 const { data: remoteConfig } = await useAsyncData('link-page-config', () => $fetch<any>('/api/config').catch(() => null))
 if (remoteConfig.value) applyServerConfig(remoteConfig.value)
 else config.links = DEFAULT_LINKS.map(attachLogo)
 configReady.value = true
-
 onMounted(async () => {
   const visitor_id = getOrCreateVisitorId()
   if (!alreadyViewedToday()) {
     markViewedToday()
     track('page_view', { offer_slug: 'wanessa_links' })
   }
-
   let restored: string | null = null
   try { restored = localStorage.getItem(GATE_KEY) } catch {}
   if (restored === 'pass' || restored === 'reject') gate.value = restored
   else if (restored === '1' || restored === '2' || restored === '3' || restored === '4') gate.value = Number(restored) as 1 | 2 | 3 | 4
-
   const fingerprint = await getDeviceFingerprint()
-
   if (gate.value !== 'pass' && gate.value !== 'reject') {
     try {
-      const res = await $fetch<{ status: string | null }>('/api/quiz', {
-        query: { visitor_id, fingerprint },
-      })
+      const res = await $fetch<{ status: string | null }>('/api/quiz', { query: { visitor_id, fingerprint } })
       if (res?.status === 'pass' || res?.status === 'reject') {
         gate.value = res.status
         try { localStorage.setItem(GATE_KEY, res.status) } catch {}
@@ -456,18 +443,11 @@ onMounted(async () => {
     } catch {}
   } else if (visitor_id && (gate.value === 'pass' || gate.value === 'reject')) {
     try {
-      fetch('/api/quiz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visitor_id, fingerprint, status: gate.value }),
-        keepalive: true,
-      }).catch(() => {})
+      fetch('/api/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitor_id, fingerprint, status: gate.value }), keepalive: true }).catch(() => {})
     } catch {}
   }
-
   if (gate.value == null) gate.value = 1
   gateReady.value = true
-
   if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
     chatMessages.value = []
     typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
@@ -475,14 +455,12 @@ onMounted(async () => {
     chatMessages.value = []
     pushMsg('her', 'Obrigada. Você não é o tipo de pessoa que estou procurando.')
   }
-
   photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 4200)
 })
 onUnmounted(() => {
   if (photoTimer) clearInterval(photoTimer)
   if (typingTimer) clearTimeout(typingTimer)
 })
-
 function openLogin() { password.value = ''; loginError.value = ''; showLogin.value = true; nextTick(() => passInput.value?.focus()) }
 function openEdit() {
   edit.name = config.name; edit.bio = config.bio; edit.highlight_label = config.highlight_label || DEFAULT_HIGHLIGHT
@@ -515,7 +493,6 @@ async function doSave() {
   } catch (e: any) { saveError.value = e?.data?.statusMessage || 'Erro ao salvar' }
   finally { loading.value = false }
 }
-
 useHead({
   title: 'Modelo de Luxo',
   meta: [{ name: 'description', content: 'Acesso restrito — privacidade e alto nível.' }, { name: 'theme-color', content: '#12081a' }],
