@@ -49,7 +49,7 @@
           <p class="eyebrow">Modelo de Luxo</p>
           <h1 class="name">{{ config.name || 'Wanessa' }}</h1>
           <p class="tagline">{{ config.bio || 'Exclusividade. Elegância. Nível que poucos alcançam.' }}</p>
-          <div class="gold-line" aria-hidden="true"></div>
+          <div class="accent-line" aria-hidden="true"></div>
         </div>
       </header>
 
@@ -563,7 +563,7 @@ useHead({
   title: 'Wanessa | Modelo de Luxo',
   meta: [
     { name: 'description', content: 'Apresentação exclusiva de Wanessa — elegância, privacidade e alto nível.' },
-    { name: 'theme-color', content: '#0a0a0b' },
+    { name: 'theme-color', content: '#1a0a24' },
   ],
 })
 </script>
@@ -576,7 +576,7 @@ useHead({
   align-items: flex-start;
   padding: max(16px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
   position: relative;
-  background: #070708;
+  background: #12081a;
   box-sizing: border-box;
   -webkit-user-select: none;
   user-select: none;
@@ -595,14 +595,14 @@ useHead({
   width: min(100vw, 520px);
   height: 420px;
   background:
-    radial-gradient(ellipse 70% 50% at 50% 20%, rgba(212, 175, 55, 0.14) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 70% 40%, rgba(180, 120, 40, 0.08) 0%, transparent 55%);
+    radial-gradient(ellipse 70% 50% at 50% 20%, rgba(168, 85, 247, 0.22) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 70% 40%, rgba(192, 38, 211, 0.12) 0%, transparent 55%);
   pointer-events: none;
 }
 .bg-grain {
   position: absolute;
   inset: 0;
-  opacity: 0.035;
+  opacity: 0.04;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   pointer-events: none;
 }
@@ -655,12 +655,12 @@ useHead({
   aspect-ratio: 3 / 4;
   border-radius: 18px;
   overflow: hidden;
-  background: #111;
-  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: #1a0f24;
+  border: 1px solid rgba(192, 132, 252, 0.4);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 20px 50px rgba(0, 0, 0, 0.55),
-    0 0 40px rgba(212, 175, 55, 0.08);
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(168, 85, 247, 0.15);
 }
 
 .hero-photo {
@@ -688,7 +688,7 @@ useHead({
   background: linear-gradient(
     125deg,
     transparent 40%,
-    rgba(255, 255, 255, 0.06) 48%,
+    rgba(255, 255, 255, 0.07) 48%,
     transparent 56%
   );
   pointer-events: none;
@@ -704,7 +704,7 @@ useHead({
   position: absolute;
   inset: 0;
   z-index: 2;
-  background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.45) 100%);
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(18, 8, 26, 0.5) 100%);
   pointer-events: none;
 }
 
@@ -722,7 +722,7 @@ useHead({
   transition: background 0.3s, transform 0.3s;
 }
 .dot.active {
-  background: #d4af37;
+  background: #c084fc;
   transform: scale(1.25);
 }
 
@@ -734,14 +734,14 @@ useHead({
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #d4af37;
+  color: #c084fc;
   margin: 0 0 6px;
 }
 .name {
   font-size: 1.85rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: #f8f5ef;
+  color: #f5f0ff;
   margin: 0 0 8px;
   line-height: 1.15;
   text-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
@@ -749,16 +749,16 @@ useHead({
 .tagline {
   font-size: 0.88rem;
   font-weight: 400;
-  color: rgba(248, 245, 239, 0.72);
+  color: rgba(245, 240, 255, 0.72);
   line-height: 1.45;
   margin: 0 auto;
   max-width: 300px;
 }
-.gold-line {
+.accent-line {
   width: 48px;
   height: 1px;
   margin: 16px auto 0;
-  background: linear-gradient(90deg, transparent, #d4af37, transparent);
+  background: linear-gradient(90deg, transparent, #c084fc, transparent);
 }
 
 /* ===== MAIN CARDS ===== */
@@ -776,8 +776,8 @@ useHead({
   flex-direction: column;
   padding: 16px 14px 14px;
   border-radius: 16px;
-  background: linear-gradient(165deg, rgba(28, 26, 24, 0.95), rgba(16, 15, 14, 0.98));
-  border: 1px solid rgba(212, 175, 55, 0.22);
+  background: linear-gradient(165deg, rgba(40, 20, 55, 0.95), rgba(24, 12, 36, 0.98));
+  border: 1px solid rgba(168, 85, 247, 0.28);
   text-decoration: none;
   overflow: hidden;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
@@ -785,8 +785,8 @@ useHead({
 }
 .lux-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(212, 175, 55, 0.45);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 24px rgba(212, 175, 55, 0.1);
+  border-color: rgba(192, 132, 252, 0.55);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 28px rgba(168, 85, 247, 0.18);
 }
 .lux-card:active {
   transform: scale(0.98);
@@ -798,7 +798,7 @@ useHead({
   right: -20%;
   width: 80%;
   height: 70%;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.18) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -831,29 +831,29 @@ useHead({
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #d4af37;
-  background: rgba(212, 175, 55, 0.12);
+  color: #e9d5ff;
+  background: rgba(168, 85, 247, 0.2);
   padding: 3px 7px;
   border-radius: 6px;
-  border: 1px solid rgba(212, 175, 55, 0.25);
+  border: 1px solid rgba(168, 85, 247, 0.35);
 }
 .badge-tg {
-  color: #7dd3fc;
-  background: rgba(56, 189, 248, 0.1);
-  border-color: rgba(56, 189, 248, 0.25);
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(139, 92, 246, 0.35);
 }
 
 .card-title {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #f8f5ef;
+  color: #f5f0ff;
   margin: 0 0 4px;
   position: relative;
   z-index: 1;
 }
 .card-desc {
   font-size: 0.72rem;
-  color: rgba(248, 245, 239, 0.55);
+  color: rgba(245, 240, 255, 0.55);
   line-height: 1.35;
   margin: 0 0 auto;
   position: relative;
@@ -863,7 +863,7 @@ useHead({
 .card-cta {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #d4af37;
+  color: #c084fc;
   margin-top: 12px;
   position: relative;
   z-index: 1;
@@ -883,20 +883,20 @@ useHead({
   width: 100%;
   padding: 16px 18px;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.18), rgba(160, 120, 30, 0.08));
-  border: 1px solid rgba(212, 175, 55, 0.4);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(126, 34, 206, 0.12));
+  border: 1px solid rgba(192, 132, 252, 0.45);
   text-decoration: none;
   overflow: hidden;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .vip-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(212, 175, 55, 0.18);
+  box-shadow: 0 10px 28px rgba(168, 85, 247, 0.25);
 }
 .vip-shine {
   position: absolute;
   inset: 0;
-  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.07) 50%, transparent 70%);
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.08) 50%, transparent 70%);
   animation: vip-shine 4.5s ease-in-out infinite;
   pointer-events: none;
 }
@@ -918,18 +918,18 @@ useHead({
 .vip-title {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #f8f5ef;
+  color: #f5f0ff;
   margin: 0 0 2px;
 }
 .vip-desc {
   font-size: 0.7rem;
-  color: rgba(248, 245, 239, 0.6);
+  color: rgba(245, 240, 255, 0.6);
   margin: 0;
 }
 .vip-arrow {
-  color: #d4af37;
+  color: #c084fc;
   font-size: 1.1rem;
-  opacity: 0.8;
+  opacity: 0.85;
   position: relative;
   z-index: 1;
 }
@@ -942,7 +942,7 @@ useHead({
 }
 .direct-label {
   font-size: 0.68rem;
-  color: rgba(248, 245, 239, 0.35);
+  color: rgba(245, 240, 255, 0.35);
   letter-spacing: 0.04em;
   margin: 0 0 12px;
 }
@@ -960,14 +960,14 @@ useHead({
   font-size: 0.8rem;
   font-weight: 600;
   text-decoration: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(248, 245, 239, 0.75);
+  border: 1px solid rgba(192, 132, 252, 0.2);
+  background: rgba(168, 85, 247, 0.08);
+  color: rgba(245, 240, 255, 0.8);
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .direct-btn:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(168, 85, 247, 0.16);
+  border-color: rgba(192, 132, 252, 0.4);
   color: #fff;
 }
 .d-icon {
@@ -1004,12 +1004,12 @@ useHead({
   align-items: center !important;
   justify-content: center !important;
   padding: 16px !important;
-  background: rgba(0, 0, 0, 0.85) !important;
+  background: rgba(18, 8, 26, 0.92) !important;
   overflow-y: auto !important;
 }
 .wl-card {
-  background: #141416 !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: #1e1230 !important;
+  border: 1px solid rgba(168, 85, 247, 0.25) !important;
   border-radius: 16px !important;
   padding: 20px !important;
   width: 100% !important;
@@ -1041,7 +1041,7 @@ useHead({
   width: 100%; margin-top: 10px; padding: 12px; border-radius: 10px;
   border: none; font-weight: 600; cursor: pointer; font-size: 0.9rem;
 }
-.wl-btn-primary { background: linear-gradient(135deg, #d4af37, #b8860b); color: #0a0a0b; }
+.wl-btn-primary { background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; }
 .wl-btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #fff; }
 .wl-btn-sm { width: auto; padding: 6px 12px; font-size: 0.78rem; margin-top: 0; }
 .wl-btn-danger { background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.4); color: #fca5a5; }
