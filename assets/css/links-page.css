@@ -117,3 +117,31 @@
 .wl-icon { text-align: center !important; }
 .wl-link-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
 .wl-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: rgba(255,255,255,0.7); cursor: pointer; }
+.bio-block {
+  width: 100%;
+  margin-top: 28px;
+  padding: 20px 16px 8px;
+  text-align: center;
+  border-top: 1px solid rgba(192, 132, 252, 0.18);
+}
+.bio-name {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #e9d5ff;
+}
+.bio-meta {
+  margin: 0 0 12px;
+  font-size: 0.72rem;
+  color: rgba(192, 132, 252, 0.85);
+  letter-spacing: 0.04em;
+}
+.bio-text {
+  margin: 0 auto;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: rgba(245, 240, 255, 0.55);
+  max-width: 320px;
+}
