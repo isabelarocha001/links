@@ -6,20 +6,75 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
     </button>
     <main class="container">
-      <section v-if="gateReady && (gate === 1 || gate === 2 || gate === 3)" class="quiz">
-        <p class="quiz-eyebrow">Acesso restrito</p>
-        <h2 class="quiz-title">{{ quizTitle }}</h2>
-        <p v-if="quizHint" class="quiz-hint">{{ quizHint }}</p>
-        <div class="quiz-actions">
-          <button v-for="opt in quizOptions" :key="opt.key" type="button" class="quiz-btn" :class="opt.variant" @click="answerQuiz(opt.key)">{{ opt.label }}</button>
+      <section
+        v-if="gateReady && (gate === 1 || gate === 2 || gate === 3 || gate === 'reject')"
+        class="wa-shell"
+      >
+        <header class="wa-header">
+          <div class="wa-header-side">
+            <span class="wa-back" aria-hidden="true">‹</span>
+          </div>
+          <div class="wa-header-info">
+            <p class="wa-name">Modelo de Luxo</p>
+            <p class="wa-status">
+              <span v-if="isTyping" class="wa-status-typing">digitando…</span>
+              <span v-else class="wa-status-online">online</span>
+            </p>
+          </div>
+          <div class="wa-avatar-wrap">
+            <img class="wa-avatar" src="/model.jpg" alt="" draggable="false" />
+            <span class="wa-online-dot" aria-hidden="true"></span>
+          </div>
+        </header>
+
+        <div ref="chatBox" class="wa-chat">
+          <div class="wa-day">Hoje</div>
+          <div
+            v-for="(m, i) in chatMessages"
+            :key="i"
+            class="wa-row"
+            :class="m.from === 'me' ? 'wa-row--me' : 'wa-row--her'"
+          >
+            <div class="wa-bubble" :class="m.from === 'me' ? 'wa-bubble--me' : 'wa-bubble--her'">
+              <p class="wa-text">{{ m.text }}</p>
+              <span class="wa-time">{{ m.time }}</span>
+            </div>
+          </div>
+          <div v-if="isTyping" class="wa-row wa-row--her">
+            <div class="wa-bubble wa-bubble--her wa-bubble--typing">
+              <span class="wa-dot"></span><span class="wa-dot"></span><span class="wa-dot"></span>
+            </div>
+          </div>
         </div>
-        <p class="quiz-step">{{ gate }} / 3</p>
+
+        <div v-if="!isTyping && gate !== 'reject' && quizOptions.length" class="wa-quick">
+          <button
+            v-for="opt in quizOptions"
+            :key="opt.key"
+            type="button"
+            class="wa-quick-btn"
+            :class="opt.variant"
+            @click="answerQuiz(opt.key)"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+
+        <div class="wa-composer">
+          <button type="button" class="wa-emoji" disabled aria-hidden="true">😊</button>
+          <input
+            class="wa-input"
+            type="text"
+            disabled
+            placeholder="Responda pelos botões acima"
+            readonly
+          />
+          <button type="button" class="wa-send" disabled aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
       </section>
-      <section v-else-if="gateReady && gate === 'reject'" class="quiz quiz--reject">
-        <p class="quiz-eyebrow">Obrigado</p>
-        <h2 class="quiz-title">Você não é o tipo de pessoa que estou procurando.</h2>
-        <p class="quiz-hint">Este espaço é só para quem compra conteúdo e valoriza o exclusivo.</p>
-      </section>
+
       <template v-else-if="gateReady && gate === 'pass'">
         <header class="hero">
           <div class="photo-stage">
@@ -139,6 +194,7 @@
 
 <script setup lang="ts">
 type LinkItem = { label: string; icon: string; url: string; desc?: string; logo?: string; enabled?: boolean }
+type ChatMsg = { from: 'her' | 'me'; text: string; time: string }
 import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 import { getDeviceFingerprint } from '~/utils/fingerprint'
 import '~/assets/css/links-page.css'
@@ -163,21 +219,49 @@ let photoTimer: ReturnType<typeof setInterval> | null = null
 const gate = ref<1 | 2 | 3 | 'pass' | 'reject' | null>(null)
 const quizAnswers = ref<Record<string, string>>({})
 const gateReady = ref(false)
+const chatMessages = ref<ChatMsg[]>([])
+const isTyping = ref(false)
+const chatBox = ref<HTMLElement | null>(null)
+let typingTimer: ReturnType<typeof setTimeout> | null = null
 
-const quizTitle = computed(() => {
-  if (gate.value === 1) return 'Você já comprou conteúdo alguma vez?'
-  if (gate.value === 2) return 'Você costuma ver só as prévias ou tem desejo de ir pro VIP?'
-  return 'Você já conhece a criadora Wanessa? Pagaria para ver algo mais exclusivo dela?'
-})
-const quizHint = computed(() => {
-  if (gate.value === 1) return 'Resposta sincera. Isso define se você entra.'
-  if (gate.value === 2) return 'Só quem quer VIP segue.'
-  return 'Só quem investe no exclusivo passa.'
-})
+function nowTime() {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function scrollChat() {
+  nextTick(() => {
+    const el = chatBox.value
+    if (el) el.scrollTop = el.scrollHeight
+  })
+}
+
+function pushMsg(from: 'her' | 'me', text: string) {
+  chatMessages.value.push({ from, text, time: nowTime() })
+  scrollChat()
+}
+
+function typeThenAsk(text: string, delay = 900) {
+  isTyping.value = true
+  scrollChat()
+  if (typingTimer) clearTimeout(typingTimer)
+  typingTimer = setTimeout(() => {
+    isTyping.value = false
+    pushMsg('her', text)
+  }, delay)
+}
+
+const questionText = (g: 1 | 2 | 3) => {
+  if (g === 1) return 'Oi 😊 Você já comprou conteúdo alguma vez?'
+  if (g === 2) return 'Você costuma ver só as prévias ou tem desejo de ir pro VIP?'
+  return 'Você já me conhece? Pagaria pra ver algo mais exclusivo meu?'
+}
+
 const quizOptions = computed(() => {
-  if (gate.value === 1) return [{ key: 'yes', label: 'Sim', variant: 'quiz-btn--yes' }, { key: 'no', label: 'Não', variant: 'quiz-btn--no' }]
-  if (gate.value === 2) return [{ key: 'vip', label: 'Tenho desejo de ir pro VIP', variant: 'quiz-btn--yes' }, { key: 'previas', label: 'Só vejo as prévias', variant: 'quiz-btn--no' }]
-  return [{ key: 'yes', label: 'Sim, eu pagaria', variant: 'quiz-btn--yes' }, { key: 'no', label: 'Não', variant: 'quiz-btn--no' }]
+  if (gate.value === 1) return [{ key: 'yes', label: 'Sim', variant: 'wa-quick--yes' }, { key: 'no', label: 'Não', variant: 'wa-quick--no' }]
+  if (gate.value === 2) return [{ key: 'vip', label: 'Tenho desejo de ir pro VIP', variant: 'wa-quick--yes' }, { key: 'previas', label: 'Só vejo as prévias', variant: 'wa-quick--no' }]
+  if (gate.value === 3) return [{ key: 'yes', label: 'Sim, eu pagaria', variant: 'wa-quick--yes' }, { key: 'no', label: 'Não', variant: 'wa-quick--no' }]
+  return []
 })
 
 function setGate(next: 1 | 2 | 3 | 'pass' | 'reject', persistServer = false) {
@@ -199,20 +283,37 @@ function setGate(next: 1 | 2 | 3 | 'pass' | 'reject', persistServer = false) {
 }
 
 function answerQuiz(key: string) {
+  if (isTyping.value) return
+  const label = quizOptions.value.find((o) => o.key === key)?.label || key
+  pushMsg('me', label)
+
   if (gate.value === 1) {
     quizAnswers.value.q1 = key === 'yes' ? 'comprou_sim' : 'comprou_nao'
-    setGate(key === 'yes' ? 3 : 2)
+    const next = key === 'yes' ? 3 : 2
+    setGate(next as 2 | 3)
+    typeThenAsk(questionText(next as 2 | 3), 1100)
     return
   }
   if (gate.value === 2) {
     quizAnswers.value.q2 = key === 'previas' ? 'so_previas' : 'desejo_vip'
-    if (key === 'previas') setGate('reject', true)
-    else setGate(3)
+    if (key === 'previas') {
+      setGate('reject', true)
+      typeThenAsk('Obrigada. Você não é o tipo de pessoa que estou procurando. Este espaço é só pra quem compra e valoriza o exclusivo.', 1400)
+    } else {
+      setGate(3)
+      typeThenAsk(questionText(3), 1100)
+    }
     return
   }
   if (gate.value === 3) {
     quizAnswers.value.q3 = key === 'yes' ? 'pagaria_sim' : 'pagaria_nao'
-    setGate(key === 'yes' ? 'pass' : 'reject', true)
+    if (key === 'yes') {
+      pushMsg('her', 'Perfeito. Entrando…')
+      setTimeout(() => setGate('pass', true), 700)
+    } else {
+      setGate('reject', true)
+      typeThenAsk('Obrigada. Você não é o tipo de pessoa que estou procurando.', 1200)
+    }
   }
 }
 
@@ -347,9 +448,21 @@ onMounted(async () => {
 
   if (gate.value == null) gate.value = 1
   gateReady.value = true
+
+  if (gate.value === 1 || gate.value === 2 || gate.value === 3) {
+    chatMessages.value = []
+    typeThenAsk(questionText(gate.value as 1 | 2 | 3), 800)
+  } else if (gate.value === 'reject') {
+    chatMessages.value = []
+    pushMsg('her', 'Obrigada. Você não é o tipo de pessoa que estou procurando.')
+  }
+
   photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 4200)
 })
-onUnmounted(() => { if (photoTimer) clearInterval(photoTimer) })
+onUnmounted(() => {
+  if (photoTimer) clearInterval(photoTimer)
+  if (typingTimer) clearTimeout(typingTimer)
+})
 
 function openLogin() { password.value = ''; loginError.value = ''; showLogin.value = true; nextTick(() => passInput.value?.focus()) }
 function openEdit() {
@@ -386,6 +499,6 @@ async function doSave() {
 
 useHead({
   title: 'Modelo de Luxo',
-  meta: [{ name: 'description', content: 'Acesso restrito — privacidade e alto nível.' }, { name: 'theme-color', content: '#1a0a24' }],
+  meta: [{ name: 'description', content: 'Acesso restrito — privacidade e alto nível.' }, { name: 'theme-color', content: '#0b141a' }],
 })
 </script>
