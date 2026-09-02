@@ -252,17 +252,17 @@ function typeThenAsk(text: string, delay = 900) {
 }
 
 const questionText = (g: 1 | 2 | 3 | 4) => {
-  if (g === 1) return 'Oi 😊 Você já comprou conteúdo alguma vez?'
-  if (g === 2) return 'Você costuma ver só as prévias ou tem desejo de ir pro VIP?'
-  if (g === 3) return 'Você já me conhece?'
-  return 'Você pagaria pra ver algo mais exclusivo meu?'
+  if (g === 1) return 'Oi 😊 Você já pagou por conteúdo de alguma criadora?'
+  if (g === 2) return 'Você costuma ver só as prévias grátis ou já tem costume de entrar no VIP?'
+  if (g === 3) return 'Você já me conhece pelo Instagram?'
+  return 'Você já assinou Privacy, PrivSex ou VIP de alguma criadora?'
 }
 
 const quizOptions = computed(() => {
-  if (gate.value === 1) return [{ key: 'yes', label: 'Sim', variant: 'wa-quick--yes' }, { key: 'no', label: 'Não', variant: 'wa-quick--no' }]
-  if (gate.value === 2) return [{ key: 'vip', label: 'Tenho desejo de ir pro VIP', variant: 'wa-quick--yes' }, { key: 'previas', label: 'Só vejo as prévias', variant: 'wa-quick--no' }]
+  if (gate.value === 1) return [{ key: 'yes', label: 'Sim, já paguei', variant: 'wa-quick--yes' }, { key: 'no', label: 'Nunca paguei', variant: 'wa-quick--no' }]
+  if (gate.value === 2) return [{ key: 'vip', label: 'Já entro / quero VIP', variant: 'wa-quick--yes' }, { key: 'previas', label: 'Só vejo prévia grátis', variant: 'wa-quick--no' }]
   if (gate.value === 3) return [{ key: 'yes', label: 'Sim', variant: 'wa-quick--yes' }, { key: 'no', label: 'Não', variant: 'wa-quick--no' }]
-  if (gate.value === 4) return [{ key: 'yes', label: 'Sim, eu pagaria', variant: 'wa-quick--yes' }, { key: 'no', label: 'Não', variant: 'wa-quick--no' }]
+  if (gate.value === 4) return [{ key: 'yes', label: 'Sim, já assinei', variant: 'wa-quick--yes' }, { key: 'no', label: 'Nunca assinei nada', variant: 'wa-quick--no' }]
   return []
 })
 
@@ -290,7 +290,7 @@ function answerQuiz(key: string) {
   pushMsg('me', label)
 
   if (gate.value === 1) {
-    quizAnswers.value.q1 = key === 'yes' ? 'comprou_sim' : 'comprou_nao'
+    quizAnswers.value.q1 = key === 'yes' ? 'pagou_sim' : 'pagou_nao'
     const next = key === 'yes' ? 3 : 2
     setGate(next as 2 | 3)
     typeThenAsk(questionText(next as 2 | 3), 1100)
@@ -300,7 +300,7 @@ function answerQuiz(key: string) {
     quizAnswers.value.q2 = key === 'previas' ? 'so_previas' : 'desejo_vip'
     if (key === 'previas') {
       setGate('reject', true)
-      typeThenAsk('Obrigada. Você não é o tipo de pessoa que estou procurando. Este espaço é só pra quem compra e valoriza o exclusivo.', 1400)
+      typeThenAsk('Obrigada. Este espaço é só pra quem compra. Quem só quer prévia grátis não é o perfil que eu atendo.', 1400)
     } else {
       setGate(3)
       typeThenAsk(questionText(3), 1100)
@@ -319,13 +319,13 @@ function answerQuiz(key: string) {
     return
   }
   if (gate.value === 4) {
-    quizAnswers.value.q4 = key === 'yes' ? 'pagaria_sim' : 'pagaria_nao'
+    quizAnswers.value.q4 = key === 'yes' ? 'assinou_sim' : 'assinou_nao'
     if (key === 'yes') {
       pushMsg('her', 'Perfeito. Entrando…')
       setTimeout(() => setGate('pass', true), 700)
     } else {
       setGate('reject', true)
-      typeThenAsk('Obrigada. Você não é o tipo de pessoa que estou procurando.', 1200)
+      typeThenAsk('Obrigada. Este espaço é exclusivo pra quem já valoriza conteúdo pago. Não libero acesso pra quem nunca assinou nada.', 1400)
     }
   }
 }
