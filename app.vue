@@ -149,6 +149,7 @@
           </div>
           <p class="bio-meta">Criadora de conteúdo · Catarinense · 22 anos</p>
           <p class="bio-text">Presença digital com mais de 30 mil pessoas. O que você encontra aqui é o que não cabe no Instagram.</p>
+          <p class="bio-copy">© Wanessa</p>
         </footer>
       </template>
     </main>
