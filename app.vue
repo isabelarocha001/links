@@ -15,7 +15,7 @@
             <span class="wa-back" aria-hidden="true">‹</span>
           </div>
           <div class="wa-header-info">
-            <p class="wa-name">Modelo de Luxo</p>
+            <p class="wa-name">Criadora de conteúdo · Wanessa</p>
             <p class="wa-status">
               <span v-if="isTyping" class="wa-status-typing">digitando…</span>
               <span v-else class="wa-status-online">online</span>
