@@ -124,14 +124,52 @@
   text-align: center;
   border-top: 1px solid rgba(192, 132, 252, 0.18);
 }
-.bio-ig {
-  display: block;
+.ig-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   width: 100%;
-  max-width: 320px;
-  margin: 0 auto 16px;
+  max-width: 340px;
+  margin: 0 auto 14px;
+  padding: 14px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(192, 132, 252, 0.35);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  background: rgba(30, 18, 48, 0.85);
+  border: 1px solid rgba(192, 132, 252, 0.28);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+  text-align: left;
+}
+.ig-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(192, 132, 252, 0.45);
+  flex-shrink: 0;
+  background: #1a0f24;
+}
+.ig-info { flex: 1; min-width: 0; }
+.ig-user {
+  margin: 0 0 2px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f5f0ff;
+  letter-spacing: 0.01em;
+}
+.ig-name {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  color: rgba(245, 240, 255, 0.65);
+}
+.ig-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  font-size: 0.7rem;
+  color: rgba(245, 240, 255, 0.55);
+}
+.ig-stats b {
+  color: #e9d5ff;
+  font-weight: 700;
 }
 .bio-name {
   margin: 0 0 4px;
