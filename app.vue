@@ -6,7 +6,7 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
     </button>
     <main class="container">
-      <section v-if="gate === 1 || gate === 2 || gate === 3" class="quiz">
+      <section v-if="gateReady && (gate === 1 || gate === 2 || gate === 3)" class="quiz">
         <p class="quiz-eyebrow">Acesso restrito</p>
         <h2 class="quiz-title">{{ quizTitle }}</h2>
         <p v-if="quizHint" class="quiz-hint">{{ quizHint }}</p>
@@ -15,12 +15,12 @@
         </div>
         <p class="quiz-step">{{ gate }} / 3</p>
       </section>
-      <section v-else-if="gate === 'reject'" class="quiz quiz--reject">
+      <section v-else-if="gateReady && gate === 'reject'" class="quiz quiz--reject">
         <p class="quiz-eyebrow">Obrigado</p>
         <h2 class="quiz-title">Você não é o tipo de pessoa que estou procurando.</h2>
         <p class="quiz-hint">Este espaço é só para quem compra conteúdo e valoriza o exclusivo.</p>
       </section>
-      <template v-else>
+      <template v-else-if="gateReady && gate === 'pass'">
         <header class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
@@ -158,7 +158,9 @@ const gallery = ['/model.jpg', '/model.jpg', '/model.jpg']
 const photoIndex = ref(0)
 let photoTimer: ReturnType<typeof setInterval> | null = null
 
-const gate = ref<1 | 2 | 3 | 'pass' | 'reject'>(1)
+const gate = ref<1 | 2 | 3 | 'pass' | 'reject' | null>(null)
+const quizAnswers = ref<Record<string, string>>({})
+const gateReady = ref(false)
 
 const quizTitle = computed(() => {
   if (gate.value === 1) return 'Você já comprou conteúdo alguma vez?'
@@ -176,24 +178,37 @@ const quizOptions = computed(() => {
   return [{ key: 'yes', label: 'Sim, eu pagaria', variant: 'quiz-btn--yes' }, { key: 'no', label: 'Não', variant: 'quiz-btn--no' }]
 })
 
-function setGate(next: typeof gate.value) {
+function setGate(next: 1 | 2 | 3 | 'pass' | 'reject', persistServer = false) {
   gate.value = next
-  try { sessionStorage.setItem(GATE_KEY, String(next)) } catch {}
+  try { localStorage.setItem(GATE_KEY, String(next)) } catch {}
+  if (persistServer && (next === 'pass' || next === 'reject')) {
+    const visitor_id = getOrCreateVisitorId()
+    try {
+      fetch('/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitor_id, status: next, answers: { ...quizAnswers.value } }),
+        keepalive: true,
+      }).catch(() => {})
+    } catch {}
+  }
 }
+
 function answerQuiz(key: string) {
   if (gate.value === 1) {
-    if (key === 'yes') { setGate(3); track('quiz_step', { step: 1, answer: 'comprou_sim' }) }
-    else { setGate(2); track('quiz_step', { step: 1, answer: 'comprou_nao' }) }
+    quizAnswers.value.q1 = key === 'yes' ? 'comprou_sim' : 'comprou_nao'
+    setGate(key === 'yes' ? 3 : 2)
     return
   }
   if (gate.value === 2) {
-    if (key === 'previas') { setGate('reject'); track('quiz_reject', { step: 2, answer: 'so_previas' }) }
-    else { setGate(3); track('quiz_step', { step: 2, answer: 'desejo_vip' }) }
+    quizAnswers.value.q2 = key === 'previas' ? 'so_previas' : 'desejo_vip'
+    if (key === 'previas') setGate('reject', true)
+    else setGate(3)
     return
   }
   if (gate.value === 3) {
-    if (key === 'yes') { setGate('pass'); track('quiz_pass', { step: 3, answer: 'pagaria_sim' }) }
-    else { setGate('reject'); track('quiz_reject', { step: 3, answer: 'pagaria_nao' }) }
+    quizAnswers.value.q3 = key === 'yes' ? 'pagaria_sim' : 'pagaria_nao'
+    setGate(key === 'yes' ? 'pass' : 'reject', true)
   }
 }
 
@@ -291,14 +306,39 @@ if (remoteConfig.value) applyServerConfig(remoteConfig.value)
 else config.links = DEFAULT_LINKS.map(attachLogo)
 configReady.value = true
 
-onMounted(() => {
-  getOrCreateVisitorId()
-  if (!alreadyViewedToday()) { markViewedToday(); track('page_view', { offer_slug: 'wanessa_links' }) }
-  try {
-    const saved = sessionStorage.getItem(GATE_KEY)
-    if (saved === 'pass' || saved === 'reject') gate.value = saved
-    else if (saved === '1' || saved === '2' || saved === '3') gate.value = Number(saved) as 1 | 2 | 3
-  } catch {}
+onMounted(async () => {
+  const visitor_id = getOrCreateVisitorId()
+  if (!alreadyViewedToday()) {
+    markViewedToday()
+    track('page_view', { offer_slug: 'wanessa_links' })
+  }
+
+  let restored: string | null = null
+  try { restored = localStorage.getItem(GATE_KEY) } catch {}
+  if (restored === 'pass' || restored === 'reject') gate.value = restored
+  else if (restored === '1' || restored === '2' || restored === '3') gate.value = Number(restored) as 1 | 2 | 3
+
+  if (visitor_id && gate.value !== 'pass' && gate.value !== 'reject') {
+    try {
+      const res = await $fetch<{ status: string | null }>('/api/quiz', { query: { visitor_id } })
+      if (res?.status === 'pass' || res?.status === 'reject') {
+        gate.value = res.status
+        try { localStorage.setItem(GATE_KEY, res.status) } catch {}
+      }
+    } catch {}
+  } else if (visitor_id && (gate.value === 'pass' || gate.value === 'reject')) {
+    try {
+      fetch('/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitor_id, status: gate.value }),
+        keepalive: true,
+      }).catch(() => {})
+    } catch {}
+  }
+
+  if (gate.value == null) gate.value = 1
+  gateReady.value = true
   photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 4200)
 })
 onUnmounted(() => { if (photoTimer) clearInterval(photoTimer) })
