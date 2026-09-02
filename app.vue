@@ -27,7 +27,7 @@
               :key="src + i"
               :src="src"
               :class="['hero-photo', { 'is-active': i === photoIndex }]"
-              alt="Wanessa"
+              alt=""
               decoding="async"
               draggable="false"
             />
@@ -46,8 +46,6 @@
 
         <div class="identity">
           <p class="eyebrow">Modelo de Luxo</p>
-          <h1 class="name">{{ config.name || 'Wanessa' }}</h1>
-          <p class="tagline">{{ config.bio || 'Exclusividade. Elegância. Nível que poucos alcançam.' }}</p>
           <div class="accent-line" aria-hidden="true"></div>
         </div>
       </header>
@@ -156,7 +154,7 @@
       </section>
 
       <footer class="footer">
-        <p class="footer-copy">© Wanessa · Experiência exclusiva</p>
+        <p class="footer-copy">Experiência exclusiva</p>
       </footer>
     </main>
   </div>
@@ -293,7 +291,7 @@ const DEFAULT_LINKS: LinkItem[] = [
 ]
 
 const config = reactive({
-  name: 'Wanessa',
+  name: '',
   bio: '',
   links: [] as LinkItem[],
   highlight_label: DEFAULT_HIGHLIGHT,
@@ -532,7 +530,7 @@ async function doSave() {
   loading.value = true
   try {
     const payload = {
-      name: edit.name || config.name || 'Wanessa',
+      name: edit.name || config.name || '',
       bio: edit.bio,
       avatar_url: '',
       highlight_label: (edit.highlight_label || '').trim() || DEFAULT_HIGHLIGHT,
@@ -563,9 +561,9 @@ async function doSave() {
 }
 
 useHead({
-  title: 'Wanessa | Modelo de Luxo',
+  title: 'Modelo de Luxo',
   meta: [
-    { name: 'description', content: 'Apresentação exclusiva de Wanessa — elegância, privacidade e alto nível.' },
+    { name: 'description', content: 'Apresentação exclusiva — privacidade e alto nível.' },
     { name: 'theme-color', content: '#1a0a24' },
   ],
 })
