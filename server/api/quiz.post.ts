@@ -1,7 +1,6 @@
 /**
  * POST /api/quiz
- * Body: { visitor_id, status: 'pass'|'reject', answers? }
- * Salva no Supabase (tabela quiz_gate).
+ * Body: { visitor_id, fingerprint, status: 'pass'|'reject', answers? }
  */
 export default defineEventHandler(async (event) => {
   if (getMethod(event) !== 'POST') {
@@ -10,6 +9,7 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event).catch(() => ({} as any))
   let visitorId = String(body?.visitor_id || getCookie(event, 'vid') || '').trim().slice(0, 64)
+  const fingerprint = String(body?.fingerprint || '').trim().slice(0, 128)
   const status = String(body?.status || '').trim()
 
   if (!visitorId || visitorId.length < 8) {
@@ -36,11 +36,14 @@ export default defineEventHandler(async (event) => {
 
   try {
     const supabase = useServiceSupabase()
-    const row = {
+    const row: Record<string, any> = {
       visitor_id: visitorId,
       status,
       answers,
       updated_at: new Date().toISOString(),
+    }
+    if (fingerprint && fingerprint.length >= 8) {
+      row.fingerprint = fingerprint
     }
 
     const { error } = await supabase.from('quiz_gate').upsert(row, {
@@ -48,15 +51,28 @@ export default defineEventHandler(async (event) => {
     })
 
     if (error) {
-      // Tabela pode não existir ainda — não quebra a UX
-      return { ok: false, visitor_id: visitorId, status, stored: false, reason: error.message }
+      return {
+        ok: false,
+        visitor_id: visitorId,
+        fingerprint: fingerprint || null,
+        status,
+        stored: false,
+        reason: error.message,
+      }
     }
 
-    return { ok: true, visitor_id: visitorId, status, stored: true }
+    return {
+      ok: true,
+      visitor_id: visitorId,
+      fingerprint: fingerprint || null,
+      status,
+      stored: true,
+    }
   } catch (e: any) {
     return {
       ok: false,
       visitor_id: visitorId,
+      fingerprint: fingerprint || null,
       status,
       stored: false,
       reason: e?.message || 'error',
