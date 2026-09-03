@@ -140,10 +140,10 @@
               <span class="d-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></span>
               <span class="d-btn-text"><span class="d-btn-title">{{ t('tgPrivTitle') }}</span><span class="d-btn-sub">{{ t('tgPrivSub') }}</span></span>
             </a>
-            <a class="direct-btn direct-wa" :class="{ 'direct-btn--primary': isPt, 'direct-btn--secondary': !isPt }" :href="whatsappUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('WhatsApp', whatsappUrl)">
+            <button type="button" class="direct-btn direct-wa" :class="{ 'direct-btn--primary': isPt, 'direct-btn--secondary': !isPt }" @click="openWaFunnel">
               <span class="d-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></span>
               <span class="d-btn-text"><span class="d-btn-title">{{ t('waTitle') }}</span><span class="d-btn-sub">{{ t('waSub') }}</span></span>
-            </a>
+            </button>
           </div>
         </section>
         <footer class="bio-block">
@@ -169,6 +169,66 @@
 
   <ClientOnly>
     <Teleport to="body">
+
+      <div v-if="showWaFunnel" class="wa-funnel-overlay" @click.self="closeWaFunnel">
+        <div class="wa-funnel-shell" role="dialog" aria-modal="true" @click.stop>
+          <header class="wa-header">
+            <button type="button" class="wa-back-btn" aria-label="Fechar" @click="closeWaFunnel">‹</button>
+            <div class="wa-header-info">
+              <p class="wa-name">Wanessa</p>
+              <p class="wa-status">
+                <span v-if="funnelTyping" class="wa-status-typing">digitando…</span>
+                <span v-else class="wa-status-online">online</span>
+              </p>
+            </div>
+            <div class="wa-avatar-wrap">
+              <img class="wa-avatar" src="/model.jpg" alt="" draggable="false" />
+              <span class="wa-online-dot" aria-hidden="true"></span>
+            </div>
+          </header>
+
+          <div ref="funnelChatBox" class="wa-chat wa-funnel-chat">
+            <div class="wa-day">Hoje</div>
+            <div
+              v-for="(m, i) in funnelMessages"
+              :key="i"
+              class="wa-row"
+              :class="m.from === 'me' ? 'wa-row--me' : 'wa-row--her'"
+            >
+              <div class="wa-bubble" :class="m.from === 'me' ? 'wa-bubble--me' : 'wa-bubble--her'">
+                <p class="wa-text" v-html="m.html || escapeHtml(m.text)"></p>
+                <span class="wa-time">{{ m.time }}</span>
+              </div>
+            </div>
+            <div v-if="funnelTyping" class="wa-row wa-row--her">
+              <div class="wa-bubble wa-bubble--her wa-bubble--typing">
+                <span class="wa-dot"></span><span class="wa-dot"></span><span class="wa-dot"></span>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="!funnelTyping && funnelOptions.length" class="wa-quick wa-funnel-quick">
+            <button
+              v-for="opt in funnelOptions"
+              :key="opt.key"
+              type="button"
+              class="wa-quick-btn"
+              :class="opt.variant || 'wa-quick--yes'"
+              @click="answerFunnel(opt)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+
+          <div class="wa-composer">
+            <button type="button" class="wa-emoji" disabled aria-hidden="true">😊</button>
+            <input class="wa-input" type="text" disabled placeholder="Responda pelos botões acima" readonly />
+            <button type="button" class="wa-send" disabled aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
       <div v-if="showLogin && !isAdmin" class="wl-overlay" @click.self="showLogin = false">
         <div class="wl-card" role="dialog" aria-modal="true" @click.stop>
           <h2>Acesso admin</h2>
@@ -238,6 +298,222 @@ const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (
 const telegramPublicUrlActive = computed(() => isPt.value ? telegramPublicUrl : telegramPublicUrlIntl)
 function t(key: string) { return tr(locale.value, key) }
 const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeURIComponent(t('waPrefill')))
+
+const PIX_KEY = '47992750967'
+const showWaFunnel = ref(false)
+const funnelStep = ref<'menu' | 'packs' | 'pix' | 'redirect' | 'other'>('menu')
+const funnelMessages = ref<{ from: 'her' | 'me'; text: string; html?: string; time: string }[]>([])
+const funnelTyping = ref(false)
+const funnelChatBox = ref<HTMLElement | null>(null)
+const selectedPack = ref<{ key: string; label: string; price: string } | null>(null)
+let funnelTimer: ReturnType<typeof setTimeout> | null = null
+
+function escapeHtml(s: string) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+function scrollFunnel() {
+  nextTick(() => {
+    const el = funnelChatBox.value
+    if (el) el.scrollTop = el.scrollHeight
+  })
+}
+
+function pushFunnel(from: 'her' | 'me', text: string, html?: string) {
+  funnelMessages.value.push({ from, text, html, time: nowTime() })
+  scrollFunnel()
+}
+
+function funnelType(text: string, delay = 1000, html?: string) {
+  return new Promise<void>((resolve) => {
+    funnelTyping.value = true
+    scrollFunnel()
+    if (funnelTimer) clearTimeout(funnelTimer)
+    funnelTimer = setTimeout(() => {
+      funnelTyping.value = false
+      pushFunnel('her', text, html)
+      resolve()
+    }, delay)
+  })
+}
+
+const funnelOptions = computed(() => {
+  if (funnelTyping.value) return []
+  if (funnelStep.value === 'menu') {
+    return [
+      { key: 'video', label: '📹 Videochamada', variant: 'wa-quick--yes' },
+      { key: 'pack', label: '🔥 Pack de conteúdo', variant: 'wa-quick--yes' },
+      { key: 'webnamoro', label: '💕 Webnamoro', variant: 'wa-quick--yes' },
+      { key: 'conversar', label: '💬 Só conversar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'packs') {
+    return [
+      { key: 'pack_basic', label: 'Pack gostinho — R$ 29,90', variant: 'wa-quick--yes' },
+      { key: 'pack_gold', label: 'Pack Gold solo — R$ 79,90', variant: 'wa-quick--yes' },
+      { key: 'pack_combo', label: 'Combo completo — R$ 109,90', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'pix') {
+    return [
+      { key: 'pix_yes', label: 'Sim, manda a chave PIX 💚', variant: 'wa-quick--yes' },
+      { key: 'pix_no', label: 'Ainda não', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'redirect') {
+    return [
+      { key: 'go_wa', label: 'Abrir WhatsApp agora →', variant: 'wa-quick--yes' },
+    ]
+  }
+  if (funnelStep.value === 'other') {
+    return [
+      { key: 'go_wa', label: 'Falar no WhatsApp →', variant: 'wa-quick--yes' },
+      { key: 'back_menu', label: '← Ver outras opções', variant: 'wa-quick--no' },
+    ]
+  }
+  return []
+})
+
+function openWaFunnel() {
+  track('whatsapp_funnel_open', { offer_slug: 'whatsapp' })
+  onCardClick('WhatsApp Funnel', whatsappUrl.value)
+  showWaFunnel.value = true
+  funnelStep.value = 'menu'
+  funnelMessages.value = []
+  selectedPack.value = null
+  funnelTyping.value = false
+  nextTick(async () => {
+    await funnelType('Bem-vindo, amor 😘 O que você gostaria de ter de mim hoje?', 1200)
+  })
+}
+
+function closeWaFunnel() {
+  showWaFunnel.value = false
+  if (funnelTimer) clearTimeout(funnelTimer)
+  funnelTyping.value = false
+}
+
+function buildWaLink(prefill: string) {
+  return 'https://wa.me/5547992750967?text=' + encodeURIComponent(prefill)
+}
+
+async function answerFunnel(opt: { key: string; label: string }) {
+  if (funnelTyping.value) return
+  pushFunnel('me', opt.label)
+
+  if (opt.key === 'back' || opt.key === 'back_menu') {
+    funnelStep.value = 'menu'
+    await funnelType('Beleza… então me conta: o que você quer de mim hoje? 😏', 900)
+    return
+  }
+
+  if (opt.key === 'pack') {
+    track('whatsapp_funnel_pack', { offer_slug: 'pack' })
+    funnelStep.value = 'packs'
+    await funnelType(
+      'Tenho 3 packs pra você, amor:\n\n• R$ 29,90 — um gostinho pra me conhecer melhor\n• R$ 79,90 — Pack Gold: solos longos, bem safadinha\n• R$ 109,90 — Combo completo: solo, transando, com outras mulheres, cosplay e tudo\n\nQual você quer?',
+      1400,
+    )
+    return
+  }
+
+  if (opt.key === 'pack_basic' || opt.key === 'pack_gold' || opt.key === 'pack_combo') {
+    const map: Record<string, { label: string; price: string; desc: string }> = {
+      pack_basic: {
+        label: 'Pack gostinho',
+        price: '29,90',
+        desc: 'conteúdos pra você me conhecer melhor, um gostinho delicioso',
+      },
+      pack_gold: {
+        label: 'Pack Gold',
+        price: '79,90',
+        desc: 'solos de maior duração, bem íntimos e safados',
+      },
+      pack_combo: {
+        label: 'Combo completo',
+        price: '109,90',
+        desc: 'todos os conteúdos: solo, transando, com outras mulheres, cosplay e muito mais',
+      },
+    }
+    const p = map[opt.key]
+    selectedPack.value = { key: opt.key, label: p.label, price: p.price }
+    track('whatsapp_funnel_pack_select', { offer_slug: opt.key, metric_value: Number(p.price.replace(',', '.')) })
+    funnelStep.value = 'pix'
+    await funnelType(
+      `Perfeito 🔥 Você escolheu o ${p.label} por R$ ${p.price} — ${p.desc}.\n\nPosso te mandar a chave PIX agora?`,
+      1200,
+    )
+    return
+  }
+
+  if (opt.key === 'pix_yes') {
+    track('whatsapp_funnel_pix', { offer_slug: selectedPack.value?.key || 'pack' })
+    const pixHtml =
+      'Chave PIX (telefone):<br><b style="font-size:1.05em;letter-spacing:0.02em">47992750967</b><br><br>Nome: confira no app do banco antes de confirmar 💚'
+    await funnelType('Prontinho, amor 💕', 800, pixHtml)
+    funnelStep.value = 'redirect'
+    await funnelType(
+      'Agora vou te redirecionar pro meu WhatsApp. Faz o PIX e me manda o comprovante assim que me chamar — eu já te mando tudo 🔥',
+      1400,
+    )
+    return
+  }
+
+  if (opt.key === 'pix_no') {
+    funnelStep.value = 'packs'
+    await funnelType('Sem pressa… quando quiser, é só escolher o pack de novo 😘', 1000)
+    return
+  }
+
+  if (opt.key === 'video') {
+    track('whatsapp_funnel_intent', { offer_slug: 'videochamada' })
+    funnelStep.value = 'other'
+    await funnelType(
+      'Videochamada eu combino pelo WhatsApp, amor — valores e horário a gente fecha lá. Quer que eu te leve agora?',
+      1200,
+    )
+    return
+  }
+
+  if (opt.key === 'webnamoro') {
+    track('whatsapp_funnel_intent', { offer_slug: 'webnamoro' })
+    funnelStep.value = 'other'
+    await funnelType(
+      'Webnamoro é exclusividade, amor 💕 A gente combina detalhes e valores no WhatsApp. Posso te redirecionar?',
+      1200,
+    )
+    return
+  }
+
+  if (opt.key === 'conversar') {
+    track('whatsapp_funnel_intent', { offer_slug: 'conversar' })
+    funnelStep.value = 'other'
+    await funnelType(
+      'Claro… mas aqui o foco é conteúdo e experiência premium 😘 Se quiser só papo, me chama no WhatsApp e a gente vê.',
+      1200,
+    )
+    return
+  }
+
+  if (opt.key === 'go_wa') {
+    const pack = selectedPack.value
+    let prefill = 'Oi Wanessa! Vim do site e quero falar com você.'
+    if (pack) {
+      prefill = `Oi Wanessa! Quero o ${pack.label} (R$ ${pack.price}). Vou fazer o PIX na chave 47992750967 e te mando o comprovante.`
+    } else {
+      prefill = 'Oi Wanessa! Vim do site e quero saber mais sobre videochamada / webnamoro / conteúdo.'
+    }
+    track('whatsapp_funnel_redirect', { offer_slug: pack?.key || 'whatsapp' })
+    const url = buildWaLink(prefill)
+    window.open(url, '_blank', 'noopener,noreferrer')
+    closeWaFunnel()
+  }
+}
+
 const telegramPrivateUrl = 'https://t.me/wanessabsx'
 const logoPriv = LOGO_PRIVSEX
 const logoTg = LOGO_TG_BLUE
