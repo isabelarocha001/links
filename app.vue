@@ -83,7 +83,7 @@
           </div>
           <!-- identity title removed -->
         </header>
-        <section class="main-cards" :class="{ 'main-cards--single': isPt }" v-if="configReady">
+        <section class="main-cards" v-if="configReady">
           <div class="card-col">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
               <div class="portal-spiral" aria-hidden="true">
@@ -103,7 +103,7 @@
             </a>
             <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
           </div>
-          <div v-if="!isPt" class="card-col">
+          <div class="card-col">
             <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
               <div class="card-glow"></div>
               <div class="card-top">
@@ -116,7 +116,7 @@
             <a class="card-enter" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">{{ t('pubEnter') }}</a>
           </div>
         </section>
-        <section class="vip-block" v-if="configReady && !isPt">
+        <section class="vip-block" v-if="configReady && isPt">
           <a class="vip-card" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">
             <div class="vip-shine"></div>
             <div class="vip-content">
@@ -132,11 +132,6 @@
             <span class="vip-arrow">→</span>
           </a>
         </section>
-
-        <div class="online-only-notice" role="note">
-          <p class="online-only-title">⚠️ SOMENTE CONTEÚDO ONLINE</p>
-          <p class="online-only-text">Não faço encontro presencial. Não faço programada. Não importa o valor — a resposta continua sendo <strong>NÃO</strong>. Vendo só conteúdo digital.</p>
-        </div>
         <section class="direct-section">
           <p class="direct-label">{{ t('directLabel') }}</p>
           <div class="direct-stack" :class="{ 'direct-stack--intl': !isPt }">
