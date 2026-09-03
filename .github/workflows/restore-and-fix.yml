@@ -18,8 +18,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Apply portal border animation
-        run: python3 scripts/fix_portal_border.py
+      - name: Apply black-hole spiral portal
+        run: python3 scripts/fix_portal_spiral.py
 
       - name: Commit and push
         run: |
@@ -29,6 +29,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "fix: portal PrivSex - borda animada, fundo preto, texto branco"
+            git commit -m "fix: portal PrivSex - espiral tipo buraco negro"
             git push
           fi
