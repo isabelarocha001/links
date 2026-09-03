@@ -18,8 +18,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Apply quiz intent question
-        run: python3 scripts/fix_quiz_intent.py
+      - name: Reject curious leads on intent question
+        run: python3 scripts/fix_quiz_reject_curious.py
 
       - name: Commit and push
         run: |
@@ -29,6 +29,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "fix: quiz - 3a pergunta de intencao (VIP / precos / so olhando)"
+            git commit -m "fix: quiz - so olhando bloqueia (filtro final de intencao)"
             git push
           fi
