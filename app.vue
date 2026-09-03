@@ -171,7 +171,7 @@
     <Teleport to="body">
 
       <div v-if="showWaFunnel" class="wa-funnel-overlay" @click.self="closeWaFunnel">
-        <div class="wa-funnel-shell" role="dialog" aria-modal="true" @click.stop>
+        <div class="wa-funnel-shell" role="dialog" aria-modal="true" :style="funnelShellStyle" @click.stop>
           <header class="wa-header wa-funnel-header">
             <button type="button" class="wa-avatar-btn" aria-label="Ver foto de perfil" @click="showFunnelPhoto = true">
               <span class="wa-avatar-wrap wa-avatar-wrap--lg">
@@ -267,6 +267,10 @@
               placeholder="Mensagem"
               :disabled="funnelTyping"
               maxlength="500"
+              enterkeyhint="send"
+              autocomplete="off"
+              @focus="onFunnelInputFocus"
+              @blur="onFunnelInputBlur"
               @keyup.enter="sendFunnelFreeText"
             />
             <button
@@ -354,7 +358,68 @@ const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeU
 const PIX_KEY = '47992750967'
 const showWaFunnel = ref(false)
 const showFunnelPhoto = ref(false)
+
 const funnelInput = ref('')
+const funnelShellStyle = ref<Record<string, string>>({})
+
+function syncFunnelViewport() {
+  try {
+    const vv = window.visualViewport
+    if (!vv) {
+      funnelShellStyle.value = { height: '100dvh' }
+      return
+    }
+    // altura real visível (desconta teclado)
+    const h = Math.round(vv.height)
+    const top = Math.round(vv.offsetTop)
+    funnelShellStyle.value = {
+      height: h + 'px',
+      top: top + 'px',
+      maxHeight: h + 'px',
+    }
+  } catch {
+    funnelShellStyle.value = {}
+  }
+}
+
+function onFunnelInputFocus() {
+  syncFunnelViewport()
+  // iOS às vezes atrasa o resize do teclado
+  setTimeout(syncFunnelViewport, 150)
+  setTimeout(syncFunnelViewport, 350)
+  nextTick(() => scrollFunnel())
+}
+
+function onFunnelInputBlur() {
+  setTimeout(syncFunnelViewport, 100)
+}
+
+let funnelVvClean: (() => void) | null = null
+function bindFunnelViewport() {
+  unbindFunnelViewport()
+  syncFunnelViewport()
+  const vv = window.visualViewport
+  const handler = () => syncFunnelViewport()
+  if (vv) {
+    vv.addEventListener('resize', handler)
+    vv.addEventListener('scroll', handler)
+  }
+  window.addEventListener('resize', handler)
+  funnelVvClean = () => {
+    if (vv) {
+      vv.removeEventListener('resize', handler)
+      vv.removeEventListener('scroll', handler)
+    }
+    window.removeEventListener('resize', handler)
+  }
+}
+function unbindFunnelViewport() {
+  if (funnelVvClean) {
+    funnelVvClean()
+    funnelVvClean = null
+  }
+}
+
 const showFunnelProfile = ref(false)
 const funnelStep = ref<'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'redirect' | 'other'>('menu')
 const funnelMessages = ref<{ from: 'her' | 'me'; text: string; html?: string; time: string }[]>([])
@@ -507,6 +572,7 @@ function openWaFunnel() {
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
   funnelTyping.value = false
+  nextTick(() => bindFunnelViewport())
   if (funnelTimer) clearTimeout(funnelTimer)
 
   const restored = loadFunnelState()
@@ -527,11 +593,13 @@ function openWaFunnel() {
 function closeWaFunnel() {
   if (funnelTimer) clearTimeout(funnelTimer)
   funnelTyping.value = false
+  unbindFunnelViewport()
   // salva progresso antes de fechar
   if (funnelMessages.value.length) saveFunnelState()
   showWaFunnel.value = false
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
+  funnelShellStyle.value = {}
 }
 
 function buildWaLink(prefill: string) {
