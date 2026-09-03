@@ -395,3 +395,63 @@
 .direct-stack--intl .direct-tg {
   order: -1;
 }
+
+/* WhatsApp sales funnel popup */
+.wa-funnel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  backdrop-filter: blur(4px);
+}
+.wa-funnel-shell {
+  width: 100%;
+  max-width: 400px;
+  max-height: min(92vh, 720px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #0b141a;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.wa-funnel-shell .wa-header {
+  flex-shrink: 0;
+}
+.wa-back-btn {
+  background: none;
+  border: none;
+  color: #e9edef;
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.wa-funnel-chat {
+  flex: 1;
+  min-height: 220px;
+  max-height: 48vh;
+  overflow-y: auto;
+}
+.wa-funnel-quick {
+  flex-shrink: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.wa-funnel-shell .wa-composer {
+  flex-shrink: 0;
+}
+button.direct-btn {
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.wa-funnel-shell .wa-text {
+  white-space: pre-wrap;
+}
