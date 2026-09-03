@@ -328,14 +328,15 @@ function answerQuiz(key: string) {
     }
     quizAnswers.value.q3 = intentMap[key] || key
     try { localStorage.setItem('wanessa_intent', quizAnswers.value.q3) } catch {}
+    // 3a pergunta = filtro final: so curiosos nao entram na pressel
     if (key === 'olhando') {
-      // Lead frio: libera página, mas avisa que o foco é quem compra
-      pushMsg('her', 'Beleza. Vou te mostrar as opções — o VIP e o privado são pra quem já decide.')
-      setTimeout(() => setGate('pass', true), 900)
+      setGate('reject', true)
+      typeThenAsk('Obrigada. Este espaço é pra quem já está pronto pra assinar. Quando decidir, volta aqui.', 1400)
     } else if (key === 'assinar') {
       pushMsg('her', 'Perfeito. Vou te levar pro bot VIP e às opções de compra…')
       setTimeout(() => setGate('pass', true), 800)
     } else {
+      // precos / opcoes
       pushMsg('her', 'Perfeito. Entrando nas opções e valores…')
       setTimeout(() => setGate('pass', true), 800)
     }
