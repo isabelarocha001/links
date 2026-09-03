@@ -500,3 +500,185 @@ button.direct-btn {
   text-align: left;
   width: 100%;
 }
+
+/* Avatar maior no header do funil */
+.wa-funnel-header .wa-avatar-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.wa-funnel-header .wa-avatar-wrap--lg {
+  width: 52px;
+  height: 52px;
+  position: relative;
+  display: block;
+}
+.wa-funnel-header .wa-avatar-wrap--lg .wa-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.wa-funnel-header .wa-avatar-wrap--lg .wa-online-dot {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #25d366;
+  border: 2px solid #1f2c34;
+}
+.wa-header-info-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  flex: 1;
+  min-width: 0;
+}
+.wa-header-info-btn .wa-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+/* Foto circular full (clique na foto) */
+.wa-profile-photo-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: #0b141a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+}
+.wa-profile-photo-close {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.wa-profile-photo-circle {
+  width: min(78vw, 320px);
+  height: min(78vw, 320px);
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  border: 3px solid rgba(255,255,255,0.12);
+}
+.wa-profile-photo-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.wa-profile-photo-name {
+  margin: 0;
+  color: #e9edef;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Painel de perfil / bio */
+.wa-profile-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  background: #0b141a;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.wa-profile-panel-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  padding-top: max(10px, env(safe-area-inset-top));
+  background: #1f2c34;
+}
+.wa-profile-panel-title {
+  flex: 1;
+  color: #e9edef;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.wa-profile-panel-spacer { width: 40px; }
+.wa-profile-panel-body {
+  padding: 28px 20px 40px;
+  text-align: center;
+}
+.wa-profile-big-avatar {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: none;
+  padding: 0;
+  margin: 0 auto 14px;
+  cursor: pointer;
+  display: block;
+  background: none;
+}
+.wa-profile-big-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.wa-profile-name {
+  margin: 0 0 18px;
+  color: #e9edef;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+.wa-profile-about-label {
+  margin: 0 0 4px;
+  color: #8696a0;
+  font-size: 0.75rem;
+  text-align: left;
+}
+.wa-profile-about {
+  margin: 0 0 18px;
+  color: #e9edef;
+  font-size: 0.95rem;
+  text-align: left;
+  padding: 10px 12px;
+  background: #1f2c34;
+  border-radius: 10px;
+}
+.wa-profile-row {
+  text-align: left;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.wa-profile-row-label {
+  display: block;
+  color: #8696a0;
+  font-size: 0.72rem;
+  margin-bottom: 4px;
+}
+.wa-profile-row-value {
+  color: #e9edef;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+.wa-funnel-shell {
+  position: relative;
+}
