@@ -682,3 +682,18 @@ button.direct-btn {
 .wa-funnel-shell {
   position: relative;
 }
+
+.wa-funnel-composer .wa-input {
+  pointer-events: auto;
+  opacity: 1;
+  color: #e9edef;
+}
+.wa-funnel-composer .wa-send:not(:disabled) {
+  opacity: 1;
+  cursor: pointer;
+  color: #25d366;
+}
+.wa-funnel-composer .wa-send:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
