@@ -313,14 +313,10 @@ function answerQuiz(key: string) {
   const label = quizOptions.value.find((o) => o.key === key)?.label || key
   pushMsg('me', label)
   if (gate.value === 1) {
+    // Nunca assinou NAO bloqueia — lead novo tambem pode comprar; so registra
     quizAnswers.value.q1 = key === 'yes' ? 'assinou_sim' : 'assinou_nao'
-    if (key === 'no') {
-      setGate('reject', true)
-      typeThenAsk(t('rejectNever'), 1400)
-    } else {
-      setGate(2)
-      typeThenAsk(questionText(2), 1100)
-    }
+    setGate(2)
+    typeThenAsk(questionText(2), 1100)
     return
   }
   if (gate.value === 2) {
