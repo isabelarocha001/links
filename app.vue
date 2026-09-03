@@ -511,6 +511,7 @@ const funnelOptions = computed(() => {
   if (funnelStep.value === 'redirect') {
     return [
       { key: 'go_wa', label: 'Abrir WhatsApp agora →', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
   if (funnelStep.value === 'other') {
@@ -606,12 +607,103 @@ function buildWaLink(prefill: string) {
   return 'https://wa.me/5547992750967?text=' + encodeURIComponent(prefill)
 }
 
+
+async function sendFunnelFreeText() {
+  const text = (funnelInput.value || '').trim()
+  if (!text || funnelTyping.value) return
+  funnelInput.value = ''
+  pushFunnel('me', text)
+  try { saveFunnelState() } catch {}
+  try { track('whatsapp_funnel_free_text', { offer_slug: 'whatsapp', message: text.slice(0, 120) }) } catch {}
+
+  const lower = text.toLowerCase()
+
+  if (/pack|pacote|conte[uú]do|combo|gold/.test(lower)) {
+    funnelStep.value = 'packs'
+    await funnelType(
+      'Tenho packs sim, amor 🔥\n\n• R$ 29,90 — gostinho\n• R$ 79,90 — Gold solo\n• R$ 109,90 — Combo completo\n\nQual você quer? Ou continua falando comigo aqui 😘',
+      1200,
+    )
+    return
+  }
+  if (/video|chamada|call|cam/.test(lower)) {
+    funnelStep.value = 'video'
+    await funnelType(
+      'Videochamada eu faço sim 🔥\n\n• 10 min — R$ 99,90\n• 20 min — R$ 149,90\n• 30 min — R$ 229,90\n\nQual tempo você quer?',
+      1200,
+    )
+    return
+  }
+  if (/webnamoro|namoro|namorada|exclusiv/.test(lower)) {
+    funnelStep.value = 'webnamoro'
+    await funnelType(
+      'Webnamoro é exclusividade comigo 💕\n\n• 7 dias — R$ 179,90\n• 15 dias — R$ 299,90\n• 30 dias — R$ 499,90\n\nQual pacote te interessa?',
+      1200,
+    )
+    return
+  }
+  if (/pix|pagar|pre[cç]o|valor|quanto/.test(lower)) {
+    if (selectedPack.value) {
+      funnelStep.value = 'pix'
+      await funnelType(
+        `O ${selectedPack.value.label} fica R$ ${selectedPack.value.price}. Posso te mandar a chave PIX agora?`,
+        1100,
+      )
+    } else {
+      await funnelType(
+        'Depende do que você quer, amor 😘 Pack, videochamada, webnamoro ou chat — me diz qual e eu te passo o valor.',
+        1100,
+      )
+    }
+    return
+  }
+  if (/oi|ol[aá]|bom dia|boa tarde|boa noite|e a[ií]|hey|hello/.test(lower)) {
+    await funnelType('Oi amor 😘 Me conta o que você quer de mim hoje — pack, videochamada, webnamoro ou só um papo safado?', 1100)
+    return
+  }
+  if (/encont|presencial|sair|te encontrar|programad/.test(lower)) {
+    await funnelType(
+      'Amor, eu só faço conteúdo e experiências online — sem encontro presencial, ok? Posso te oferecer pack, call ou webnamoro 💕',
+      1200,
+    )
+    return
+  }
+
+  const replies = [
+    'Hmm entendi… me conta melhor o que você quer, amor 😏 Pode escolher pelos botões ou escrever: pack, videochamada, webnamoro...',
+    'Tô aqui 🔥 Quer conteúdo, call ao vivo ou webnamoro? Pode digitar ou usar os botões.',
+    'Gostei de você falando comigo 😘 O que te deixa mais louco: pack, videochamada ou ser meu webnamorado?',
+  ]
+  const reply = replies[Math.floor(Math.random() * replies.length)]
+  await funnelType(reply, 1100)
+}
+
 async function answerFunnel(opt: { key: string; label: string }) {
   if (funnelTyping.value) return
   pushFunnel('me', opt.label)
   saveFunnelState()
 
   if (opt.key === 'back' || opt.key === 'back_menu') {
+    const k = selectedPack.value?.key || ''
+    if (funnelStep.value === 'redirect' || funnelStep.value === 'pix') {
+      if (k.startsWith('vid_')) {
+        funnelStep.value = 'video'
+        await funnelType('Beleza… escolhe de novo o tempo da videochamada 🔥', 900)
+      } else if (k.startsWith('web_')) {
+        funnelStep.value = 'webnamoro'
+        await funnelType('Beleza… escolhe de novo o plano de webnamoro 💕', 900)
+      } else if (k.startsWith('chat_')) {
+        funnelStep.value = 'chat'
+        await funnelType('Beleza… escolhe de novo o chat 😘', 900)
+      } else if (k.startsWith('pack_')) {
+        funnelStep.value = 'packs'
+        await funnelType('Beleza… escolhe de novo o pack 🔥', 900)
+      } else {
+        funnelStep.value = 'menu'
+        await funnelType('Beleza… então me conta: o que você quer de mim hoje? 😏', 900)
+      }
+      return
+    }
     funnelStep.value = 'menu'
     await funnelType('Beleza… então me conta: o que você quer de mim hoje? 😏', 900)
     return
