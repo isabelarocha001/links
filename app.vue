@@ -7,7 +7,7 @@
     </button>
     <main class="container">
       <section
-        v-if="gateReady && (gate === 1 || gate === 2 || gate === 'reject')"
+        v-if="gateReady && (gate === 1 || gate === 2 || gate === 3 || gate === 'reject')"
         class="wa-shell"
       >
         <header class="wa-header">
@@ -231,7 +231,7 @@ const gallery = ['/model.jpg', '/model.jpg', '/model.jpg']
 const photoIndex = ref(0)
 let photoTimer: ReturnType<typeof setInterval> | null = null
 
-const gate = ref<1 | 2 | 'pass' | 'reject' | null>(null)
+const gate = ref<1 | 2 | 3 | 'pass' | 'reject' | null>(null)
 const quizAnswers = ref<Record<string, string>>({})
 const gateReady = ref(false)
 const chatMessages = ref<ChatMsg[]>([])
@@ -262,16 +262,22 @@ function typeThenAsk(text: string, delay = 900) {
     pushMsg('her', text)
   }, delay)
 }
-const questionText = (g: 1 | 2) => {
+const questionText = (g: 1 | 2 | 3) => {
   if (g === 1) return 'Oi 😊 Você já assinou Privacy, PrivSex ou VIP de alguma criadora?'
-  return 'Você já me conhece pelo Instagram?'
+  if (g === 2) return 'Você já me conhece pelo Instagram?'
+  return 'O que você busca aqui agora?'
 }
 const quizOptions = computed(() => {
   if (gate.value === 1) return [{ key: 'yes', label: 'Sim, já assinei', variant: 'wa-quick--yes' }, { key: 'no', label: 'Nunca assinei nada', variant: 'wa-quick--no' }]
   if (gate.value === 2) return [{ key: 'yes', label: 'Sim', variant: 'wa-quick--yes' }, { key: 'no', label: 'Não', variant: 'wa-quick--no' }]
+  if (gate.value === 3) return [
+    { key: 'assinar', label: 'Quero assinar o VIP hoje', variant: 'wa-quick--yes' },
+    { key: 'precos', label: 'Quero ver preços / opções', variant: 'wa-quick--yes' },
+    { key: 'olhando', label: 'Só estou olhando', variant: 'wa-quick--no' },
+  ]
   return []
 })
-function setGate(next: 1 | 2 | 'pass' | 'reject', persistServer = false) {
+function setGate(next: 1 | 2 | 3 | 'pass' | 'reject', persistServer = false) {
   gate.value = next
   try { localStorage.setItem(GATE_KEY, String(next)) } catch {}
   if (persistServer && (next === 'pass' || next === 'reject')) {
@@ -309,8 +315,29 @@ function answerQuiz(key: string) {
       setGate('reject', true)
       typeThenAsk('Obrigada. Você não é o tipo de pessoa que estou procurando.', 1200)
     } else {
-      pushMsg('her', 'Perfeito. Entrando…')
-      setTimeout(() => setGate('pass', true), 700)
+      setGate(3)
+      typeThenAsk(questionText(3), 1100)
+    }
+    return
+  }
+  if (gate.value === 3) {
+    const intentMap: Record<string, string> = {
+      assinar: 'intent_assinar_hoje',
+      precos: 'intent_ver_precos',
+      olhando: 'intent_so_olhando',
+    }
+    quizAnswers.value.q3 = intentMap[key] || key
+    try { localStorage.setItem('wanessa_intent', quizAnswers.value.q3) } catch {}
+    if (key === 'olhando') {
+      // Lead frio: libera página, mas avisa que o foco é quem compra
+      pushMsg('her', 'Beleza. Vou te mostrar as opções — o VIP e o privado são pra quem já decide.')
+      setTimeout(() => setGate('pass', true), 900)
+    } else if (key === 'assinar') {
+      pushMsg('her', 'Perfeito. Vou te levar pro bot VIP e às opções de compra…')
+      setTimeout(() => setGate('pass', true), 800)
+    } else {
+      pushMsg('her', 'Perfeito. Entrando nas opções e valores…')
+      setTimeout(() => setGate('pass', true), 800)
     }
   }
 }
@@ -414,8 +441,8 @@ onMounted(async () => {
   let restored: string | null = null
   try { restored = localStorage.getItem(GATE_KEY) } catch {}
   if (restored === 'pass' || restored === 'reject') gate.value = restored
-  else if (restored === '1' || restored === '2') gate.value = Number(restored) as 1 | 2
-  else if (restored === '3' || restored === '4') gate.value = 1 // old multi-step progress -> restart simplified flow
+  else if (restored === '1' || restored === '2' || restored === '3') gate.value = Number(restored) as 1 | 2 | 3
+  else if (restored === '4') gate.value = 1 // legacy progress -> restart
   const fingerprint = await getDeviceFingerprint()
   if (gate.value !== 'pass' && gate.value !== 'reject') {
     try {
@@ -432,9 +459,9 @@ onMounted(async () => {
   }
   if (gate.value == null) gate.value = 1
   gateReady.value = true
-  if (gate.value === 1 || gate.value === 2) {
+  if (gate.value === 1 || gate.value === 2 || gate.value === 3) {
     chatMessages.value = []
-    typeThenAsk(questionText(gate.value as 1 | 2), 800)
+    typeThenAsk(questionText(gate.value as 1 | 2 | 3), 800)
   } else if (gate.value === 'reject') {
     chatMessages.value = []
     pushMsg('her', 'Obrigada. Você não é o tipo de pessoa que estou procurando.')
