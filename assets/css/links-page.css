@@ -56,6 +56,7 @@
 .eyebrow { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #c084fc; margin: 0 0 6px; }
 .accent-line { width: 48px; height: 1px; margin: 16px auto 0; background: linear-gradient(90deg, transparent, #c084fc, transparent); }
 .main-cards { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; align-items: stretch; }
+.main-cards--single { grid-template-columns: 1fr; max-width: 320px; margin-left: auto; margin-right: auto; }
 .card-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .card-col .lux-card { flex: 1; min-height: 148px; }
 .card-enter {
