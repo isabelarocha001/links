@@ -18,8 +18,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Apply quiz simplification
-        run: python3 scripts/fix_quiz_flow.py
+      - name: Apply quiz intent question
+        run: python3 scripts/fix_quiz_intent.py
 
       - name: Commit and push
         run: |
@@ -29,6 +29,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "fix: quiz - 1a pergunta Privacy/PrivSex/VIP (sem duplicata)"
+            git commit -m "fix: quiz - 3a pergunta de intencao (VIP / precos / so olhando)"
             git push
           fi
