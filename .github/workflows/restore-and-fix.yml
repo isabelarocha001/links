@@ -18,17 +18,17 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Apply black-hole spiral portal
-        run: python3 scripts/fix_portal_spiral.py
+      - name: Apply i18n + CTA below cards
+        run: python3 scripts/fix_i18n_cta.py
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.vue assets/css/links-page.css
+          git add app.vue assets/css/links-page.css utils/i18n.ts
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "fix: portal PrivSex - espiral tipo buraco negro"
+            git commit -m "fix: i18n multi-idioma + botao Entrar abaixo do card"
             git push
           fi
