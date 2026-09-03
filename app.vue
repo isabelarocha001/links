@@ -85,6 +85,13 @@
         </header>
         <section class="main-cards" v-if="configReady">
           <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
+            <div class="portal-spiral" aria-hidden="true">
+              <span class="ps-ring ps-r1"></span>
+              <span class="ps-ring ps-r2"></span>
+              <span class="ps-ring ps-r3"></span>
+              <span class="ps-ring ps-r4"></span>
+              <span class="ps-core"></span>
+            </div>
             <div class="card-glow"></div>
             <div class="card-top">
               <span class="card-icon"><img v-if="logoPriv" :src="logoPriv" alt="" class="logo-img" width="28" height="28" /><template v-else>🔥</template></span>
