@@ -173,19 +173,55 @@
       <div v-if="showWaFunnel" class="wa-funnel-overlay" @click.self="closeWaFunnel">
         <div class="wa-funnel-shell" role="dialog" aria-modal="true" @click.stop>
           <header class="wa-header wa-funnel-header">
-            <div class="wa-avatar-wrap">
-              <img class="wa-avatar" src="/model.jpg" alt="" draggable="false" />
-              <span class="wa-online-dot" aria-hidden="true"></span>
-            </div>
-            <div class="wa-header-info">
+            <button type="button" class="wa-avatar-btn" aria-label="Ver foto de perfil" @click="showFunnelPhoto = true">
+              <span class="wa-avatar-wrap wa-avatar-wrap--lg">
+                <img class="wa-avatar" src="/model.jpg" alt="Wanessa" draggable="false" />
+                <span class="wa-online-dot" aria-hidden="true"></span>
+              </span>
+            </button>
+            <button type="button" class="wa-header-info wa-header-info-btn" @click="showFunnelProfile = true">
               <p class="wa-name">Wanessa</p>
               <p class="wa-status">
                 <span v-if="funnelTyping" class="wa-status-typing">digitando…</span>
                 <span v-else class="wa-status-online">online</span>
               </p>
-            </div>
+            </button>
             <button type="button" class="wa-close-btn" aria-label="Fechar chat" @click="closeWaFunnel">✕</button>
           </header>
+
+          <!-- Foto de perfil em círculo (estilo WhatsApp) -->
+          <div v-if="showFunnelPhoto" class="wa-profile-photo-overlay" @click.self="showFunnelPhoto = false">
+            <button type="button" class="wa-profile-photo-close" aria-label="Fechar" @click="showFunnelPhoto = false">✕</button>
+            <div class="wa-profile-photo-circle">
+              <img src="/model.jpg" alt="Wanessa" draggable="false" />
+            </div>
+            <p class="wa-profile-photo-name">Wanessa</p>
+          </div>
+
+          <!-- Perfil / bio (estilo WhatsApp) -->
+          <div v-if="showFunnelProfile" class="wa-profile-panel">
+            <header class="wa-profile-panel-top">
+              <button type="button" class="wa-close-btn" aria-label="Voltar" @click="showFunnelProfile = false">‹</button>
+              <span class="wa-profile-panel-title">Dados do contato</span>
+              <span class="wa-profile-panel-spacer"></span>
+            </header>
+            <div class="wa-profile-panel-body">
+              <button type="button" class="wa-profile-big-avatar" @click="showFunnelPhoto = true">
+                <img src="/model.jpg" alt="Wanessa" draggable="false" />
+              </button>
+              <h2 class="wa-profile-name">Wanessa</h2>
+              <p class="wa-profile-about-label">Recado</p>
+              <p class="wa-profile-about">Criadora de conteúdo</p>
+              <div class="wa-profile-row">
+                <span class="wa-profile-row-label">Localização</span>
+                <span class="wa-profile-row-value">Balneário Camboriú, Santa Catarina, Brasil</span>
+              </div>
+              <div class="wa-profile-row">
+                <span class="wa-profile-row-label">Sobre</span>
+                <span class="wa-profile-row-value">Conteúdo online · sem encontro presencial</span>
+              </div>
+            </div>
+          </div>
 
           <div ref="funnelChatBox" class="wa-chat wa-funnel-chat">
             <div class="wa-day">Hoje</div>
@@ -303,6 +339,8 @@ const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeU
 
 const PIX_KEY = '47992750967'
 const showWaFunnel = ref(false)
+const showFunnelPhoto = ref(false)
+const showFunnelProfile = ref(false)
 const funnelStep = ref<'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'redirect' | 'other'>('menu')
 const funnelMessages = ref<{ from: 'her' | 'me'; text: string; html?: string; time: string }[]>([])
 const funnelTyping = ref(false)
@@ -418,6 +456,8 @@ function openWaFunnel() {
 
 function closeWaFunnel() {
   showWaFunnel.value = false
+  showFunnelPhoto.value = false
+  showFunnelProfile.value = false
   if (funnelTimer) clearTimeout(funnelTimer)
   funnelTyping.value = false
 }
