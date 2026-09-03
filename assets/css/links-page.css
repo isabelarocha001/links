@@ -373,3 +373,25 @@
   .ig-avatar { width: 56px; height: 56px; min-width: 56px; min-height: 56px; }
   .ig-stats { gap: 6px 8px; font-size: 0.64rem; }
 }
+
+/* Intl: Telegram é o CTA principal; WhatsApp secundário */
+.direct-btn--primary {
+  background: linear-gradient(135deg, rgba(42, 171, 238, 0.28), rgba(168, 85, 247, 0.18));
+  border-color: rgba(42, 171, 238, 0.55);
+  box-shadow: 0 8px 22px rgba(42, 171, 238, 0.2);
+}
+.direct-btn--primary:hover {
+  background: linear-gradient(135deg, rgba(42, 171, 238, 0.4), rgba(168, 85, 247, 0.25));
+  border-color: rgba(42, 171, 238, 0.75);
+}
+.direct-btn--secondary {
+  opacity: 0.78;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.direct-btn--secondary:hover {
+  opacity: 1;
+}
+.direct-stack--intl .direct-tg {
+  order: -1;
+}
