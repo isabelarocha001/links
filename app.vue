@@ -316,138 +316,125 @@ function answerQuiz(key: string) {
   const label = quizOptions.value.find((o) => o.key === key)?.label || key
   pushMsg('me', label)
   if (gate.value === 1) {
-    // Nunca assinou NAO bloqueia — lead novo tambem pode comprar; so registra
+    // Nunca assinou NAO bloqueia — só avança
     quizAnswers.value.q1 = key === 'yes' ? 'assinou_sim' : 'assinou_nao'
     setGate(2)
-    typeThenAsk(questionText(2), 1100)
+    typeThenAsk(questionText(2), 700)
     return
   }
   if (gate.value === 2) {
-    // Nao conhecer pelo Instagram NAO bloqueia — so registra
     quizAnswers.value.q2 = key === 'yes' ? 'conhece_sim' : 'conhece_nao'
     setGate(3)
-    typeThenAsk(questionText(3), 1100)
+    typeThenAsk(questionText(3), 700)
     return
   }
   if (gate.value === 3) {
-    // Disposto a pagar? Sim -> segue | Nao -> bloqueia
     quizAnswers.value.q_pay = key === 'yes' ? 'pago_sim' : 'pago_nao'
     if (key === 'no') {
       setGate('reject', true)
-      typeThenAsk(t('rejectPay'), 1400)
-    } else {
-      setGate(4)
-      typeThenAsk(questionText(4), 1100)
+      setTimeout(() => pushMsg('her', t('rejectIg')), 600)
+      return
     }
+    setGate(4)
+    typeThenAsk(questionText(4), 700)
     return
   }
   if (gate.value === 4) {
     const intentMap: Record<string, string> = {
-      assinar: 'intent_assinar_hoje',
-      precos: 'intent_ver_precos',
-      olhando: 'intent_so_olhando',
+      assinar: 'assinar',
+      precos: 'precos',
+      olhando: 'olhando',
     }
     quizAnswers.value.q3 = intentMap[key] || key
     try { localStorage.setItem('wanessa_intent', quizAnswers.value.q3) } catch {}
     if (key === 'olhando') {
       setGate('reject', true)
-      typeThenAsk(t('rejectCurious'), 1400)
-    } else if (key === 'assinar') {
-      pushMsg('her', t('passAssinar'))
-      setTimeout(() => setGate('pass', true), 800)
-    } else {
-      pushMsg('her', t('passPrecos'))
-      setTimeout(() => setGate('pass', true), 800)
+      setTimeout(() => pushMsg('her', t('rejectIg')), 600)
+      return
     }
+    if (key === 'precos') {
+      setTimeout(() => setGate('pass', true), 800)
+      return
+    }
+    setTimeout(() => setGate('pass', true), 800)
   }
 }
-const DEFAULT_LINKS: LinkItem[] = [
-  { label: 'PrivSex', icon: '🔥', url: privsexUrl, enabled: true },
-  { label: 'Telegram VIP', icon: '⭐', url: vipBotUrl, enabled: true },
-  { label: 'Canal de prévias', icon: '📱', url: telegramPublicUrl, enabled: true },
-]
-const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT })
+
+function getOrCreateVisitorId() {
+  try {
+    let id = localStorage.getItem(VID_KEY)
+    if (!id) {
+      id = crypto.randomUUID()
+      localStorage.setItem(VID_KEY, id)
+    }
+    return id
+  } catch {
+    return 'anon-' + Math.random().toString(36).slice(2)
+  }
+}
+function alreadyViewedToday() {
+  try {
+    const d = new Date().toISOString().slice(0, 10)
+    return localStorage.getItem(VIEW_DAY_KEY) === d
+  } catch { return false }
+}
+function markViewedToday() {
+  try {
+    const d = new Date().toISOString().slice(0, 10)
+    localStorage.setItem(VIEW_DAY_KEY, d)
+  } catch {}
+}
+function track(event: string, payload: Record<string, any> = {}) {
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    getDeviceFingerprint().then((fingerprint) => {
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitor_id, fingerprint, event, ...payload }),
+        keepalive: true,
+      }).catch(() => {})
+    })
+  } catch {}
+}
+function onCardClick(label: string, url: string) {
+  track('card_click', { label, url, offer_slug: 'wanessa_links' })
+}
+
 const configReady = ref(false)
+const config = reactive({
+  name: 'Wanessa',
+  bio: '',
+  highlight_label: DEFAULT_HIGHLIGHT,
+  links: [] as LinkItem[],
+})
+const DEFAULT_LINKS: LinkItem[] = []
+function attachLogo(l: LinkItem): LinkItem {
+  return { ...l }
+}
+function applyServerConfig(data: any) {
+  if (!data) return
+  if (data.name) config.name = data.name
+  if (data.bio != null) config.bio = data.bio
+  if (data.highlight_label) config.highlight_label = data.highlight_label
+  if (Array.isArray(data.links)) config.links = data.links.map(attachLogo)
+}
+
 const showLogin = ref(false)
 const isAdmin = ref(false)
 const password = ref('')
 const loginError = ref('')
+const loading = ref(false)
 const saveMsg = ref('')
 const saveError = ref('')
-const loading = ref(false)
 const passInput = ref<HTMLInputElement | null>(null)
-const edit = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT })
-function getOrCreateVisitorId(): string {
-  if (typeof window === 'undefined') return ''
-  try {
-    let id = localStorage.getItem(VID_KEY) || ''
-    if (!id || id.length < 8) {
-      id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`
-      localStorage.setItem(VID_KEY, id)
-    }
-    document.cookie = `vid=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax;Secure`
-    return id
-  } catch { return `v_${Date.now().toString(36)}` }
-}
-function todayKey() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-function alreadyViewedToday() { try { return localStorage.getItem(VIEW_DAY_KEY) === todayKey() } catch { return false } }
-function markViewedToday() { try { localStorage.setItem(VIEW_DAY_KEY, todayKey()) } catch {} }
-function alreadyClickedToday(slug: string) { try { return localStorage.getItem(CLICK_DAY_PREFIX + slug) === todayKey() } catch { return false } }
-function markClickedToday(slug: string) { try { localStorage.setItem(CLICK_DAY_PREFIX + slug, todayKey()) } catch {} }
-function readUtms() {
-  if (typeof window === 'undefined') return {}
-  const p = new URLSearchParams(window.location.search)
-  return { utm_source: p.get('utm_source'), utm_medium: p.get('utm_medium'), utm_campaign: p.get('utm_campaign'), utm_content: p.get('utm_content'), utm_term: p.get('utm_term'), src: p.get('src'), sck: p.get('sck') }
-}
-function offerFromLabel(label: string) {
-  const lower = label.toLowerCase()
-  if (/pr[eé]via|canal|público/i.test(lower)) return 'previa_telegram'
-  if (/vip/i.test(lower)) return 'telegram_vip'
-  if (/priv/i.test(lower)) return 'privsex'
-  if (/whats/i.test(lower)) return 'whatsapp'
-  if (/telegram.*priv|conteúdo no telegram/i.test(lower)) return 'telegram_privado'
-  return label.toLowerCase().replace(/\s+/g, '_').slice(0, 40)
-}
-function track(eventName: string, extra: Record<string, any> = {}) {
-  const visitor_id = getOrCreateVisitorId()
-  const payload = { event_name: eventName, path: '/links/wanessa', visitor_id, ...readUtms(), ...extra }
-  const json = JSON.stringify(payload)
-  try {
-    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      const blob = new Blob([json], { type: 'application/json' })
-      if (navigator.sendBeacon('/api/track', blob)) return
-    }
-    fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true }).catch(() => {})
-  } catch {}
-}
-function onCardClick(label: string, url: string) {
-  const slug = offerFromLabel(label)
-  if (alreadyClickedToday(slug)) return
-  markClickedToday(slug)
-  track('outbound_click', { label, url, offer_slug: slug })
-}
-function attachLogo(l: LinkItem): LinkItem {
-  const lab = (l.label || '').toLowerCase()
-  let logo: string | undefined
-  if (/pr[eé]via|canal|público/i.test(lab)) logo = LOGO_TG_BLUE
-  else if (/vip/i.test(lab)) logo = LOGO_TG_PURPLE
-  else if (/priv/i.test(lab)) logo = LOGO_PRIVSEX
-  return { ...l, logo, enabled: l.enabled !== false }
-}
-function applyServerConfig(data: any) {
-  if (!data) return
-  config.name = data.name || config.name
-  const incomingBio = (data.bio || '').trim()
-  const isGeneric = /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|língua\s*bifurcada|resto\s*tu\s*descobre/i.test(incomingBio)
-  config.bio = !incomingBio || isGeneric ? '' : incomingBio
-  config.highlight_label = String(data.highlight_label || '').trim() || DEFAULT_HIGHLIGHT
-  if (Array.isArray(data.links) && data.links.length) {
-    config.links = data.links.filter((l: any) => l && l.label).map((l: any) => attachLogo({ label: String(l.label || ''), icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled: l.enabled !== false }))
-  } else config.links = DEFAULT_LINKS.map(attachLogo)
-}
+const edit = reactive({
+  name: '',
+  bio: '',
+  highlight_label: '',
+  links: [] as LinkItem[],
+})
+
 const { data: remoteConfig } = await useAsyncData('link-page-config', () => $fetch<any>('/api/config').catch(() => null))
 if (remoteConfig.value) applyServerConfig(remoteConfig.value)
 else config.links = DEFAULT_LINKS.map(attachLogo)
@@ -460,34 +447,10 @@ onMounted(async () => {
     markViewedToday()
     track('page_view', { offer_slug: 'wanessa_links' })
   }
-  let restored: string | null = null
-  try { restored = localStorage.getItem(GATE_KEY) } catch {}
-  if (restored === 'pass' || restored === 'reject') gate.value = restored
-  else if (restored === '1' || restored === '2' || restored === '3' || restored === '4') gate.value = Number(restored) as 1 | 2 | 3 | 4
-  else if (restored === '4') gate.value = 1 // legacy progress -> restart
-  const fingerprint = await getDeviceFingerprint()
-  if (gate.value !== 'pass' && gate.value !== 'reject') {
-    try {
-      const res = await $fetch<{ status: string | null }>('/api/quiz', { query: { visitor_id, fingerprint } })
-      if (res?.status === 'pass' || res?.status === 'reject') {
-        gate.value = res.status
-        try { localStorage.setItem(GATE_KEY, res.status) } catch {}
-      }
-    } catch {}
-  } else if (visitor_id && (gate.value === 'pass' || gate.value === 'reject')) {
-    try {
-      fetch('/api/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitor_id, fingerprint, status: gate.value }), keepalive: true }).catch(() => {})
-    } catch {}
-  }
-  if (gate.value == null) gate.value = 1
+  // Formulário/quiz desativado: sempre libera acesso direto
+  gate.value = 'pass'
+  try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
   gateReady.value = true
-  if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
-    chatMessages.value = []
-    typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
-  } else if (gate.value === 'reject') {
-    chatMessages.value = []
-    pushMsg('her', t('rejectIg'))
-  }
   photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 4200)
 })
 onUnmounted(() => {
