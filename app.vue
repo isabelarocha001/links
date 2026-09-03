@@ -81,10 +81,7 @@
               <span v-for="(_, i) in gallery" :key="i" class="dot" :class="{ active: i === photoIndex }" />
             </div>
           </div>
-          <div class="identity">
-            <p class="eyebrow">Modelo de Luxo</p>
-            <div class="accent-line" aria-hidden="true"></div>
-          </div>
+          <!-- identity title removed -->
         </header>
         <section class="main-cards" v-if="configReady">
           <a class="lux-card lux-card--left" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
@@ -112,9 +109,9 @@
           <a class="vip-card" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">
             <div class="vip-shine"></div>
             <div class="vip-content">
-              <span class="vip-icon vip-icon-stack" aria-hidden="true">
+              <span class="vip-icon vip-icon-stack" aria-hidden="true" title="Bot Telegram">
                 <span class="vip-robot">🤖</span>
-                <img class="vip-tg-logo" :src="logoTgPurple" alt="" width="26" height="26" />
+                <img class="vip-tg-logo" :src="logoTgPurple" alt="Telegram" width="18" height="18" />
               </span>
               <div>
                 <h3 class="vip-title">Bot pra assinar o VIP no Telegram</h3>
@@ -506,7 +503,7 @@ async function doSave() {
   finally { loading.value = false }
 }
 useHead({
-  title: 'Modelo de Luxo',
+  title: 'Wanessa',
   meta: [{ name: 'description', content: 'Acesso restrito — privacidade e alto nível.' }, { name: 'theme-color', content: '#12081a' }],
 })
 </script>

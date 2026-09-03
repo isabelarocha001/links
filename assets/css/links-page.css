@@ -80,37 +80,41 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
 }
+/* Robo em destaque; Telegram pequeno na mao (canto inferior direito) */
 .vip-robot {
-  position: absolute;
-  font-size: 1.55rem;
+  position: relative;
+  z-index: 1;
+  font-size: 1.85rem;
   line-height: 1;
-  opacity: 0.55;
-  transform: translate(-4px, 2px) scale(1.05);
-  filter: grayscale(0.15);
-  z-index: 0;
+  opacity: 1;
+  filter: none;
+  transform: none;
   animation: vip-robot-pulse 2.8s ease-in-out infinite;
 }
 .vip-tg-logo {
-  position: relative;
-  z-index: 1;
-  width: 26px;
-  height: 26px;
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(42, 171, 238, 0.35), 0 2px 10px rgba(42, 171, 238, 0.25);
+  background: #1a0f24;
+  box-shadow: 0 0 0 2px rgba(42, 171, 238, 0.55), 0 2px 8px rgba(42, 171, 238, 0.35);
   animation: vip-tg-float 2.4s ease-in-out infinite;
 }
 @keyframes vip-tg-float {
   0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-2px) scale(1.06); }
+  50% { transform: translateY(-1px) scale(1.08); }
 }
 @keyframes vip-robot-pulse {
-  0%, 100% { opacity: 0.45; transform: translate(-4px, 2px) scale(1.02); }
-  50% { opacity: 0.7; transform: translate(-5px, 1px) scale(1.08); }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
 }
 .vip-title { font-size: 0.95rem; font-weight: 700; color: #f5f0ff; margin: 0 0 2px; }
 .vip-desc { font-size: 0.7rem; color: rgba(245, 240, 255, 0.6); margin: 0; }
@@ -231,12 +235,12 @@
 }
 .bio-text {
   margin: 0 auto 14px;
-  padding: 12px 14px;
+  padding: 0;
   font-size: 0.82rem;
   line-height: 1.55;
-  color: #ffffff;
-  background: #000000;
-  border-radius: 10px;
+  color: rgba(245, 240, 255, 0.78);
+  background: transparent;
+  border-radius: 0;
   max-width: 340px;
   box-sizing: border-box;
 }
