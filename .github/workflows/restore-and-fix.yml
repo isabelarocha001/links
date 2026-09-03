@@ -18,8 +18,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Apply cards copy + portal
-        run: python3 scripts/fix_cards_copy.py
+      - name: Apply portal border animation
+        run: python3 scripts/fix_portal_border.py
 
       - name: Commit and push
         run: |
@@ -29,6 +29,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "fix: cards - portal PrivSex, textos VIP e canal publico"
+            git commit -m "fix: portal PrivSex - borda animada, fundo preto, texto branco"
             git push
           fi
