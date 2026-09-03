@@ -1,1 +1,3 @@
-PLACEHOLDER
+<template>
+  <!-- see full file -->
+</template>
