@@ -258,10 +258,24 @@
             <div v-if="funnelTyping || !funnelOptions.length" class="wa-funnel-quick-placeholder" aria-hidden="true"></div>
           </div>
 
-          <div class="wa-composer">
+          <div class="wa-composer wa-funnel-composer">
             <button type="button" class="wa-emoji" disabled aria-hidden="true">😊</button>
-            <input class="wa-input" type="text" disabled placeholder="Responda pelos botões acima" readonly />
-            <button type="button" class="wa-send" disabled aria-hidden="true">
+            <input
+              class="wa-input"
+              type="text"
+              v-model="funnelInput"
+              placeholder="Mensagem"
+              :disabled="funnelTyping"
+              maxlength="500"
+              @keyup.enter="sendFunnelFreeText"
+            />
+            <button
+              type="button"
+              class="wa-send"
+              :disabled="funnelTyping || !funnelInput.trim()"
+              aria-label="Enviar"
+              @click="sendFunnelFreeText"
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
             </button>
           </div>
@@ -340,6 +354,7 @@ const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeU
 const PIX_KEY = '47992750967'
 const showWaFunnel = ref(false)
 const showFunnelPhoto = ref(false)
+const funnelInput = ref('')
 const showFunnelProfile = ref(false)
 const funnelStep = ref<'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'redirect' | 'other'>('menu')
 const funnelMessages = ref<{ from: 'her' | 'me'; text: string; html?: string; time: string }[]>([])
