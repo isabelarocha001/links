@@ -7,7 +7,7 @@
     </button>
     <main class="container">
       <section
-        v-if="gateReady && (gate === 1 || gate === 2 || gate === 3 || gate === 4 || gate === 'reject')"
+        v-if="gateReady && (gate === 1 || gate === 2 || gate === 'reject')"
         class="wa-shell"
       >
         <header class="wa-header">
@@ -231,7 +231,7 @@ const gallery = ['/model.jpg', '/model.jpg', '/model.jpg']
 const photoIndex = ref(0)
 let photoTimer: ReturnType<typeof setInterval> | null = null
 
-const gate = ref<1 | 2 | 3 | 4 | 'pass' | 'reject' | null>(null)
+const gate = ref<1 | 2 | 'pass' | 'reject' | null>(null)
 const quizAnswers = ref<Record<string, string>>({})
 const gateReady = ref(false)
 const chatMessages = ref<ChatMsg[]>([])
@@ -262,20 +262,16 @@ function typeThenAsk(text: string, delay = 900) {
     pushMsg('her', text)
   }, delay)
 }
-const questionText = (g: 1 | 2 | 3 | 4) => {
-  if (g === 1) return 'Oi 😊 Você já pagou por conteúdo de alguma criadora?'
-  if (g === 2) return 'Você costuma ver só as prévias grátis ou já tem costume de entrar no VIP?'
-  if (g === 3) return 'Você já me conhece pelo Instagram?'
-  return 'Você já assinou Privacy, PrivSex ou VIP de alguma criadora?'
+const questionText = (g: 1 | 2) => {
+  if (g === 1) return 'Oi 😊 Você já assinou Privacy, PrivSex ou VIP de alguma criadora?'
+  return 'Você já me conhece pelo Instagram?'
 }
 const quizOptions = computed(() => {
-  if (gate.value === 1) return [{ key: 'yes', label: 'Sim, já paguei', variant: 'wa-quick--yes' }, { key: 'no', label: 'Nunca paguei', variant: 'wa-quick--no' }]
-  if (gate.value === 2) return [{ key: 'vip', label: 'Já entro / quero VIP', variant: 'wa-quick--yes' }, { key: 'previas', label: 'Só vejo prévia grátis', variant: 'wa-quick--no' }]
-  if (gate.value === 3) return [{ key: 'yes', label: 'Sim', variant: 'wa-quick--yes' }, { key: 'no', label: 'Não', variant: 'wa-quick--no' }]
-  if (gate.value === 4) return [{ key: 'yes', label: 'Sim, já assinei', variant: 'wa-quick--yes' }, { key: 'no', label: 'Nunca assinei nada', variant: 'wa-quick--no' }]
+  if (gate.value === 1) return [{ key: 'yes', label: 'Sim, já assinei', variant: 'wa-quick--yes' }, { key: 'no', label: 'Nunca assinei nada', variant: 'wa-quick--no' }]
+  if (gate.value === 2) return [{ key: 'yes', label: 'Sim', variant: 'wa-quick--yes' }, { key: 'no', label: 'Não', variant: 'wa-quick--no' }]
   return []
 })
-function setGate(next: 1 | 2 | 3 | 4 | 'pass' | 'reject', persistServer = false) {
+function setGate(next: 1 | 2 | 'pass' | 'reject', persistServer = false) {
   gate.value = next
   try { localStorage.setItem(GATE_KEY, String(next)) } catch {}
   if (persistServer && (next === 'pass' || next === 'reject')) {
@@ -297,42 +293,24 @@ function answerQuiz(key: string) {
   const label = quizOptions.value.find((o) => o.key === key)?.label || key
   pushMsg('me', label)
   if (gate.value === 1) {
-    quizAnswers.value.q1 = key === 'yes' ? 'pagou_sim' : 'pagou_nao'
-    const next = key === 'yes' ? 3 : 2
-    setGate(next as 2 | 3)
-    typeThenAsk(questionText(next as 2 | 3), 1100)
-    return
-  }
-  if (gate.value === 2) {
-    quizAnswers.value.q2 = key === 'previas' ? 'so_previas' : 'desejo_vip'
-    if (key === 'previas') {
+    quizAnswers.value.q1 = key === 'yes' ? 'assinou_sim' : 'assinou_nao'
+    if (key === 'no') {
       setGate('reject', true)
-      typeThenAsk('Obrigada. Este espaço é só pra quem compra. Quem só quer prévia grátis não é o perfil que eu atendo.', 1400)
+      typeThenAsk('Obrigada. Este espaço é exclusivo pra quem já valoriza conteúdo pago. Não libero acesso pra quem nunca assinou nada.', 1400)
     } else {
-      setGate(3)
-      typeThenAsk(questionText(3), 1100)
+      setGate(2)
+      typeThenAsk(questionText(2), 1100)
     }
     return
   }
-  if (gate.value === 3) {
-    quizAnswers.value.q3 = key === 'yes' ? 'conhece_sim' : 'conhece_nao'
+  if (gate.value === 2) {
+    quizAnswers.value.q2 = key === 'yes' ? 'conhece_sim' : 'conhece_nao'
     if (key === 'no') {
       setGate('reject', true)
       typeThenAsk('Obrigada. Você não é o tipo de pessoa que estou procurando.', 1200)
     } else {
-      setGate(4)
-      typeThenAsk(questionText(4), 1100)
-    }
-    return
-  }
-  if (gate.value === 4) {
-    quizAnswers.value.q4 = key === 'yes' ? 'assinou_sim' : 'assinou_nao'
-    if (key === 'yes') {
       pushMsg('her', 'Perfeito. Entrando…')
       setTimeout(() => setGate('pass', true), 700)
-    } else {
-      setGate('reject', true)
-      typeThenAsk('Obrigada. Este espaço é exclusivo pra quem já valoriza conteúdo pago. Não libero acesso pra quem nunca assinou nada.', 1400)
     }
   }
 }
@@ -436,7 +414,8 @@ onMounted(async () => {
   let restored: string | null = null
   try { restored = localStorage.getItem(GATE_KEY) } catch {}
   if (restored === 'pass' || restored === 'reject') gate.value = restored
-  else if (restored === '1' || restored === '2' || restored === '3' || restored === '4') gate.value = Number(restored) as 1 | 2 | 3 | 4
+  else if (restored === '1' || restored === '2') gate.value = Number(restored) as 1 | 2
+  else if (restored === '3' || restored === '4') gate.value = 1 // old multi-step progress -> restart simplified flow
   const fingerprint = await getDeviceFingerprint()
   if (gate.value !== 'pass' && gate.value !== 'reject') {
     try {
@@ -453,9 +432,9 @@ onMounted(async () => {
   }
   if (gate.value == null) gate.value = 1
   gateReady.value = true
-  if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
+  if (gate.value === 1 || gate.value === 2) {
     chatMessages.value = []
-    typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
+    typeThenAsk(questionText(gate.value as 1 | 2), 800)
   } else if (gate.value === 'reject') {
     chatMessages.value = []
     pushMsg('her', 'Obrigada. Você não é o tipo de pessoa que estou procurando.')
