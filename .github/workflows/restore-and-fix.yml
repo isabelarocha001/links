@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/restore-and-fix.yml'
+      - 'scripts/**'
 
 jobs:
   fix:
@@ -17,22 +18,17 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restore files from good commit
-        run: |
-          git checkout 6dfd289e469aeca52255886e737de11d465c5c42 -- app.vue assets/css/links-page.css
-
-      - name: Apply VIP icon and WhatsApp prefill
-        run: |
-          python3 scripts/apply_vip_wa_fix.py
+      - name: Apply quiz simplification
+        run: python3 scripts/fix_quiz_flow.py
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.vue assets/css/links-page.css
+          git add app.vue
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "fix: VIP Telegram+robo animado e WhatsApp mensagem pre-preenchida"
+            git commit -m "fix: quiz - 1a pergunta Privacy/PrivSex/VIP (sem duplicata)"
             git push
           fi
