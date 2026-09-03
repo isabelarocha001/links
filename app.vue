@@ -207,17 +207,19 @@
             </div>
           </div>
 
-          <div v-if="!funnelTyping && funnelOptions.length" class="wa-quick wa-funnel-quick">
+          <div class="wa-quick wa-funnel-quick" :class="{ 'wa-funnel-quick--busy': funnelTyping || !funnelOptions.length }">
             <button
               v-for="opt in funnelOptions"
               :key="opt.key"
               type="button"
               class="wa-quick-btn"
               :class="opt.variant || 'wa-quick--yes'"
+              :disabled="funnelTyping"
               @click="answerFunnel(opt)"
             >
               {{ opt.label }}
             </button>
+            <div v-if="funnelTyping || !funnelOptions.length" class="wa-funnel-quick-placeholder" aria-hidden="true"></div>
           </div>
 
           <div class="wa-composer">
@@ -341,7 +343,7 @@ function funnelType(text: string, delay = 1000, html?: string) {
 }
 
 const funnelOptions = computed(() => {
-  if (funnelTyping.value) return []
+  // NÃO zera opções ao digitar — evita o chat "encolher"
   if (funnelStep.value === 'menu') {
     return [
       { key: 'video', label: '📹 Videochamada', variant: 'wa-quick--yes' },
