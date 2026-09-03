@@ -15,10 +15,10 @@
             <span class="wa-back" aria-hidden="true">‹</span>
           </div>
           <div class="wa-header-info">
-            <p class="wa-name">Criadora de conteúdo · Wanessa</p>
+            <p class="wa-name">{{ t('waName') }}</p>
             <p class="wa-status">
-              <span v-if="isTyping" class="wa-status-typing">digitando…</span>
-              <span v-else class="wa-status-online">online</span>
+              <span v-if="isTyping" class="wa-status-typing">{{ t('waTyping') }}</span>
+              <span v-else class="wa-status-online">{{ t('waOnline') }}</span>
             </p>
           </div>
           <div class="wa-avatar-wrap">
@@ -28,7 +28,7 @@
         </header>
 
         <div ref="chatBox" class="wa-chat">
-          <div class="wa-day">Hoje</div>
+          <div class="wa-day">{{ t('waDay') }}</div>
           <div
             v-for="(m, i) in chatMessages"
             :key="i"
@@ -62,7 +62,7 @@
 
         <div class="wa-composer">
           <button type="button" class="wa-emoji" disabled aria-hidden="true">😊</button>
-          <input class="wa-input" type="text" disabled placeholder="Responda pelos botões acima" readonly />
+          <input class="wa-input" type="text" disabled :placeholder="t('waPlaceholder')" readonly />
           <button type="button" class="wa-send" disabled aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
@@ -84,33 +84,37 @@
           <!-- identity title removed -->
         </header>
         <section class="main-cards" v-if="configReady">
-          <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
-            <div class="portal-spiral" aria-hidden="true">
-              <span class="ps-ring ps-r1"></span>
-              <span class="ps-ring ps-r2"></span>
-              <span class="ps-ring ps-r3"></span>
-              <span class="ps-ring ps-r4"></span>
-              <span class="ps-core"></span>
-            </div>
-            <div class="card-glow"></div>
-            <div class="card-top">
-              <span class="card-icon"><img v-if="logoPriv" :src="logoPriv" alt="" class="logo-img" width="28" height="28" /><template v-else>🔥</template></span>
-              <span class="card-badge">Portal</span>
-            </div>
-            <h2 class="card-title">PrivSex</h2>
-            <p class="card-desc">Aqui você desbloqueia meu conteúdo pago, chat privado, sou tua noiva virtual, faço lives e chamadas de vídeo ao vivo.</p>
-            <span class="card-cta">Entrar no portal →</span>
-          </a>
-          <a class="lux-card lux-card--right" :href="telegramPublicUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrl)">
-            <div class="card-glow"></div>
-            <div class="card-top">
-              <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
-              <span class="card-badge badge-tg">Telegram</span>
-            </div>
-            <h2 class="card-title">Canal Público</h2>
-            <p class="card-desc">Meu canal público onde posto todos os teasers dos meus filmes pagos.</p>
-            <span class="card-cta">Entrar →</span>
-          </a>
+          <div class="card-col">
+            <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
+              <div class="portal-spiral" aria-hidden="true">
+                <span class="ps-ring ps-r1"></span>
+                <span class="ps-ring ps-r2"></span>
+                <span class="ps-ring ps-r3"></span>
+                <span class="ps-ring ps-r4"></span>
+                <span class="ps-core"></span>
+              </div>
+              <div class="card-glow"></div>
+              <div class="card-top">
+                <span class="card-icon"><img v-if="logoPriv" :src="logoPriv" alt="" class="logo-img" width="28" height="28" /><template v-else>🔥</template></span>
+                <span class="card-badge">{{ t('portalBadge') }}</span>
+              </div>
+              <h2 class="card-title">{{ t('privTitle') }}</h2>
+              <p class="card-desc">{{ t('privDesc') }}</p>
+            </a>
+            <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
+          </div>
+          <div class="card-col">
+            <a class="lux-card lux-card--right" :href="telegramPublicUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrl)">
+              <div class="card-glow"></div>
+              <div class="card-top">
+                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
+                <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
+              </div>
+              <h2 class="card-title">{{ t('pubTitle') }}</h2>
+              <p class="card-desc">{{ t('pubDesc') }}</p>
+            </a>
+            <a class="card-enter" :href="telegramPublicUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrl)">{{ t('pubEnter') }}</a>
+          </div>
         </section>
         <section class="vip-block" v-if="configReady">
           <a class="vip-card" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">
@@ -121,23 +125,23 @@
                 <img class="vip-tg-logo" :src="logoTgPurple" alt="Telegram" width="18" height="18" />
               </span>
               <div>
-                <h3 class="vip-title">Bot pra assinar o VIP no Telegram</h3>
-                <p class="vip-desc">Assinatura instantânea · acesso imediato ao conteúdo</p>
+                <h3 class="vip-title">{{ t('vipTitle') }}</h3>
+                <p class="vip-desc">{{ t('vipDesc') }}</p>
               </div>
             </div>
             <span class="vip-arrow">→</span>
           </a>
         </section>
         <section class="direct-section">
-          <p class="direct-label">Privado · somente venda de conteúdo</p>
+          <p class="direct-label">{{ t('directLabel') }}</p>
           <div class="direct-stack">
             <a class="direct-btn direct-wa" :href="whatsappUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('WhatsApp', whatsappUrl)">
               <span class="d-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></span>
-              <span class="d-btn-text"><span class="d-btn-title">WhatsApp privado</span><span class="d-btn-sub">Só venda de conteúdo</span></span>
+              <span class="d-btn-text"><span class="d-btn-title">{{ t('waTitle') }}</span><span class="d-btn-sub">{{ t('waSub') }}</span></span>
             </a>
             <a class="direct-btn direct-tg" :href="telegramPrivateUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Privado', telegramPrivateUrl)">
               <span class="d-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></span>
-              <span class="d-btn-text"><span class="d-btn-title">Telegram privado</span><span class="d-btn-sub">Só venda de conteúdo</span></span>
+              <span class="d-btn-text"><span class="d-btn-title">{{ t('tgPrivTitle') }}</span><span class="d-btn-sub">{{ t('tgPrivSub') }}</span></span>
             </a>
           </div>
         </section>
@@ -148,14 +152,14 @@
               <p class="ig-user">wanessabsx_</p>
               <p class="ig-name">Wanessa Borges</p>
               <div class="ig-stats">
-                <span><b>22</b> posts</span>
-                <span><b>32,2 mil</b> seguidores</span>
-                <span><b>53</b> seguindo</span>
+                <span><b>22</b> {{ t('posts') }}</span>
+                <span><b>{{ t('followersCount') }}</b> {{ t('followers') }}</span>
+                <span><b>53</b> {{ t('following') }}</span>
               </div>
             </div>
           </div>
-          <p class="bio-meta">Criadora de conteúdo · Catarinense · 22 anos</p>
-          <p class="bio-text">Presença digital com mais de 30 mil pessoas. O que você encontra aqui é o que não cabe no Instagram.</p>
+          <p class="bio-meta">{{ t('bioMeta') }}</p>
+          <p class="bio-text">{{ t('bioText') }}</p>
           <p class="bio-copy">© Wanessa</p>
         </footer>
       </template>
@@ -215,6 +219,7 @@ type ChatMsg = { from: 'her' | 'me'; text: string; time: string }
 import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 import { getDeviceFingerprint } from '~/utils/fingerprint'
 import { IG_PROFILE_SRC as igProfileSrc } from '~/utils/ig-profile'
+import { detectLocale, t as tr, type Locale } from '~/utils/i18n'
 import '~/assets/css/links-page.css'
 
 const DEFAULT_HIGHLIGHT = 'PrivSex'
@@ -226,7 +231,9 @@ const GATE_KEY = 'wanessa_gate_v1'
 const privsexUrl = 'https://privsex.com/wanessa'
 const telegramPublicUrl = 'https://t.me/+yA5Y1pAWx5RlMWIx'
 const vipBotUrl = 'https://t.me/wanessaavipbot?start=Pressel'
-const whatsappUrl = 'https://wa.me/5547992750967?text=' + encodeURIComponent('Quero mais informaçoes sobre o seu conteudo vip')
+const locale = ref<Locale>('pt')
+function t(key: string) { return tr(locale.value, key) }
+const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeURIComponent(t('waPrefill')))
 const telegramPrivateUrl = 'https://t.me/wanessabsx'
 const logoPriv = LOGO_PRIVSEX
 const logoTg = LOGO_TG_BLUE
@@ -267,17 +274,17 @@ function typeThenAsk(text: string, delay = 900) {
   }, delay)
 }
 const questionText = (g: 1 | 2 | 3) => {
-  if (g === 1) return 'Oi 😊 Você já assinou Privacy, PrivSex ou VIP de alguma criadora?'
-  if (g === 2) return 'Você já me conhece pelo Instagram?'
-  return 'O que você busca aqui agora?'
+  if (g === 1) return t('q1')
+  if (g === 2) return t('q2')
+  return t('q3')
 }
 const quizOptions = computed(() => {
-  if (gate.value === 1) return [{ key: 'yes', label: 'Sim, já assinei', variant: 'wa-quick--yes' }, { key: 'no', label: 'Nunca assinei nada', variant: 'wa-quick--no' }]
-  if (gate.value === 2) return [{ key: 'yes', label: 'Sim', variant: 'wa-quick--yes' }, { key: 'no', label: 'Não', variant: 'wa-quick--no' }]
+  if (gate.value === 1) return [{ key: 'yes', label: t('q1yes'), variant: 'wa-quick--yes' }, { key: 'no', label: t('q1no'), variant: 'wa-quick--no' }]
+  if (gate.value === 2) return [{ key: 'yes', label: t('q2yes'), variant: 'wa-quick--yes' }, { key: 'no', label: t('q2no'), variant: 'wa-quick--no' }]
   if (gate.value === 3) return [
-    { key: 'assinar', label: 'Quero assinar o VIP hoje', variant: 'wa-quick--yes' },
-    { key: 'precos', label: 'Quero ver preços / opções', variant: 'wa-quick--yes' },
-    { key: 'olhando', label: 'Só estou olhando', variant: 'wa-quick--no' },
+    { key: 'assinar', label: t('q3assinar'), variant: 'wa-quick--yes' },
+    { key: 'precos', label: t('q3precos'), variant: 'wa-quick--yes' },
+    { key: 'olhando', label: t('q3olhando'), variant: 'wa-quick--no' },
   ]
   return []
 })
@@ -306,7 +313,7 @@ function answerQuiz(key: string) {
     quizAnswers.value.q1 = key === 'yes' ? 'assinou_sim' : 'assinou_nao'
     if (key === 'no') {
       setGate('reject', true)
-      typeThenAsk('Obrigada. Este espaço é exclusivo pra quem já valoriza conteúdo pago. Não libero acesso pra quem nunca assinou nada.', 1400)
+      typeThenAsk(t('rejectNever'), 1400)
     } else {
       setGate(2)
       typeThenAsk(questionText(2), 1100)
@@ -317,7 +324,7 @@ function answerQuiz(key: string) {
     quizAnswers.value.q2 = key === 'yes' ? 'conhece_sim' : 'conhece_nao'
     if (key === 'no') {
       setGate('reject', true)
-      typeThenAsk('Obrigada. Você não é o tipo de pessoa que estou procurando.', 1200)
+      typeThenAsk(t('rejectIg'), 1200)
     } else {
       setGate(3)
       typeThenAsk(questionText(3), 1100)
@@ -335,13 +342,13 @@ function answerQuiz(key: string) {
     // 3a pergunta = filtro final: so curiosos nao entram na pressel
     if (key === 'olhando') {
       setGate('reject', true)
-      typeThenAsk('Obrigada. Este espaço é pra quem já está pronto pra assinar. Quando decidir, volta aqui.', 1400)
+      typeThenAsk(t('rejectCurious'), 1400)
     } else if (key === 'assinar') {
-      pushMsg('her', 'Perfeito. Vou te levar pro bot VIP e às opções de compra…')
+      pushMsg('her', t('passAssinar'))
       setTimeout(() => setGate('pass', true), 800)
     } else {
       // precos / opcoes
-      pushMsg('her', 'Perfeito. Entrando nas opções e valores…')
+      pushMsg('her', t('passPrecos'))
       setTimeout(() => setGate('pass', true), 800)
     }
   }
@@ -438,6 +445,8 @@ if (remoteConfig.value) applyServerConfig(remoteConfig.value)
 else config.links = DEFAULT_LINKS.map(attachLogo)
 configReady.value = true
 onMounted(async () => {
+  locale.value = detectLocale()
+  try { document.documentElement.lang = locale.value } catch {}
   const visitor_id = getOrCreateVisitorId()
   if (!alreadyViewedToday()) {
     markViewedToday()
@@ -469,7 +478,7 @@ onMounted(async () => {
     typeThenAsk(questionText(gate.value as 1 | 2 | 3), 800)
   } else if (gate.value === 'reject') {
     chatMessages.value = []
-    pushMsg('her', 'Obrigada. Você não é o tipo de pessoa que estou procurando.')
+    pushMsg('her', t('rejectIg'))
   }
   photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 4200)
 })

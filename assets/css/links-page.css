@@ -55,7 +55,31 @@
 .identity { padding: 0 8px; }
 .eyebrow { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #c084fc; margin: 0 0 6px; }
 .accent-line { width: 48px; height: 1px; margin: 16px auto 0; background: linear-gradient(90deg, transparent, #c084fc, transparent); }
-.main-cards { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.main-cards { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; align-items: stretch; }
+.card-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card-col .lux-card { flex: 1; min-height: 148px; }
+.card-enter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: #f5f0ff;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(126, 34, 206, 0.22));
+  border: 1px solid rgba(192, 132, 252, 0.45);
+  box-sizing: border-box;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.card-enter:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.5), rgba(126, 34, 206, 0.32));
+  box-shadow: 0 8px 20px rgba(168, 85, 247, 0.25);
+}
+.card-enter:active { transform: scale(0.98); }
 .lux-card { position: relative; display: flex; flex-direction: column; padding: 16px 14px 14px; border-radius: 16px; background: linear-gradient(165deg, rgba(40, 20, 55, 0.95), rgba(24, 12, 36, 0.98)); border: 1px solid rgba(168, 85, 247, 0.28); text-decoration: none; overflow: hidden; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; min-height: 148px; }
 .lux-card:hover { transform: translateY(-3px); border-color: rgba(192, 132, 252, 0.55); box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 28px rgba(168, 85, 247, 0.18); }
 .lux-card:active { transform: scale(0.98); }
