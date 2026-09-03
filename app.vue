@@ -445,6 +445,8 @@ function scrollFunnel() {
 function pushFunnel(from: 'her' | 'me', text: string, html?: string) {
   funnelMessages.value.push({ from, text, html, time: nowTime() })
   scrollFunnel()
+  // grava no Supabase (lead = me, bot = her)
+  logFunnelMessage(from === 'me' ? 'lead' : 'bot', text, { has_html: !!html })
 }
 
 function funnelType(text: string, delay = 1000, html?: string) {
@@ -523,7 +525,53 @@ const funnelOptions = computed(() => {
   return []
 })
 
+
 const FUNNEL_STORAGE_KEY = 'wanessa_wa_funnel_v1'
+const FUNNEL_SESSION_KEY = 'wanessa_wa_funnel_session'
+
+function getFunnelSessionId(): string {
+  try {
+    let id = sessionStorage.getItem(FUNNEL_SESSION_KEY) || ''
+    if (!id) {
+      id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `fs_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+      sessionStorage.setItem(FUNNEL_SESSION_KEY, id)
+    }
+    return id
+  } catch {
+    return `fs_${Date.now().toString(36)}`
+  }
+}
+
+function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Record<string, any> = {}) {
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    const payload = {
+      visitor_id,
+      session_id: getFunnelSessionId(),
+      direction,
+      message: String(message || '').slice(0, 2000),
+      step: funnelStep.value,
+      selected_offer: selectedPack.value?.key || selectedPack.value?.label || null,
+      selected_price: selectedPack.value?.price || null,
+      metadata: extra,
+    }
+    const json = JSON.stringify(payload)
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([json], { type: 'application/json' })
+      navigator.sendBeacon('/api/funnel-chat', blob)
+      return
+    }
+    fetch('/api/funnel-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: json,
+      keepalive: true,
+    }).catch(() => {})
+  } catch {}
+}
+
 
 function saveFunnelState() {
   try {
@@ -569,6 +617,7 @@ function clearFunnelState() {
 function openWaFunnel() {
   track('whatsapp_funnel_open', { offer_slug: 'whatsapp' })
   onCardClick('WhatsApp Funnel', whatsappUrl.value)
+  try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open' }) } catch {}
   showWaFunnel.value = true
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
