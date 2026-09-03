@@ -83,7 +83,7 @@
           </div>
           <!-- identity title removed -->
         </header>
-        <section class="main-cards" :class="{ 'main-cards--single': !isPt }" v-if="configReady">
+        <section class="main-cards" v-if="configReady">
           <div class="card-col">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
               <div class="portal-spiral" aria-hidden="true">
@@ -103,8 +103,8 @@
             </a>
             <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
           </div>
-          <div v-if="isPt" class="card-col">
-            <a class="lux-card lux-card--right" :href="telegramPublicUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrl)">
+          <div class="card-col">
+            <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
               <div class="card-glow"></div>
               <div class="card-top">
                 <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
@@ -113,7 +113,7 @@
               <h2 class="card-title">{{ t('pubTitle') }}</h2>
               <p class="card-desc">{{ t('pubDesc') }}</p>
             </a>
-            <a class="card-enter" :href="telegramPublicUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrl)">{{ t('pubEnter') }}</a>
+            <a class="card-enter" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">{{ t('pubEnter') }}</a>
           </div>
         </section>
         <section class="vip-block" v-if="configReady && isPt">
@@ -230,9 +230,11 @@ const GATE_KEY = 'wanessa_gate_v1'
 
 const privsexUrl = 'https://privsex.com/wanessa'
 const telegramPublicUrl = 'https://t.me/+yA5Y1pAWx5RlMWIx'
+const telegramPublicUrlIntl = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const vipBotUrl = 'https://t.me/wanessaavipbot?start=Pressel'
 const locale = ref<Locale>('pt')
 const isPt = computed(() => locale.value === 'pt')
+const telegramPublicUrlActive = computed(() => isPt.value ? telegramPublicUrl : telegramPublicUrlIntl)
 function t(key: string) { return tr(locale.value, key) }
 const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeURIComponent(t('waPrefill')))
 const telegramPrivateUrl = 'https://t.me/wanessabsx'
