@@ -85,8 +85,6 @@
         </header>
         <section class="main-cards" v-if="configReady">
           <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
-            <div class="portal-ring" aria-hidden="true"></div>
-            <div class="portal-core" aria-hidden="true"></div>
             <div class="card-glow"></div>
             <div class="card-top">
               <span class="card-icon"><img v-if="logoPriv" :src="logoPriv" alt="" class="logo-img" width="28" height="28" /><template v-else>🔥</template></span>
