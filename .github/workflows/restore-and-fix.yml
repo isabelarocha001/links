@@ -18,17 +18,17 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Telegram primary CTA for intl
-        run: python3 scripts/fix_pressel_intl_cta.py
+      - name: Restore + hide Telegram for BR
+        run: python3 scripts/fix_hide_telegram_br.py
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.vue assets/css/links-page.css
+          git add app.vue assets/css/links-page.css utils/i18n.ts
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "fix: Telegram privado em destaque na gringa; WhatsApp secundario"
+            git commit -m "fix: Telegram oculto para BR (pt); gringa mantém; aviso só conteúdo online"
             git push
           fi
