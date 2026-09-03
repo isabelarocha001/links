@@ -7,7 +7,7 @@
     </button>
     <main class="container">
       <section
-        v-if="gateReady && (gate === 1 || gate === 2 || gate === 3 || gate === 'reject')"
+        v-if="gateReady && (gate === 1 || gate === 2 || gate === 3 || gate === 4 || gate === 'reject')"
         class="wa-shell"
       >
         <header class="wa-header">
@@ -245,7 +245,7 @@ const gallery = ['/model.jpg', '/model.jpg', '/model.jpg']
 const photoIndex = ref(0)
 let photoTimer: ReturnType<typeof setInterval> | null = null
 
-const gate = ref<1 | 2 | 3 | 'pass' | 'reject' | null>(null)
+const gate = ref<1 | 2 | 3 | 4 | 'pass' | 'reject' | null>(null)
 const quizAnswers = ref<Record<string, string>>({})
 const gateReady = ref(false)
 const chatMessages = ref<ChatMsg[]>([])
@@ -276,22 +276,24 @@ function typeThenAsk(text: string, delay = 900) {
     pushMsg('her', text)
   }, delay)
 }
-const questionText = (g: 1 | 2 | 3) => {
+const questionText = (g: 1 | 2 | 3 | 4) => {
   if (g === 1) return t('q1')
   if (g === 2) return t('q2')
+  if (g === 3) return t('qPay')
   return t('q3')
 }
 const quizOptions = computed(() => {
   if (gate.value === 1) return [{ key: 'yes', label: t('q1yes'), variant: 'wa-quick--yes' }, { key: 'no', label: t('q1no'), variant: 'wa-quick--no' }]
   if (gate.value === 2) return [{ key: 'yes', label: t('q2yes'), variant: 'wa-quick--yes' }, { key: 'no', label: t('q2no'), variant: 'wa-quick--no' }]
-  if (gate.value === 3) return [
+  if (gate.value === 3) return [{ key: 'yes', label: t('qPayYes'), variant: 'wa-quick--yes' }, { key: 'no', label: t('qPayNo'), variant: 'wa-quick--no' }]
+  if (gate.value === 4) return [
     { key: 'assinar', label: t('q3assinar'), variant: 'wa-quick--yes' },
     { key: 'precos', label: t('q3precos'), variant: 'wa-quick--yes' },
     { key: 'olhando', label: t('q3olhando'), variant: 'wa-quick--no' },
   ]
   return []
 })
-function setGate(next: 1 | 2 | 3 | 'pass' | 'reject', persistServer = false) {
+function setGate(next: 1 | 2 | 3 | 4 | 'pass' | 'reject', persistServer = false) {
   gate.value = next
   try { localStorage.setItem(GATE_KEY, String(next)) } catch {}
   if (persistServer && (next === 'pass' || next === 'reject')) {
@@ -331,6 +333,18 @@ function answerQuiz(key: string) {
     return
   }
   if (gate.value === 3) {
+    // Disposto a pagar? Sim -> segue | Nao -> bloqueia
+    quizAnswers.value.q_pay = key === 'yes' ? 'pago_sim' : 'pago_nao'
+    if (key === 'no') {
+      setGate('reject', true)
+      typeThenAsk(t('rejectPay'), 1400)
+    } else {
+      setGate(4)
+      typeThenAsk(questionText(4), 1100)
+    }
+    return
+  }
+  if (gate.value === 4) {
     const intentMap: Record<string, string> = {
       assinar: 'intent_assinar_hoje',
       precos: 'intent_ver_precos',
@@ -338,7 +352,6 @@ function answerQuiz(key: string) {
     }
     quizAnswers.value.q3 = intentMap[key] || key
     try { localStorage.setItem('wanessa_intent', quizAnswers.value.q3) } catch {}
-    // 3a pergunta = filtro final: so curiosos nao entram na pressel
     if (key === 'olhando') {
       setGate('reject', true)
       typeThenAsk(t('rejectCurious'), 1400)
@@ -346,7 +359,6 @@ function answerQuiz(key: string) {
       pushMsg('her', t('passAssinar'))
       setTimeout(() => setGate('pass', true), 800)
     } else {
-      // precos / opcoes
       pushMsg('her', t('passPrecos'))
       setTimeout(() => setGate('pass', true), 800)
     }
@@ -454,7 +466,7 @@ onMounted(async () => {
   let restored: string | null = null
   try { restored = localStorage.getItem(GATE_KEY) } catch {}
   if (restored === 'pass' || restored === 'reject') gate.value = restored
-  else if (restored === '1' || restored === '2' || restored === '3') gate.value = Number(restored) as 1 | 2 | 3
+  else if (restored === '1' || restored === '2' || restored === '3' || restored === '4') gate.value = Number(restored) as 1 | 2 | 3 | 4
   else if (restored === '4') gate.value = 1 // legacy progress -> restart
   const fingerprint = await getDeviceFingerprint()
   if (gate.value !== 'pass' && gate.value !== 'reject') {
@@ -472,9 +484,9 @@ onMounted(async () => {
   }
   if (gate.value == null) gate.value = 1
   gateReady.value = true
-  if (gate.value === 1 || gate.value === 2 || gate.value === 3) {
+  if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
     chatMessages.value = []
-    typeThenAsk(questionText(gate.value as 1 | 2 | 3), 800)
+    typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
   } else if (gate.value === 'reject') {
     chatMessages.value = []
     pushMsg('her', t('rejectIg'))
