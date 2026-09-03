@@ -219,7 +219,7 @@ type ChatMsg = { from: 'her' | 'me'; text: string; time: string }
 import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 import { getDeviceFingerprint } from '~/utils/fingerprint'
 import { IG_PROFILE_SRC as igProfileSrc } from '~/utils/ig-profile'
-import { detectLocale, t as tr, type Locale } from '~/utils/i18n'
+import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i18n'
 import '~/assets/css/links-page.css'
 
 const DEFAULT_HIGHLIGHT = 'PrivSex'
@@ -233,7 +233,7 @@ const telegramPublicUrl = 'https://t.me/+yA5Y1pAWx5RlMWIx'
 const telegramPublicUrlIntl = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const vipBotUrl = 'https://t.me/wanessaavipbot?start=Pressel'
 const locale = ref<Locale>('pt')
-const isPt = computed(() => locale.value === 'pt')
+const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (intl)
 const telegramPublicUrlActive = computed(() => isPt.value ? telegramPublicUrl : telegramPublicUrlIntl)
 function t(key: string) { return tr(locale.value, key) }
 const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeURIComponent(t('waPrefill')))

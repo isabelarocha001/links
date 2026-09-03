@@ -15,6 +15,24 @@ export function detectLocale(): Locale {
   return 'pt'
 }
 
+/** BR market only: pt-BR (or bare "pt"). Portugal (pt-PT) is international. */
+export function isBrazilAudience(): boolean {
+  if (typeof navigator === 'undefined') return true
+  const list = [...(navigator.languages || []), navigator.language || 'pt-BR'].map((x) =>
+    String(x || '').toLowerCase().replace(/_/g, '-'),
+  )
+  // Prefer explicit region if present
+  for (const tag of list) {
+    if (tag === 'pt-pt' || tag.startsWith('pt-pt-')) return false
+    if (tag === 'pt-br' || tag.startsWith('pt-br-')) return true
+  }
+  // No explicit BR/PT region: if any Portuguese tag ("pt"), treat as BR (main market)
+  for (const tag of list) {
+    if (tag === 'pt' || tag.startsWith('pt-')) return true
+  }
+  return false
+}
+
 type Dict = Record<string, string>
 
 const pt: Dict = {
