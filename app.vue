@@ -301,7 +301,7 @@ const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeU
 
 const PIX_KEY = '47992750967'
 const showWaFunnel = ref(false)
-const funnelStep = ref<'menu' | 'packs' | 'pix' | 'redirect' | 'other'>('menu')
+const funnelStep = ref<'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'redirect' | 'other'>('menu')
 const funnelMessages = ref<{ from: 'her' | 'me'; text: string; html?: string; time: string }[]>([])
 const funnelTyping = ref(false)
 const funnelChatBox = ref<HTMLElement | null>(null)
@@ -355,6 +355,29 @@ const funnelOptions = computed(() => {
       { key: 'pack_basic', label: 'Pack gostinho — R$ 29,90', variant: 'wa-quick--yes' },
       { key: 'pack_gold', label: 'Pack Gold solo — R$ 79,90', variant: 'wa-quick--yes' },
       { key: 'pack_combo', label: 'Combo completo — R$ 109,90', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'video') {
+    return [
+      { key: 'vid_10', label: '10 min — R$ 99,90', variant: 'wa-quick--yes' },
+      { key: 'vid_20', label: '20 min — R$ 149,90', variant: 'wa-quick--yes' },
+      { key: 'vid_30', label: '30 min — R$ 229,90', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'webnamoro') {
+    return [
+      { key: 'web_7', label: '7 dias — R$ 179,90', variant: 'wa-quick--yes' },
+      { key: 'web_15', label: '15 dias — R$ 299,90', variant: 'wa-quick--yes' },
+      { key: 'web_30', label: '30 dias — R$ 499,90', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'chat') {
+    return [
+      { key: 'chat_basic', label: 'Chat 30–40 min — R$ 49,90', variant: 'wa-quick--yes' },
+      { key: 'chat_midia', label: 'Chat + fotos/vídeos — R$ 79,90', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
@@ -464,16 +487,37 @@ async function answerFunnel(opt: { key: string; label: string }) {
   }
 
   if (opt.key === 'pix_no') {
-    funnelStep.value = 'packs'
-    await funnelType('Sem pressa… quando quiser, é só escolher o pack de novo 😘', 1000)
+    const k = selectedPack.value?.key || ''
+    if (k.startsWith('vid_')) funnelStep.value = 'video'
+    else if (k.startsWith('web_')) funnelStep.value = 'webnamoro'
+    else if (k.startsWith('chat_')) funnelStep.value = 'chat'
+    else funnelStep.value = 'packs'
+    await funnelType('Sem pressa… quando quiser, é só escolher de novo 😘', 1000)
     return
   }
 
   if (opt.key === 'video') {
     track('whatsapp_funnel_intent', { offer_slug: 'videochamada' })
-    funnelStep.value = 'other'
+    funnelStep.value = 'video'
     await funnelType(
-      'Videochamada eu combino pelo WhatsApp, amor — valores e horário a gente fecha lá. Quer que eu te leve agora?',
+      'Videochamada ao vivo comigo, amor 🔥 Escolhe o tempo:\n\n• 10 min — R$ 99,90\n• 20 min — R$ 149,90\n• 30 min — R$ 229,90\n\nQual combina com você?',
+      1300,
+    )
+    return
+  }
+
+  if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30') {
+    const map: Record<string, { label: string; price: string; desc: string }> = {
+      vid_10: { label: 'Videochamada 10 min', price: '99,90', desc: 'chamada ao vivo rápida e safada' },
+      vid_20: { label: 'Videochamada 20 min', price: '149,90', desc: 'tempo pra gozar com calma' },
+      vid_30: { label: 'Videochamada 30 min', price: '229,90', desc: 'sessão completa comigo' },
+    }
+    const p = map[opt.key]
+    selectedPack.value = { key: opt.key, label: p.label, price: p.price }
+    track('whatsapp_funnel_select', { offer_slug: opt.key })
+    funnelStep.value = 'pix'
+    await funnelType(
+      `Fechado 🔥 ${p.label} por R$ ${p.price} — ${p.desc}.\n\nPosso te mandar a chave PIX agora?`,
       1200,
     )
     return
@@ -481,9 +525,26 @@ async function answerFunnel(opt: { key: string; label: string }) {
 
   if (opt.key === 'webnamoro') {
     track('whatsapp_funnel_intent', { offer_slug: 'webnamoro' })
-    funnelStep.value = 'other'
+    funnelStep.value = 'webnamoro'
     await funnelType(
-      'Webnamoro é exclusividade, amor 💕 A gente combina detalhes e valores no WhatsApp. Posso te redirecionar?',
+      'Webnamoro é pra quem quer exclusividade comigo 💕\n\n• 7 dias — R$ 179,90 (chat diário + áudios + 1 call curta)\n• 15 dias — R$ 299,90 (+ calls e conteúdo exclusivo)\n• 30 dias — R$ 499,90 (namorada virtual completa)\n\nQual pacote você quer?',
+      1400,
+    )
+    return
+  }
+
+  if (opt.key === 'web_7' || opt.key === 'web_15' || opt.key === 'web_30') {
+    const map: Record<string, { label: string; price: string; desc: string }> = {
+      web_7: { label: 'Webnamoro 7 dias', price: '179,90', desc: 'chat diário, áudios e 1 call curta' },
+      web_15: { label: 'Webnamoro 15 dias', price: '299,90', desc: 'calls + conteúdo exclusivo' },
+      web_30: { label: 'Webnamoro 30 dias', price: '499,90', desc: 'experiência completa de namorada virtual' },
+    }
+    const p = map[opt.key]
+    selectedPack.value = { key: opt.key, label: p.label, price: p.price }
+    track('whatsapp_funnel_select', { offer_slug: opt.key })
+    funnelStep.value = 'pix'
+    await funnelType(
+      `Amor, você escolheu ${p.label} por R$ ${p.price} — ${p.desc} 💕\n\nPosso te mandar a chave PIX agora?`,
       1200,
     )
     return
@@ -491,9 +552,25 @@ async function answerFunnel(opt: { key: string; label: string }) {
 
   if (opt.key === 'conversar') {
     track('whatsapp_funnel_intent', { offer_slug: 'conversar' })
-    funnelStep.value = 'other'
+    funnelStep.value = 'chat'
     await funnelType(
-      'Claro… mas aqui o foco é conteúdo e experiência premium 😘 Se quiser só papo, me chama no WhatsApp e a gente vê.',
+      'Chat comigo também tem valor, amor 😘\n\n• R$ 49,90 — chat safado 30–40 min\n• R$ 79,90 — chat + fotos e vídeos no momento\n\nO que você prefere?',
+      1200,
+    )
+    return
+  }
+
+  if (opt.key === 'chat_basic' || opt.key === 'chat_midia') {
+    const map: Record<string, { label: string; price: string; desc: string }> = {
+      chat_basic: { label: 'Chat 30–40 min', price: '49,90', desc: 'papo safado só nosso' },
+      chat_midia: { label: 'Chat + mídia', price: '79,90', desc: 'chat com fotos e vídeos no momento' },
+    }
+    const p = map[opt.key]
+    selectedPack.value = { key: opt.key, label: p.label, price: p.price }
+    track('whatsapp_funnel_select', { offer_slug: opt.key })
+    funnelStep.value = 'pix'
+    await funnelType(
+      `Perfeito 🔥 ${p.label} por R$ ${p.price} — ${p.desc}.\n\nPosso te mandar a chave PIX agora?`,
       1200,
     )
     return
@@ -503,9 +580,7 @@ async function answerFunnel(opt: { key: string; label: string }) {
     const pack = selectedPack.value
     let prefill = 'Oi Wanessa! Vim do site e quero falar com você.'
     if (pack) {
-      prefill = `Oi Wanessa! Quero o ${pack.label} (R$ ${pack.price}). Vou fazer o PIX na chave 47992750967 e te mando o comprovante.`
-    } else {
-      prefill = 'Oi Wanessa! Vim do site e quero saber mais sobre videochamada / webnamoro / conteúdo.'
+      prefill = `Oi Wanessa! Quero ${pack.label} (R$ ${pack.price}). Vou fazer o PIX na chave 47992750967 e te mando o comprovante.`
     }
     track('whatsapp_funnel_redirect', { offer_slug: pack?.key || 'whatsapp' })
     const url = buildWaLink(prefill)
