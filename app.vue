@@ -375,6 +375,7 @@ function funnelType(text: string, delay = 1000, html?: string) {
     funnelTimer = setTimeout(() => {
       funnelTyping.value = false
       pushFunnel('her', text, html)
+      saveFunnelState()
       resolve()
     }, delay)
   })
@@ -441,25 +442,81 @@ const funnelOptions = computed(() => {
   return []
 })
 
+const FUNNEL_STORAGE_KEY = 'wanessa_wa_funnel_v1'
+
+function saveFunnelState() {
+  try {
+    localStorage.setItem(
+      FUNNEL_STORAGE_KEY,
+      JSON.stringify({
+        step: funnelStep.value,
+        messages: funnelMessages.value,
+        selectedPack: selectedPack.value,
+        savedAt: Date.now(),
+      }),
+    )
+  } catch {}
+}
+
+function loadFunnelState(): boolean {
+  try {
+    const raw = localStorage.getItem(FUNNEL_STORAGE_KEY)
+    if (!raw) return false
+    const data = JSON.parse(raw)
+    // expira em 24h
+    if (!data || !data.savedAt || Date.now() - data.savedAt > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(FUNNEL_STORAGE_KEY)
+      return false
+    }
+    if (!Array.isArray(data.messages) || data.messages.length === 0) return false
+    funnelStep.value = data.step || 'menu'
+    funnelMessages.value = data.messages
+    selectedPack.value = data.selectedPack || null
+    return true
+  } catch {
+    return false
+  }
+}
+
+function clearFunnelState() {
+  try { localStorage.removeItem(FUNNEL_STORAGE_KEY) } catch {}
+  funnelStep.value = 'menu'
+  funnelMessages.value = []
+  selectedPack.value = null
+}
+
 function openWaFunnel() {
   track('whatsapp_funnel_open', { offer_slug: 'whatsapp' })
   onCardClick('WhatsApp Funnel', whatsappUrl.value)
   showWaFunnel.value = true
+  showFunnelPhoto.value = false
+  showFunnelProfile.value = false
+  funnelTyping.value = false
+  if (funnelTimer) clearTimeout(funnelTimer)
+
+  const restored = loadFunnelState()
+  if (restored) {
+    nextTick(() => scrollFunnel())
+    return
+  }
+
   funnelStep.value = 'menu'
   funnelMessages.value = []
   selectedPack.value = null
-  funnelTyping.value = false
   nextTick(async () => {
     await funnelType('Bem-vindo, amor 😘 O que você gostaria de ter de mim hoje?', 1200)
+    saveFunnelState()
   })
 }
 
 function closeWaFunnel() {
+  if (funnelTimer) clearTimeout(funnelTimer)
+  funnelTyping.value = false
+  // salva progresso antes de fechar
+  if (funnelMessages.value.length) saveFunnelState()
   showWaFunnel.value = false
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
-  if (funnelTimer) clearTimeout(funnelTimer)
-  funnelTyping.value = false
 }
 
 function buildWaLink(prefill: string) {
@@ -469,6 +526,7 @@ function buildWaLink(prefill: string) {
 async function answerFunnel(opt: { key: string; label: string }) {
   if (funnelTyping.value) return
   pushFunnel('me', opt.label)
+  saveFunnelState()
 
   if (opt.key === 'back' || opt.key === 'back_menu') {
     funnelStep.value = 'menu'
@@ -626,8 +684,13 @@ async function answerFunnel(opt: { key: string; label: string }) {
     }
     track('whatsapp_funnel_redirect', { offer_slug: pack?.key || 'whatsapp' })
     const url = buildWaLink(prefill)
+    clearFunnelState()
     window.open(url, '_blank', 'noopener,noreferrer')
-    closeWaFunnel()
+    showWaFunnel.value = false
+    showFunnelPhoto.value = false
+    showFunnelProfile.value = false
+    if (funnelTimer) clearTimeout(funnelTimer)
+    funnelTyping.value = false
   }
 }
 
