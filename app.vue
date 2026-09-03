@@ -84,15 +84,17 @@
           <!-- identity title removed -->
         </header>
         <section class="main-cards" v-if="configReady">
-          <a class="lux-card lux-card--left" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
+          <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
+            <div class="portal-ring" aria-hidden="true"></div>
+            <div class="portal-core" aria-hidden="true"></div>
             <div class="card-glow"></div>
             <div class="card-top">
               <span class="card-icon"><img v-if="logoPriv" :src="logoPriv" alt="" class="logo-img" width="28" height="28" /><template v-else>🔥</template></span>
-              <span class="card-badge">Privado</span>
+              <span class="card-badge">Portal</span>
             </div>
             <h2 class="card-title">PrivSex</h2>
-            <p class="card-desc">Conteúdo exclusivo e experiência premium.</p>
-            <span class="card-cta">Entrar →</span>
+            <p class="card-desc">Aqui você desbloqueia meu conteúdo pago, chat privado, sou tua noiva virtual, faço lives e chamadas de vídeo ao vivo.</p>
+            <span class="card-cta">Entrar no portal →</span>
           </a>
           <a class="lux-card lux-card--right" :href="telegramPublicUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrl)">
             <div class="card-glow"></div>
@@ -101,7 +103,7 @@
               <span class="card-badge badge-tg">Telegram</span>
             </div>
             <h2 class="card-title">Canal Público</h2>
-            <p class="card-desc">Prévias e o primeiro contato com o meu mundo.</p>
+            <p class="card-desc">Meu canal público onde posto todos os teasers dos meus filmes pagos.</p>
             <span class="card-cta">Entrar →</span>
           </a>
         </section>
@@ -115,7 +117,7 @@
               </span>
               <div>
                 <h3 class="vip-title">Bot pra assinar o VIP no Telegram</h3>
-                <p class="vip-desc">Compra instantânea · sem conversa · acesso imediato</p>
+                <p class="vip-desc">Assinatura instantânea · acesso imediato ao conteúdo</p>
               </div>
             </div>
             <span class="vip-arrow">→</span>
