@@ -18,17 +18,17 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Reject curious leads on intent question
-        run: python3 scripts/fix_quiz_reject_curious.py
+      - name: Apply UI polish
+        run: python3 scripts/fix_ui_polish.py
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.vue
+          git add app.vue assets/css/links-page.css
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "fix: quiz - so olhando bloqueia (filtro final de intencao)"
+            git commit -m "fix: UI - robo segurando Telegram, sem Modelo de Luxo, bio sem fundo preto"
             git push
           fi
