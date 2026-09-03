@@ -322,14 +322,10 @@ function answerQuiz(key: string) {
     return
   }
   if (gate.value === 2) {
+    // Nao conhecer pelo Instagram NAO bloqueia — so registra
     quizAnswers.value.q2 = key === 'yes' ? 'conhece_sim' : 'conhece_nao'
-    if (key === 'no') {
-      setGate('reject', true)
-      typeThenAsk(t('rejectIg'), 1200)
-    } else {
-      setGate(3)
-      typeThenAsk(questionText(3), 1100)
-    }
+    setGate(3)
+    typeThenAsk(questionText(3), 1100)
     return
   }
   if (gate.value === 3) {
