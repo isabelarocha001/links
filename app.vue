@@ -172,8 +172,11 @@
 
       <div v-if="showWaFunnel" class="wa-funnel-overlay" @click.self="closeWaFunnel">
         <div class="wa-funnel-shell" role="dialog" aria-modal="true" @click.stop>
-          <header class="wa-header">
-            <button type="button" class="wa-back-btn" aria-label="Fechar" @click="closeWaFunnel">‹</button>
+          <header class="wa-header wa-funnel-header">
+            <div class="wa-avatar-wrap">
+              <img class="wa-avatar" src="/model.jpg" alt="" draggable="false" />
+              <span class="wa-online-dot" aria-hidden="true"></span>
+            </div>
             <div class="wa-header-info">
               <p class="wa-name">Wanessa</p>
               <p class="wa-status">
@@ -181,10 +184,7 @@
                 <span v-else class="wa-status-online">online</span>
               </p>
             </div>
-            <div class="wa-avatar-wrap">
-              <img class="wa-avatar" src="/model.jpg" alt="" draggable="false" />
-              <span class="wa-online-dot" aria-hidden="true"></span>
-            </div>
+            <button type="button" class="wa-close-btn" aria-label="Fechar chat" @click="closeWaFunnel">✕</button>
           </header>
 
           <div ref="funnelChatBox" class="wa-chat wa-funnel-chat">
