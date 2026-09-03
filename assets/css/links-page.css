@@ -396,24 +396,27 @@
   order: -1;
 }
 
-/* WhatsApp sales funnel — tela cheia */
+/* WhatsApp sales funnel — tela cheia estável (não encolhe ao digitar) */
 .wa-funnel-overlay {
-  position: fixed;
-  inset: 0;
+  position: fixed !important;
+  inset: 0 !important;
   z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   background: #0b141a;
   display: flex;
-  align-items: stretch;
-  justify-content: stretch;
   padding: 0;
   margin: 0;
+  overflow: hidden;
 }
 .wa-funnel-shell {
   width: 100%;
   height: 100%;
-  max-width: none;
-  max-height: none;
+  min-height: 100vh;
   min-height: 100dvh;
+  max-width: none !important;
+  max-height: none !important;
   display: flex;
   flex-direction: column;
   border-radius: 0;
@@ -423,7 +426,7 @@
   border: none;
 }
 .wa-funnel-header {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -435,9 +438,7 @@
   flex: 1;
   min-width: 0;
 }
-.wa-funnel-header .wa-name {
-  margin: 0;
-}
+.wa-funnel-header .wa-name { margin: 0; }
 .wa-close-btn {
   flex-shrink: 0;
   width: 40px;
@@ -458,37 +459,44 @@
   transform: scale(0.96);
 }
 .wa-funnel-chat {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
   max-height: none !important;
-  height: auto;
+  height: auto !important;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 .wa-funnel-quick {
   flex: 0 0 auto;
-  max-height: none;
-  overflow: visible;
+  min-height: 120px;
+  padding: 8px 10px;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+.wa-funnel-quick--busy .wa-quick-btn {
+  opacity: 0.35;
+  pointer-events: none;
+}
+.wa-funnel-quick-placeholder {
+  min-height: 96px;
 }
 .wa-funnel-shell .wa-composer {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
 .wa-funnel-shell .wa-text {
   white-space: pre-wrap;
+}
+.wa-funnel-shell .wa-quick-btn {
+  width: 100%;
+  box-sizing: border-box;
 }
 button.direct-btn {
   font: inherit;
   cursor: pointer;
   text-align: left;
   width: 100%;
-}
-/* evita encolher quando opções mudam */
-.wa-funnel-shell .wa-quick {
-  min-height: 0;
-}
-.wa-funnel-shell .wa-quick-btn {
-  width: 100%;
-  box-sizing: border-box;
 }
