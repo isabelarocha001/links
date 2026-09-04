@@ -10,6 +10,9 @@ export default defineNuxtConfig({
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnb2xtbWhidWZvc210aWdhYWt4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjMzMTQ1OSwiZXhwIjoyMTAxOTA3NDU5fQ.mLI9yoIaBvNBvu5RiBh5M5INDz9ygQMy20GLUuq6srA',
     adminSessionSecret:
       process.env.ADMIN_SESSION_SECRET || 'wanessa-links-session-secret-change-me',
+    syncpayClientId: process.env.SYNCPAY_CLIENT_ID || '',
+    syncpayClientSecret: process.env.SYNCPAY_CLIENT_SECRET || '',
+    syncpayWebhookUrl: process.env.SYNCPAY_WEBHOOK_URL || '',
     public: {
       supabaseUrl:
         process.env.SUPABASE_URL || 'https://sgolmmhbufosmtigaakx.supabase.co',

@@ -258,30 +258,80 @@
             <div v-if="funnelTyping || !funnelOptions.length" class="wa-funnel-quick-placeholder" aria-hidden="true"></div>
           </div>
 
-          <div class="wa-composer wa-funnel-composer">
+          <div class="wa-composer wa-funnel-composer wa-funnel-composer--locked" @click="openChatPlans">
             <button type="button" class="wa-emoji" disabled aria-hidden="true">😊</button>
-            <input
-              class="wa-input"
-              type="text"
-              v-model="funnelInput"
-              placeholder="Mensagem"
-              :disabled="funnelTyping"
-              maxlength="500"
-              enterkeyhint="send"
-              autocomplete="off"
-              @focus="onFunnelInputFocus"
-              @blur="onFunnelInputBlur"
-              @keyup.enter="sendFunnelFreeText"
-            />
-            <button
-              type="button"
-              class="wa-send"
-              :disabled="funnelTyping || !funnelInput.trim()"
-              aria-label="Enviar"
-              @click="sendFunnelFreeText"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            <div class="wa-input wa-input--locked" role="button" tabindex="0" aria-label="Chat bloqueado — toque para desbloquear">
+              <svg class="wa-lock-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>Chat bloqueado — desbloquear</span>
+            </div>
+            <button type="button" class="wa-send wa-send--locked" aria-label="Chat bloqueado" @click.stop="openChatPlans">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Planos low-ticket do chat (SyncPay) -->
+      <div v-if="showChatPlans" class="chat-plans-overlay" @click.self="closeChatPlans">
+        <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
+          <div class="chat-plans-handle" aria-hidden="true"></div>
+          <div class="chat-plans-head">
+            <div>
+              <p class="chat-plans-kicker">Chat privado</p>
+              <h3>Desbloqueie a conversa</h3>
+              <p class="chat-plans-sub">Escolhe um plano e fala comigo agora 🔥</p>
+            </div>
+            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeChatPlans">✕</button>
+          </div>
+          <div class="chat-plans-list">
+            <button
+              v-for="p in chatPlans"
+              :key="p.key"
+              type="button"
+              class="chat-plan-card"
+              :class="{ 'chat-plan-card--hot': p.hot, 'is-loading': chatPayLoading === p.key }"
+              :disabled="!!chatPayLoading"
+              @click="buyChatPlan(p)"
+            >
+              <div class="chat-plan-left">
+                <span class="chat-plan-badge" v-if="p.hot">Mais vendido</span>
+                <span class="chat-plan-title">{{ p.title }}</span>
+                <span class="chat-plan-desc">{{ p.desc }}</span>
+              </div>
+              <div class="chat-plan-right">
+                <span class="chat-plan-price">R$ {{ p.priceLabel }}</span>
+                <span class="chat-plan-cta">{{ chatPayLoading === p.key ? 'Gerando PIX…' : 'Pagar' }}</span>
+              </div>
+            </button>
+          </div>
+          <p v-if="chatPayError" class="chat-plans-error">{{ chatPayError }}</p>
+          <p class="chat-plans-note">Pagamento via PIX · libera na hora</p>
+        </div>
+      </div>
+
+      <!-- Modal PIX gerado -->
+      <div v-if="showPixModal" class="chat-plans-overlay" @click.self="closePixModal">
+        <div class="chat-plans-sheet chat-pix-sheet" role="dialog" aria-modal="true" @click.stop>
+          <div class="chat-plans-handle" aria-hidden="true"></div>
+          <div class="chat-plans-head">
+            <div>
+              <p class="chat-plans-kicker">PIX gerado</p>
+              <h3>{{ selectedChatPlan?.title || 'Chat' }}</h3>
+              <p class="chat-plans-sub">R$ {{ selectedChatPlan?.priceLabel }} · pague e me chama</p>
+            </div>
+            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePixModal">✕</button>
+          </div>
+          <div class="chat-pix-body">
+            <div v-if="pixQrImage" class="chat-pix-qr-wrap">
+              <img :src="pixQrImage" alt="QR Code PIX" class="chat-pix-qr" />
+            </div>
+            <p class="chat-pix-hint">Ou copie o código PIX:</p>
+            <div class="chat-pix-copy-row">
+              <input class="chat-pix-code" type="text" readonly :value="pixCopyCode" />
+              <button type="button" class="chat-pix-copy-btn" @click="copyPixCode">{{ pixCopied ? 'Copiado!' : 'Copiar' }}</button>
+            </div>
+            <p class="chat-pix-status">{{ pixStatusText }}</p>
+            <button type="button" class="chat-pix-wa" @click="openWaAfterPix">Já paguei — abrir WhatsApp</button>
           </div>
         </div>
       </div>
@@ -366,6 +416,115 @@ const showFunnelPhoto = ref(false)
 
 const funnelInput = ref('')
 const funnelShellStyle = ref<Record<string, string>>({})
+
+// Chat bloqueado + planos low-ticket (SyncPay)
+const showChatPlans = ref(false)
+const showPixModal = ref(false)
+const chatPayLoading = ref<string | null>(null)
+const chatPayError = ref('')
+const selectedChatPlan = ref<{ key: string; title: string; desc: string; price: number; priceLabel: string; hot?: boolean } | null>(null)
+const pixCopyCode = ref('')
+const pixQrImage = ref('')
+const pixPaymentId = ref('')
+const pixCopied = ref(false)
+const pixStatusText = ref('Aguardando pagamento…')
+let pixPollTimer: ReturnType<typeof setInterval> | null = null
+
+const chatPlans = [
+  { key: 'chat_quick', title: 'Chat rápido', desc: '10 min de papo safado', price: 9.9, priceLabel: '9,90' },
+  { key: 'chat_basic', title: 'Chat 30 min', desc: 'conversa completa só nosso', price: 19.9, priceLabel: '19,90', hot: true },
+  { key: 'chat_midia', title: 'Chat + mídias', desc: 'fotos e vídeos no momento', price: 29.9, priceLabel: '29,90' },
+]
+
+function openChatPlans() {
+  chatPayError.value = ''
+  showChatPlans.value = true
+  try { track('chat_lock_open', { offer_slug: 'chat_plans' }) } catch {}
+}
+function closeChatPlans() {
+  if (chatPayLoading.value) return
+  showChatPlans.value = false
+}
+function closePixModal() {
+  showPixModal.value = false
+  if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
+}
+async function copyPixCode() {
+  try {
+    await navigator.clipboard.writeText(pixCopyCode.value)
+    pixCopied.value = true
+    setTimeout(() => { pixCopied.value = false }, 2000)
+  } catch {
+    // fallback
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = pixCopyCode.value
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      pixCopied.value = true
+      setTimeout(() => { pixCopied.value = false }, 2000)
+    } catch {}
+  }
+}
+async function buyChatPlan(p: typeof chatPlans[number]) {
+  chatPayError.value = ''
+  chatPayLoading.value = p.key
+  selectedChatPlan.value = p
+  try {
+    const visitor_id = (typeof getOrCreateVisitorId === 'function' ? getOrCreateVisitorId() : null)
+    const res = await $fetch<{ ok: boolean; pix_code?: string; qr_image?: string; payment_id?: string; external_id?: string; error?: string }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: p.key,
+        amount: p.price,
+        title: p.title,
+        visitor_id,
+        source: 'links_chat_lock',
+      },
+    })
+    if (!res?.ok || !res.pix_code) {
+      throw new Error(res?.error || 'Falha ao gerar PIX')
+    }
+    pixCopyCode.value = res.pix_code
+    pixQrImage.value = res.qr_image || ''
+    pixPaymentId.value = res.payment_id || res.external_id || ''
+    pixStatusText.value = 'Escaneie o QR ou copie o código PIX'
+    showChatPlans.value = false
+    showPixModal.value = true
+    try { track('chat_plan_checkout', { offer_slug: p.key, amount: p.price }) } catch {}
+    // poll status
+    if (pixPollTimer) clearInterval(pixPollTimer)
+    let tries = 0
+    pixPollTimer = setInterval(async () => {
+      tries++
+      if (tries > 60) { if (pixPollTimer) clearInterval(pixPollTimer); return }
+      try {
+        const st = await $fetch<{ status?: string }>('/api/checkout/status', { query: { id: pixPaymentId.value } })
+        if (st?.status === 'approved' || st?.status === 'paid' || st?.status === 'completed') {
+          pixStatusText.value = 'Pagamento confirmado! ✅'
+          if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
+          try { track('chat_plan_paid', { offer_slug: p.key, amount: p.price }) } catch {}
+        }
+      } catch {}
+    }, 4000)
+  } catch (e: any) {
+    chatPayError.value = e?.data?.statusMessage || e?.message || 'Erro ao gerar cobrança. Tenta de novo.'
+  } finally {
+    chatPayLoading.value = null
+  }
+}
+function openWaAfterPix() {
+  const p = selectedChatPlan.value
+  const prefill = p
+    ? `Oi Wanessa! Acabei de pagar o ${p.title} (R$ ${p.priceLabel}) no PIX. Segue o comprovante.`
+    : 'Oi Wanessa! Acabei de pagar o chat no PIX.'
+  const url = buildWaLink(prefill)
+  try { track('chat_plan_wa_redirect', { offer_slug: p?.key || 'chat' }) } catch {}
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 
 function syncFunnelViewport() {
   try {
@@ -663,6 +822,9 @@ function buildWaLink(prefill: string) {
 
 
 async function sendFunnelFreeText() {
+  // Chat bloqueado — redireciona para planos
+  openChatPlans()
+  return
   const text = (funnelInput.value || '').trim()
   if (!text || funnelTyping.value) return
   funnelInput.value = ''
