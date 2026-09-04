@@ -186,7 +186,16 @@
                 <span v-else class="wa-status-online">online</span>
               </p>
             </button>
-            <button type="button" class="wa-close-btn" aria-label="Fechar chat" @click="closeWaFunnel">✕</button>
+            <div class="wa-header-actions">
+              <button type="button" class="wa-header-icon-btn" aria-label="Camera" @click="onFunnelCamera">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              </button>
+              <button type="button" class="wa-close-btn" aria-label="Fechar chat" @click="closeWaFunnel">✕</button>
+            </div>
+            <input ref="funnelCameraInput" type="file" accept="image/*" capture="environment" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'photo')" />
+            <input ref="funnelPhotoInput" type="file" accept="image/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'photo')" />
+            <input ref="funnelVideoInput" type="file" accept="video/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'video')" />
+            <input ref="funnelAudioInput" type="file" accept="audio/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'audio')" />
           </header>
 
           <!-- Foto de perfil em círculo (estilo WhatsApp) -->
@@ -259,15 +268,56 @@
             <div v-else class="wa-funnel-quick-placeholder" aria-hidden="true"></div>
           </div>
 
-          <div class="wa-composer wa-funnel-composer wa-funnel-composer--locked" @click="openChatPlans">
-            <button type="button" class="wa-emoji" disabled aria-hidden="true">😊</button>
-            <div class="wa-input wa-input--locked" role="button" tabindex="0" aria-label="Chat bloqueado — toque para desbloquear">
-              <svg class="wa-lock-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span>Chat bloqueado — desbloquear</span>
-            </div>
-            <button type="button" class="wa-send wa-send--locked" aria-label="Chat bloqueado" @click.stop="openChatPlans">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <div class="wa-composer wa-funnel-composer" :class="{ 'wa-funnel-composer--locked': !funnelChatUnlocked }">
+            <button type="button" class="wa-composer-icon" aria-label="Anexar foto ou video" @click="onFunnelAttach">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
             </button>
+            <div
+              v-if="!funnelChatUnlocked"
+              class="wa-input wa-input--locked"
+              role="button"
+              tabindex="0"
+              aria-label="Chat bloqueado"
+              @click="openChatPlans"
+            >
+              <svg class="wa-lock-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>Chat bloqueado desbloquear</span>
+            </div>
+            <input
+              v-else
+              v-model="funnelInput"
+              class="wa-input"
+              type="text"
+              placeholder="Mensagem"
+              @keydown.enter.prevent="sendFunnelFreeText"
+            />
+            <button
+              type="button"
+              class="wa-composer-icon"
+              :class="{ 'is-rec': funnelRecording }"
+              aria-label="Audio"
+              @click="onFunnelAudio"
+            >
+              <svg v-if="!funnelRecording" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            </button>
+            <button
+              v-if="funnelChatUnlocked && funnelInput.trim()"
+              type="button"
+              class="wa-send"
+              aria-label="Enviar"
+              @click="sendFunnelFreeText"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+          <div v-if="showFunnelAttachMenu" class="wa-attach-menu" @click.self="showFunnelAttachMenu = false">
+            <div class="wa-attach-sheet">
+              <button type="button" class="wa-attach-item" @click="pickFunnelMedia('photo')">Foto</button>
+              <button type="button" class="wa-attach-item" @click="pickFunnelMedia('video')">Video</button>
+              <button type="button" class="wa-attach-item" @click="pickFunnelMedia('audio')">Audio</button>
+              <button type="button" class="wa-attach-item wa-attach-item--cancel" @click="showFunnelAttachMenu = false">Cancelar</button>
+            </div>
           </div>
         </div>
       </div>
@@ -419,6 +469,79 @@ const showFunnelPhoto = ref(false)
 
 const funnelInput = ref('')
 const funnelShellStyle = ref<Record<string, string>>({})
+const funnelChatUnlocked = ref(false)
+const funnelRecording = ref(false)
+const showFunnelAttachMenu = ref(false)
+const funnelCameraInput = ref<HTMLInputElement | null>(null)
+const funnelPhotoInput = ref<HTMLInputElement | null>(null)
+const funnelVideoInput = ref<HTMLInputElement | null>(null)
+const funnelAudioInput = ref<HTMLInputElement | null>(null)
+let funnelMediaRecorder: MediaRecorder | null = null
+let funnelAudioChunks: BlobPart[] = []
+
+function requireFunnelChatOrPay(): boolean {
+  if (funnelChatUnlocked.value) return true
+  openChatPlans()
+  return false
+}
+function onFunnelCamera() {
+  if (!requireFunnelChatOrPay()) return
+  funnelCameraInput.value?.click()
+}
+function onFunnelAttach() {
+  if (!requireFunnelChatOrPay()) return
+  showFunnelAttachMenu.value = true
+}
+function pickFunnelMedia(kind: 'photo' | 'video' | 'audio') {
+  showFunnelAttachMenu.value = false
+  if (kind === 'photo') funnelPhotoInput.value?.click()
+  else if (kind === 'video') funnelVideoInput.value?.click()
+  else funnelAudioInput.value?.click()
+}
+function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio') {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || !funnelChatUnlocked.value) return
+  const url = URL.createObjectURL(file)
+  if (kind === 'photo') {
+    pushFunnel('me', 'Foto', `<img src="${url}" alt="foto" style="max-width:100%;border-radius:10px;display:block" />`)
+  } else if (kind === 'video') {
+    pushFunnel('me', 'Video', `<video src="${url}" controls playsinline style="max-width:100%;border-radius:10px;display:block"></video>`)
+  } else {
+    pushFunnel('me', 'Audio', `<audio src="${url}" controls style="width:100%;min-width:180px"></audio>`)
+  }
+  try { track('funnel_media_sent', { kind }) } catch {}
+  setTimeout(() => { funnelType('Recebi aqui, amor… me conta o que você quer que eu faça com isso 😏', 800) }, 400)
+}
+async function onFunnelAudio() {
+  if (!requireFunnelChatOrPay()) return
+  if (funnelRecording.value) {
+    try { funnelMediaRecorder?.stop() } catch {}
+    return
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    funnelAudioChunks = []
+    const rec = new MediaRecorder(stream)
+    funnelMediaRecorder = rec
+    rec.ondataavailable = (e) => { if (e.data.size) funnelAudioChunks.push(e.data) }
+    rec.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop())
+      funnelRecording.value = false
+      const blob = new Blob(funnelAudioChunks, { type: 'audio/webm' })
+      const url = URL.createObjectURL(blob)
+      pushFunnel('me', 'Audio', `<audio src="${url}" controls style="width:100%;min-width:180px"></audio>`)
+      try { track('funnel_media_sent', { kind: 'audio_record' }) } catch {}
+      setTimeout(() => { funnelType('Ouvi seu audio 🔥 Me fala mais…', 800) }, 400)
+    }
+    rec.start()
+    funnelRecording.value = true
+  } catch {
+    funnelAudioInput.value?.click()
+  }
+}
+
 
 // Chat bloqueado + planos low-ticket (SyncPay)
 const showChatPlans = ref(false)
