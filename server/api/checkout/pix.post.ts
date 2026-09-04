@@ -142,9 +142,18 @@ export default defineEventHandler(async (event) => {
   if (clientId && clientSecret) {
     try {
       const token = await getSyncPayToken(clientId, clientSecret)
-      const webhookUrl = String(
+      // Webhook: env OU origem do request (auto)
+      let webhookUrl = String(
         (useRuntimeConfig() as any).syncpayWebhookUrl || process.env.SYNCPAY_WEBHOOK_URL || process.env.NUXT_SYNCPAY_WEBHOOK_URL || '',
       ).trim()
+      if (!webhookUrl) {
+        try {
+          const origin = getRequestURL(event).origin
+          if (origin && !origin.includes('localhost')) {
+            webhookUrl = `${origin}/api/webhooks/syncpay`
+          }
+        } catch {}
+      }
 
       const cashInBody: Record<string, any> = {
         amount: finalAmount,
