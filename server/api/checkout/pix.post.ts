@@ -229,50 +229,20 @@ export default defineEventHandler(async (event) => {
     console.error('[checkout/pix] missing credentials', { hasId, hasSecret })
   }
 
-  // --- Fallback manual (chave PIX estática) — não trava conversão ---
-  const amountLabel = finalAmount.toFixed(2).replace('.', ',')
-  const manualCode = MANUAL_PIX_KEY
-  const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(manualCode)}`
 
-  let paymentId: string | null = null
-  try {
-    const { data } = await supabase
-      .from('payments')
-      .insert({
-        external_id: null,
-        payment_method: 'pix_manual',
-        status: 'pending',
-        amount: finalAmount,
-        currency: 'BRL',
-        pix_qr_code: manualCode,
-        metadata: {
-          source,
-          plan_key: planKey,
-          title,
-          visitor_id,
-          ip,
-          provider: 'manual_fallback',
-          reason: hasId && hasSecret ? 'syncpay_failed' : 'syncpay_credentials_missing',
-        },
-      })
-      .select('id')
-      .single()
-    paymentId = data?.id || null
-  } catch (e: any) {
-    console.error('[checkout/pix] manual payments insert', e?.message || e)
-  }
+  // Sem SyncPay válido → erro explícito (não gera QR falso de telefone)
+  const reason = hasId && hasSecret
+    ? 'SyncPay respondeu com erro. Confira client_id/secret e permissões da API.'
+    : 'Credenciais SyncPay ausentes no projeto links. Adicione SYNCPAY_CLIENT_ID e SYNCPAY_CLIENT_SECRET na Vercel (Production) ou no app_secrets.'
 
-  return {
-    ok: true,
-    mode: 'manual',
-    payment_id: paymentId,
-    external_id: null,
-    pix_code: manualCode,
-    qr_image: qrImage,
-    amount: finalAmount,
-    amount_label: amountLabel,
-    plan_key: planKey,
-    hint: `Pague R$ ${amountLabel} na chave PIX (telefone) e me manda o comprovante no WhatsApp`,
-    credentials_found: !!(hasId && hasSecret),
-  }
+  throw createError({
+    statusCode: 503,
+    statusMessage: reason,
+    data: {
+      ok: false,
+      credentials_found: !!(hasId && hasSecret),
+      has_client_id: hasId,
+      has_client_secret: hasSecret,
+    },
+  })
 })

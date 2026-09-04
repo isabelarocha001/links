@@ -322,15 +322,18 @@
             <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePixModal">✕</button>
           </div>
           <div class="chat-pix-body">
-            <div v-if="pixQrImage" class="chat-pix-qr-wrap">
+            <div v-if="pixQrImage && pixIsEmv" class="chat-pix-qr-wrap">
               <img :src="pixQrImage" alt="QR Code PIX" class="chat-pix-qr" />
             </div>
-            <p class="chat-pix-hint">Ou copie o código PIX:</p>
+            <p class="chat-pix-hint">Copia e cola PIX (SyncPay):</p>
+            <textarea class="chat-pix-code chat-pix-code--area" readonly rows="3" :value="pixCopyCode" />
             <div class="chat-pix-copy-row">
-              <input class="chat-pix-code" type="text" readonly :value="pixCopyCode" />
-              <button type="button" class="chat-pix-copy-btn" @click="copyPixCode">{{ pixCopied ? 'Copiado!' : 'Copiar' }}</button>
+              <button type="button" class="chat-pix-copy-btn chat-pix-copy-btn--full" @click="copyPixCode">{{ pixCopied ? 'Código copiado!' : 'Copiar código PIX' }}</button>
             </div>
-            <p class="chat-pix-status">{{ pixStatusText }}</p>
+            <p class="chat-pix-status" :class="{ 'is-ok': pixPaid }">{{ pixStatusText }}</p>
+            <button type="button" class="chat-pix-status-btn" :disabled="pixStatusLoading" @click="checkPixStatus">
+              {{ pixStatusLoading ? 'Consultando…' : 'Consultar status da transação' }}
+            </button>
             <button type="button" class="chat-pix-wa" @click="openWaAfterPix">Já paguei — abrir WhatsApp</button>
           </div>
         </div>
@@ -426,8 +429,12 @@ const selectedChatPlan = ref<{ key: string; title: string; desc: string; price: 
 const pixCopyCode = ref('')
 const pixQrImage = ref('')
 const pixPaymentId = ref('')
+const pixExternalId = ref('')
 const pixCopied = ref(false)
 const pixStatusText = ref('Aguardando pagamento…')
+const pixStatusLoading = ref(false)
+const pixPaid = ref(false)
+const pixIsEmv = computed(() => /^000201/.test(pixCopyCode.value || ''))
 let pixPollTimer: ReturnType<typeof setInterval> | null = null
 
 const chatPlans = [
@@ -499,32 +506,24 @@ async function buyChatPlan(p: typeof chatPlans[number]) {
     if (!res?.ok || !res.pix_code) {
       throw new Error(res?.error || 'Falha ao gerar PIX')
     }
+    pixPaid.value = false
     pixCopyCode.value = res.pix_code
-    pixQrImage.value = res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`
-    pixPaymentId.value = res.payment_id || res.external_id || ''
-    if (res.mode === 'manual') {
-      pixStatusText.value = res.hint || `Pague R$ ${p.priceLabel} na chave e me manda o comprovante`
-    } else {
-      pixStatusText.value = 'Escaneie o QR ou copie o código PIX'
-    }
+    const isEmv = /^000201/.test(res.pix_code)
+    pixQrImage.value = isEmv
+      ? (res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`)
+      : ''
+    pixPaymentId.value = res.payment_id || ''
+    pixExternalId.value = res.external_id || res.payment_id || ''
+    pixStatusText.value = isEmv
+      ? 'Aguardando pagamento… use o QR ou o copia e cola'
+      : (res.hint || 'Pague o PIX e confirme o status')
     showChatPlans.value = false
     showPixModal.value = true
     try { track('chat_plan_checkout', { offer_slug: p.key, amount: p.price, mode: res.mode || 'unknown' }) } catch {}
-    if (pixPaymentId.value && res.mode === 'syncpay') {
+    if (pixExternalId.value || pixPaymentId.value) {
       if (pixPollTimer) clearInterval(pixPollTimer)
       let tries = 0
-      pixPollTimer = setInterval(async () => {
-        tries++
-        if (tries > 60) { if (pixPollTimer) clearInterval(pixPollTimer); return }
-        try {
-          const st = await $fetch<{ status?: string }>('/api/checkout/status', { query: { id: pixPaymentId.value } })
-          if (st?.status === 'approved' || st?.status === 'paid' || st?.status === 'completed') {
-            pixStatusText.value = 'Pagamento confirmado! ✅'
-            if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
-            try { track('chat_plan_paid', { offer_slug: p.key, amount: p.price }) } catch {}
-          }
-        } catch {}
-      }, 4000)
+      pixPollTimer = setInterval(() => { checkPixStatus(true); tries++; if (tries > 45 && pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null } }, 5000)
     }
   } catch (e: any) {
     const msg =
@@ -537,6 +536,36 @@ async function buyChatPlan(p: typeof chatPlans[number]) {
     console.error('[buyChatPlan]', e)
   } finally {
     chatPayLoading.value = null
+  }
+}
+async function checkPixStatus(silent = false) {
+  const id = pixPaymentId.value || pixExternalId.value
+  if (!id) {
+    if (!silent) pixStatusText.value = 'Sem ID de transação para consultar'
+    return
+  }
+  if (!silent) pixStatusLoading.value = true
+  try {
+    const st = await $fetch<{ status?: string; message?: string }>('/api/checkout/status', {
+      query: { id },
+    })
+    const status = String(st?.status || '').toLowerCase()
+    if (['approved', 'paid', 'completed'].includes(status)) {
+      pixPaid.value = true
+      pixStatusText.value = 'Pagamento confirmado! ✅'
+      if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
+      try { track('chat_plan_paid', { offer_slug: selectedChatPlan.value?.key || 'chat' }) } catch {}
+    } else if (!silent) {
+      pixStatusText.value = st?.message || 'Ainda pendente — aguardando PIX'
+    } else if (status === 'pending') {
+      pixStatusText.value = 'Aguardando pagamento…'
+    }
+  } catch (e: any) {
+    if (!silent) {
+      pixStatusText.value = e?.data?.statusMessage || e?.message || 'Erro ao consultar status'
+    }
+  } finally {
+    if (!silent) pixStatusLoading.value = false
   }
 }
 function openWaAfterPix() {
