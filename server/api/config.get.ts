@@ -2,7 +2,7 @@ export default defineEventHandler(async () => {
   const supabase = useAnonSupabase()
   const { data, error } = await supabase
     .from('link_page_config')
-    .select('name, bio, avatar_url, links, highlight_label, updated_at')
+    .select('name, bio, avatar_url, links, highlight_label, quiz_enabled, updated_at')
     .eq('id', 'main')
     .single()
 
@@ -11,6 +11,7 @@ export default defineEventHandler(async () => {
     bio: 'língua bifurcada · o resto tu descobre 👅',
     avatar_url: '',
     highlight_label: 'PrivSex',
+    quiz_enabled: false,
     links: [
       { label: 'PrivSex', icon: '🔥', url: 'https://privsex.com/wanessa' },
       { label: 'Telegram VIP', icon: '⭐', url: 'https://t.me/wanessaavipbot?start=pressel' },
@@ -32,6 +33,9 @@ export default defineEventHandler(async () => {
   if (!data.highlight_label || !String(data.highlight_label).trim()) {
     data.highlight_label = 'PrivSex'
   }
+
+  // Quiz desativado por padrão (coluna pode ainda não existir)
+  data.quiz_enabled = data.quiz_enabled === true
 
   return data
 })

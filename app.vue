@@ -308,6 +308,11 @@
             <option value="">Nenhum</option>
             <option v-for="l in edit.links.filter((x) => x.label.trim())" :key="l.label" :value="l.label">{{ l.label }}</option>
           </select>
+          <label class="wl-label" style="margin-top:14px">Quiz / Funil de entrada</label>
+          <label class="wl-toggle" style="margin-bottom:12px">
+            <input type="checkbox" :checked="edit.quiz_enabled === true" @change="edit.quiz_enabled = ($event.target as HTMLInputElement).checked" />
+            <span>{{ edit.quiz_enabled ? 'Ativado' : 'Desativado (temporário)' }}</span>
+          </label>
           <div class="wl-links-head"><span class="wl-label" style="margin:0">Links (admin)</span><button type="button" class="wl-btn wl-btn-sm wl-btn-primary" @click="addLink">+ Adicionar</button></div>
           <div v-for="(l, i) in edit.links" :key="i" class="wl-link-edit" :class="{ 'is-off': l.enabled === false }">
             <div class="wl-link-row"><input v-model="l.icon" class="wl-input wl-icon" placeholder="🔥" /><input v-model="l.label" class="wl-input" placeholder="Título" /></div>
@@ -1046,7 +1051,7 @@ const DEFAULT_LINKS: LinkItem[] = [
   { label: 'Telegram VIP', icon: '⭐', url: vipBotUrl, enabled: true },
   { label: 'Canal de prévias', icon: '📱', url: telegramPublicUrl, enabled: true },
 ]
-const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT })
+const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
 const configReady = ref(false)
 const showLogin = ref(false)
 const isAdmin = ref(false)
@@ -1056,7 +1061,7 @@ const saveMsg = ref('')
 const saveError = ref('')
 const loading = ref(false)
 const passInput = ref<HTMLInputElement | null>(null)
-const edit = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT })
+const edit = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
 function getOrCreateVisitorId(): string {
   if (typeof window === 'undefined') return ''
   try {
@@ -1124,6 +1129,7 @@ function applyServerConfig(data: any) {
   const isGeneric = /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|língua\s*bifurcada|resto\s*tu\s*descobre/i.test(incomingBio)
   config.bio = !incomingBio || isGeneric ? '' : incomingBio
   config.highlight_label = String(data.highlight_label || '').trim() || DEFAULT_HIGHLIGHT
+  config.quiz_enabled = data.quiz_enabled === true
   if (Array.isArray(data.links) && data.links.length) {
     config.links = data.links.filter((l: any) => l && l.label).map((l: any) => attachLogo({ label: String(l.label || ''), icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled: l.enabled !== false }))
   } else config.links = DEFAULT_LINKS.map(attachLogo)
@@ -1159,6 +1165,11 @@ onMounted(async () => {
       fetch('/api/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitor_id, fingerprint, status: gate.value }), keepalive: true }).catch(() => {})
     } catch {}
   }
+  // Quiz desativado temporariamente (toggle no admin)
+  if (!config.quiz_enabled) {
+    gate.value = 'pass'
+    try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
+  }
   if (gate.value == null) gate.value = 1
   gateReady.value = true
   if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
@@ -1177,6 +1188,7 @@ onUnmounted(() => {
 function openLogin() { password.value = ''; loginError.value = ''; showLogin.value = true; nextTick(() => passInput.value?.focus()) }
 function openEdit() {
   edit.name = config.name; edit.bio = config.bio; edit.highlight_label = config.highlight_label || DEFAULT_HIGHLIGHT
+  edit.quiz_enabled = config.quiz_enabled === true
   edit.links = config.links.map((l) => ({ label: l.label, icon: l.icon, url: l.url, desc: l.desc || '', enabled: l.enabled !== false }))
   if (!edit.links.length) edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true })
 }
@@ -1197,10 +1209,12 @@ async function doSave() {
     const payload = {
       name: edit.name || config.name || '', bio: edit.bio, avatar_url: '',
       highlight_label: (edit.highlight_label || '').trim() || DEFAULT_HIGHLIGHT,
+      quiz_enabled: edit.quiz_enabled === true,
       links: edit.links.filter((l) => l.label.trim()).map((l) => ({ label: l.label.trim(), icon: l.icon || '🔗', url: l.url || '#', desc: (l.desc || '').trim(), enabled: l.enabled !== false })),
     }
     await $fetch('/api/admin/update', { method: 'POST', body: payload })
     config.name = payload.name; config.bio = payload.bio; config.highlight_label = payload.highlight_label
+    config.quiz_enabled = payload.quiz_enabled
     config.links = payload.links.map((l) => attachLogo(l))
     saveMsg.value = 'Salvo!'; setTimeout(() => { saveMsg.value = '' }, 2500)
   } catch (e: any) { saveError.value = e?.data?.statusMessage || 'Erro ao salvar' }

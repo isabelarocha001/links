@@ -13,6 +13,7 @@ export default defineEventHandler(async (event) => {
     ? ''
     : String(body.avatar_url).trim().slice(0, 500)
   const highlight_label = String(body?.highlight_label || '').trim().slice(0, 60) || 'PrivSex'
+  const quiz_enabled = body?.quiz_enabled === true
   const links = Array.isArray(body?.links) ? body.links.slice(0, 20) : []
 
   const cleanLinks = links
@@ -38,6 +39,7 @@ export default defineEventHandler(async (event) => {
       bio,
       avatar_url,
       highlight_label,
+      quiz_enabled,
       links: cleanLinks,
       updated_at: new Date().toISOString()
     })
