@@ -924,6 +924,7 @@ async function adminUnlockChat() {
   }
   isAdmin.value = true
   funnelChatUnlocked.value = true
+    startLiveChatPoll()
   showChatPlans.value = false
   chatPayLoading.value = ''
   try {
@@ -1331,6 +1332,7 @@ async function adminPayWithBalance() {
     showPixModal.value = false
   } catch {}
   funnelChatUnlocked.value = true
+    startLiveChatPoll()
   if ((pack.key || '').startsWith('vid_') || pack.key === 'video_avulso') {
     videoCallUnlocked.value = true
   }
@@ -1445,6 +1447,7 @@ async async function onFunnelPaid() {
 
   if (isChat) {
     funnelChatUnlocked.value = true
+    startLiveChatPoll()
     await funnelType(
       'Pronto 🔥 O chat tá liberado aqui mesmo pra gente conversar.\n\nMe conta o que você quer em especial… sexting, uma conversa bem picante, trocar fotinhos… o que te deixa mais louco? Assim eu já entro no clima certo pra você 😏',
       2200,
