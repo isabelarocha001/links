@@ -365,6 +365,23 @@
             </div>
             <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeChatPlans">✕</button>
           </div>
+          <button
+            v-if="isAdmin"
+            type="button"
+            class="chat-plan-card"
+            style="border-color:rgba(34,197,94,.45);margin-bottom:10px"
+            :disabled="!!chatPayLoading"
+            @click="adminUnlockChat"
+          >
+            <div class="chat-plan-left">
+              <span class="chat-plan-title">🛠 Saldo admin (∞)</span>
+              <span class="chat-plan-desc">Desbloqueia o chat sem PIX (teste)</span>
+            </div>
+            <div class="chat-plan-right">
+              <span class="chat-plan-price" style="color:#4ade80">∞</span>
+              <span class="chat-plan-cta">{{ chatPayLoading === 'admin' ? 'Liberando…' : 'Usar saldo' }}</span>
+            </div>
+          </button>
           <div class="chat-plans-list">
             <button
               v-for="p in chatPlans"
@@ -746,6 +763,7 @@ function pushPixIntoFunnelChat() {
     `<img src="${qr}" alt="QR PIX" style="width:180px;height:180px;border-radius:10px;background:#fff;padding:6px;margin:8px 0;display:block" />` +
     `<span style="opacity:.85">Copia e cola:</span><br>` +
     `<code style="display:block;word-break:break-all;font-size:0.68em;background:rgba(0,0,0,.22);padding:8px;border-radius:8px;margin-top:4px">${safe}</code>` +
+    `<br><span style="opacity:.9">Toque em <b>Copiar código PIX</b> abaixo 👇</span>` +
     `</div>`
   pushFunnel('her', `PIX gerado R$ ${price}`, html)
 }
@@ -777,6 +795,27 @@ async function copyPixCode() {
     } catch {}
   }
 }
+
+async function adminUnlockChat() {
+  chatPayError.value = ''
+  chatPayLoading.value = 'admin'
+  try {
+    await $fetch('/api/admin/test-pay', { method: 'POST' })
+  } catch {
+    isAdmin.value = false
+    chatPayError.value = 'Só admin logado pode usar saldo da carteira.'
+    chatPayLoading.value = ''
+    return
+  }
+  isAdmin.value = true
+  funnelChatUnlocked.value = true
+  showChatPlans.value = false
+  chatPayLoading.value = ''
+  try {
+    await funnelType('Chat liberado com saldo admin (∞) ✅ Pode testar à vontade.', 900)
+  } catch {}
+}
+
 async function buyChatPlan(p: typeof chatPlans[number]) {
   chatPayError.value = ''
   chatPayLoading.value = p.key
@@ -1271,9 +1310,14 @@ const funnelOptions = computed(() => {
     return opts
   }
   if (funnelStep.value === 'awaiting_payment') {
-    return [
+    const opts = [
+      { key: 'pix_copy', label: 'Copiar código PIX 📋', variant: 'wa-quick--yes' },
       { key: 'pix_check', label: 'Já paguei verificar ✅', variant: 'wa-quick--yes' },
     ]
+    if (isAdmin.value) {
+      opts.unshift({ key: 'admin_pay', label: '🛠 Pagar com saldo admin (∞)', variant: 'wa-quick--yes' })
+    }
+    return opts
   }
   if (funnelStep.value === 'paid' || funnelStep.value === 'redirect') {
     return [
