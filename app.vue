@@ -473,8 +473,20 @@ async function buyChatPlan(p: typeof chatPlans[number]) {
   chatPayLoading.value = p.key
   selectedChatPlan.value = p
   try {
-    const visitor_id = (typeof getOrCreateVisitorId === 'function' ? getOrCreateVisitorId() : null)
-    const res = await $fetch<{ ok: boolean; pix_code?: string; qr_image?: string; payment_id?: string; external_id?: string; error?: string }>('/api/checkout/pix', {
+    let visitor_id: string | null = null
+    try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
+    const res = await $fetch<{
+      ok: boolean
+      mode?: string
+      pix_code?: string
+      qr_image?: string
+      payment_id?: string
+      external_id?: string
+      hint?: string
+      amount_label?: string
+      credentials_found?: boolean
+      error?: string
+    }>('/api/checkout/pix', {
       method: 'POST',
       body: {
         plan_key: p.key,
@@ -488,29 +500,41 @@ async function buyChatPlan(p: typeof chatPlans[number]) {
       throw new Error(res?.error || 'Falha ao gerar PIX')
     }
     pixCopyCode.value = res.pix_code
-    pixQrImage.value = res.qr_image || ''
+    pixQrImage.value = res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`
     pixPaymentId.value = res.payment_id || res.external_id || ''
-    pixStatusText.value = 'Escaneie o QR ou copie o código PIX'
+    if (res.mode === 'manual') {
+      pixStatusText.value = res.hint || `Pague R$ ${p.priceLabel} na chave e me manda o comprovante`
+    } else {
+      pixStatusText.value = 'Escaneie o QR ou copie o código PIX'
+    }
     showChatPlans.value = false
     showPixModal.value = true
-    try { track('chat_plan_checkout', { offer_slug: p.key, amount: p.price }) } catch {}
-    // poll status
-    if (pixPollTimer) clearInterval(pixPollTimer)
-    let tries = 0
-    pixPollTimer = setInterval(async () => {
-      tries++
-      if (tries > 60) { if (pixPollTimer) clearInterval(pixPollTimer); return }
-      try {
-        const st = await $fetch<{ status?: string }>('/api/checkout/status', { query: { id: pixPaymentId.value } })
-        if (st?.status === 'approved' || st?.status === 'paid' || st?.status === 'completed') {
-          pixStatusText.value = 'Pagamento confirmado! ✅'
-          if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
-          try { track('chat_plan_paid', { offer_slug: p.key, amount: p.price }) } catch {}
-        }
-      } catch {}
-    }, 4000)
+    try { track('chat_plan_checkout', { offer_slug: p.key, amount: p.price, mode: res.mode || 'unknown' }) } catch {}
+    if (pixPaymentId.value && res.mode === 'syncpay') {
+      if (pixPollTimer) clearInterval(pixPollTimer)
+      let tries = 0
+      pixPollTimer = setInterval(async () => {
+        tries++
+        if (tries > 60) { if (pixPollTimer) clearInterval(pixPollTimer); return }
+        try {
+          const st = await $fetch<{ status?: string }>('/api/checkout/status', { query: { id: pixPaymentId.value } })
+          if (st?.status === 'approved' || st?.status === 'paid' || st?.status === 'completed') {
+            pixStatusText.value = 'Pagamento confirmado! ✅'
+            if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
+            try { track('chat_plan_paid', { offer_slug: p.key, amount: p.price }) } catch {}
+          }
+        } catch {}
+      }, 4000)
+    }
   } catch (e: any) {
-    chatPayError.value = e?.data?.statusMessage || e?.message || 'Erro ao gerar cobrança. Tenta de novo.'
+    const msg =
+      e?.data?.statusMessage ||
+      e?.data?.message ||
+      e?.statusMessage ||
+      e?.message ||
+      'Erro ao gerar cobrança. Tenta de novo.'
+    chatPayError.value = String(msg)
+    console.error('[buyChatPlan]', e)
   } finally {
     chatPayLoading.value = null
   }

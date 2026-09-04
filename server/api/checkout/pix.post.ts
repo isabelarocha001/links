@@ -8,15 +8,18 @@ const PLAN_FALLBACK: Record<PlanKey, { title: string; amount: number }> = {
   chat_midia: { title: 'Chat + mídias', amount: 29.9 },
 }
 
+const MANUAL_PIX_KEY = '47992750967'
+
 async function getSyncPayToken(clientId: string, clientSecret: string) {
   const res = await fetch('https://api.syncpayments.com.br/api/partner/v1/auth-token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ client_id: clientId, client_secret: clientSecret }),
   })
-  const data = await res.json().catch(() => ({}))
+  const data = await res.json().catch(() => ({} as any))
   if (!res.ok || !data?.access_token) {
-    throw createError({ statusCode: 502, statusMessage: data?.message || 'Falha auth SyncPay' })
+    const msg = data?.message || data?.error || `auth ${res.status}`
+    throw new Error(`SyncPay auth falhou: ${msg}`)
   }
   return String(data.access_token)
 }
@@ -27,6 +30,7 @@ async function loadSyncPayCredentials() {
 
   const idKeys = [
     'SYNCPAY_CLIENT_ID',
+    'NUXT_SYNCPAY_CLIENT_ID',
     'SYCPAY_CLIENT_ID',
     'SYNC_PAY_CLIENT_ID',
     'SYNCPAY_CLIENTID',
@@ -34,6 +38,7 @@ async function loadSyncPayCredentials() {
   ]
   const secretKeys = [
     'SYNCPAY_CLIENT_SECRET',
+    'NUXT_SYNCPAY_CLIENT_SECRET',
     'SYCPAY_CLIENT_SECRET',
     'SYNC_PAY_CLIENT_SECRET',
     'SYNCPAY_CLIENTSECRET',
@@ -45,12 +50,18 @@ async function loadSyncPayCredentials() {
 
   if (!clientId) {
     for (const k of idKeys) {
-      if (env[k]) { clientId = String(env[k]).trim(); break }
+      if (env[k]) {
+        clientId = String(env[k]).trim()
+        break
+      }
     }
   }
   if (!clientSecret) {
     for (const k of secretKeys) {
-      if (env[k]) { clientSecret = String(env[k]).trim(); break }
+      if (env[k]) {
+        clientSecret = String(env[k]).trim()
+        break
+      }
     }
   }
 
@@ -63,13 +74,46 @@ async function loadSyncPayCredentials() {
         const k = String(row.key || '')
         const v = row.value ? String(row.value).trim() : ''
         if (!v) continue
-        if (!clientId && idKeys.includes(k)) clientId = v
-        if (!clientSecret && secretKeys.includes(k)) clientSecret = v
+        if (!clientId && (idKeys.includes(k) || k.includes('CLIENT_ID'))) clientId = v
+        if (!clientSecret && (secretKeys.includes(k) || k.includes('CLIENT_SECRET'))) clientSecret = v
       }
     } catch {}
   }
 
-  return { clientId, clientSecret }
+  return { clientId, clientSecret, hasId: !!clientId, hasSecret: !!clientSecret }
+}
+
+function extractPixCode(payData: any): string {
+  return String(
+    payData?.pix_code ||
+      payData?.qr_code ||
+      payData?.copy_paste ||
+      payData?.copyPaste ||
+      payData?.emv ||
+      payData?.brcode ||
+      payData?.payment_data?.pix_code ||
+      payData?.payment_data?.qr_code ||
+      payData?.data?.pix_code ||
+      payData?.data?.qr_code ||
+      payData?.transaction?.pix_code ||
+      '',
+  )
+}
+
+function extractQrImage(payData: any, pixCode: string): string {
+  const img = String(
+    payData?.qr_code_image ||
+      payData?.qr_image ||
+      payData?.qrcode_image ||
+      payData?.payment_data?.qr_code_image ||
+      payData?.data?.qr_code_image ||
+      '',
+  )
+  if (img) return img
+  if (pixCode) {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pixCode)}`
+  }
+  return ''
 }
 
 export default defineEventHandler(async (event) => {
@@ -90,112 +134,145 @@ export default defineEventHandler(async (event) => {
   const visitor_id = body?.visitor_id ? String(body.visitor_id).slice(0, 120) : null
   const source = String(body?.source || 'links_chat_lock').slice(0, 60)
 
-  const { clientId, clientSecret } = await loadSyncPayCredentials()
-  if (!clientId || !clientSecret) {
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'SyncPay não configurado (SYNCPAY_CLIENT_ID / SECRET)',
-    })
-  }
-
-  const token = await getSyncPayToken(clientId, clientSecret)
-
-  // Cliente genérico low-friction (SyncPay exige dados básicos)
-  const client = {
-    name: 'Cliente Links',
-    email: `lead+${Date.now()}@wanessa.links`,
-    cpf: '00000000000',
-    phone: '11999999999',
-  }
-
-  const webhookUrl =
-    String(useRuntimeConfig().syncpayWebhookUrl || process.env.SYNCPAY_WEBHOOK_URL || '').trim() ||
-    undefined
-
-  const cashInBody: Record<string, any> = {
-    amount: finalAmount,
-    description: `${title} · ${source}`,
-    client,
-  }
-  if (webhookUrl) cashInBody.webhook_url = webhookUrl
-
-  const payRes = await fetch('https://api.syncpayments.com.br/api/partner/v1/cash-in', {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(cashInBody),
-  })
-  const payData = await payRes.json().catch(() => ({}))
-
-  if (!payRes.ok) {
-    console.error('[checkout/pix] syncpay error', payData)
-    throw createError({
-      statusCode: 502,
-      statusMessage: payData?.message || payData?.error || 'Erro ao gerar PIX na SyncPay',
-    })
-  }
-
-  const externalId = String(payData?.id || payData?.identifier || payData?.transaction_id || '')
-  const pixCode = String(
-    payData?.pix_code ||
-      payData?.qr_code ||
-      payData?.copy_paste ||
-      payData?.payment_data?.pix_code ||
-      payData?.data?.pix_code ||
-      '',
-  )
-  const qrImage = String(
-    payData?.qr_code_image ||
-      payData?.qr_image ||
-      payData?.payment_data?.qr_code_image ||
-      '',
-  )
-
-  if (!pixCode) {
-    console.error('[checkout/pix] missing pix code', payData)
-    throw createError({ statusCode: 502, statusMessage: 'SyncPay não retornou código PIX' })
-  }
-
-  const supabase = useServiceSupabase()
+  const { clientId, clientSecret, hasId, hasSecret } = await loadSyncPayCredentials()
   const ip = getClientIp(event)
-  let paymentId: string | null = null
+  const supabase = useServiceSupabase()
 
+  // --- SyncPay path ---
+  if (clientId && clientSecret) {
+    try {
+      const token = await getSyncPayToken(clientId, clientSecret)
+      const webhookUrl = String(
+        (useRuntimeConfig() as any).syncpayWebhookUrl || process.env.SYNCPAY_WEBHOOK_URL || process.env.NUXT_SYNCPAY_WEBHOOK_URL || '',
+      ).trim()
+
+      const cashInBody: Record<string, any> = {
+        amount: finalAmount,
+        description: `${title} · ${source}`,
+        client: {
+          name: 'Cliente Wanessa',
+          email: `lead${Date.now().toString().slice(-8)}@email.com`,
+          cpf: '39053344705',
+          phone: '11999999999',
+        },
+      }
+      if (webhookUrl) cashInBody.webhook_url = webhookUrl
+
+      const payRes = await fetch('https://api.syncpayments.com.br/api/partner/v1/cash-in', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(cashInBody),
+      })
+      const payData = await payRes.json().catch(() => ({} as any))
+
+      if (!payRes.ok) {
+        console.error('[checkout/pix] syncpay cash-in', payRes.status, payData)
+        throw new Error(payData?.message || payData?.error || `cash-in ${payRes.status}`)
+      }
+
+      const externalId = String(payData?.id || payData?.identifier || payData?.transaction_id || '')
+      const pixCode = extractPixCode(payData)
+      const qrImage = extractQrImage(payData, pixCode)
+
+      if (!pixCode) {
+        console.error('[checkout/pix] missing pix code payload', JSON.stringify(payData).slice(0, 800))
+        throw new Error('SyncPay não retornou código PIX')
+      }
+
+      let paymentId: string | null = null
+      try {
+        const { data } = await supabase
+          .from('payments')
+          .insert({
+            external_id: externalId || null,
+            payment_method: 'pix',
+            status: 'pending',
+            amount: finalAmount,
+            currency: 'BRL',
+            pix_qr_code: pixCode,
+            metadata: {
+              source,
+              plan_key: planKey,
+              title,
+              visitor_id,
+              ip,
+              provider: 'syncpay',
+              syncpay: payData,
+            },
+          })
+          .select('id')
+          .single()
+        paymentId = data?.id || null
+      } catch (e: any) {
+        console.error('[checkout/pix] payments insert', e?.message || e)
+      }
+
+      return {
+        ok: true,
+        mode: 'syncpay',
+        payment_id: paymentId,
+        external_id: externalId,
+        pix_code: pixCode,
+        qr_image: qrImage || null,
+        amount: finalAmount,
+        plan_key: planKey,
+      }
+    } catch (e: any) {
+      console.error('[checkout/pix] syncpay path failed', e?.message || e)
+      // cai no fallback manual abaixo
+    }
+  } else {
+    console.error('[checkout/pix] missing credentials', { hasId, hasSecret })
+  }
+
+  // --- Fallback manual (chave PIX estática) — não trava conversão ---
+  const amountLabel = finalAmount.toFixed(2).replace('.', ',')
+  const manualCode = MANUAL_PIX_KEY
+  const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(manualCode)}`
+
+  let paymentId: string | null = null
   try {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('payments')
       .insert({
-        external_id: externalId || null,
-        payment_method: 'pix',
+        external_id: null,
+        payment_method: 'pix_manual',
         status: 'pending',
         amount: finalAmount,
         currency: 'BRL',
-        pix_qr_code: pixCode,
+        pix_qr_code: manualCode,
         metadata: {
           source,
           plan_key: planKey,
           title,
           visitor_id,
           ip,
-          syncpay: payData,
+          provider: 'manual_fallback',
+          reason: hasId && hasSecret ? 'syncpay_failed' : 'syncpay_credentials_missing',
         },
       })
       .select('id')
       .single()
-    if (!error && data?.id) paymentId = data.id
+    paymentId = data?.id || null
   } catch (e: any) {
-    console.error('[checkout/pix] payments insert', e?.message || e)
+    console.error('[checkout/pix] manual payments insert', e?.message || e)
   }
 
   return {
     ok: true,
+    mode: 'manual',
     payment_id: paymentId,
-    external_id: externalId,
-    pix_code: pixCode,
-    qr_image: qrImage || null,
+    external_id: null,
+    pix_code: manualCode,
+    qr_image: qrImage,
     amount: finalAmount,
+    amount_label: amountLabel,
     plan_key: planKey,
+    hint: `Pague R$ ${amountLabel} na chave PIX (telefone) e me manda o comprovante no WhatsApp`,
+    credentials_found: !!(hasId && hasSecret),
   }
 })
