@@ -243,19 +243,20 @@
             </div>
           </div>
 
-          <div class="wa-quick wa-funnel-quick" :class="{ 'wa-funnel-quick--busy': funnelTyping || !funnelOptions.length }">
-            <button
-              v-for="opt in funnelOptions"
-              :key="opt.key"
-              type="button"
-              class="wa-quick-btn"
-              :class="opt.variant || 'wa-quick--yes'"
-              :disabled="funnelTyping"
-              @click="answerFunnel(opt)"
-            >
-              {{ opt.label }}
-            </button>
-            <div v-if="funnelTyping || !funnelOptions.length" class="wa-funnel-quick-placeholder" aria-hidden="true"></div>
+          <div class="wa-quick wa-funnel-quick" :class="{ 'wa-funnel-quick--busy': funnelTyping, 'wa-funnel-quick--empty': !funnelTyping && !funnelOptions.length }">
+            <template v-if="!funnelTyping && funnelOptions.length">
+              <button
+                v-for="opt in funnelOptions"
+                :key="opt.key"
+                type="button"
+                class="wa-quick-btn"
+                :class="opt.variant || 'wa-quick--yes'"
+                @click="answerFunnel(opt)"
+              >
+                {{ opt.label }}
+              </button>
+            </template>
+            <div v-else class="wa-funnel-quick-placeholder" aria-hidden="true"></div>
           </div>
 
           <div class="wa-composer wa-funnel-composer wa-funnel-composer--locked" @click="openChatPlans">

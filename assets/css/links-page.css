@@ -475,20 +475,29 @@
 }
 .wa-funnel-quick {
   flex: 0 0 auto;
-  min-height: 120px;
+  min-height: 48px;
   padding: 8px 10px;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 8px;
   box-sizing: border-box;
+  transition: min-height 0.2s ease;
 }
-.wa-funnel-quick--busy .wa-quick-btn {
-  opacity: 0.35;
-  pointer-events: none;
+.wa-funnel-quick--busy {
+  min-height: 56px;
 }
 .wa-funnel-quick-placeholder {
-  min-height: 96px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.28);
+  font-size: 0.78rem;
+}
+.wa-funnel-quick--busy .wa-funnel-quick-placeholder::after {
+  content: 'ela está digitando…';
+  letter-spacing: 0.02em;
 }
 .wa-funnel-shell .wa-composer {
   flex: 0 0 auto;
