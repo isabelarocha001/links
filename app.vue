@@ -275,27 +275,18 @@
             <div v-else class="wa-funnel-quick-placeholder" aria-hidden="true"></div>
           </div>
 
-          <div class="wa-composer wa-funnel-composer" :class="{ 'wa-funnel-composer--locked': !funnelChatUnlocked }">
+          <div class="wa-composer wa-funnel-composer">
             <button type="button" class="wa-composer-icon" aria-label="Emoji" @click="onFunnelEmoji">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             </button>
-            <div
-              v-if="!funnelChatUnlocked"
-              class="wa-input wa-input--locked"
-              role="button"
-              tabindex="0"
-              aria-label="Chat bloqueado"
-              @click="openChatPlans"
-            >
-              <svg class="wa-lock-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span>Mensagem</span>
-            </div>
             <input
-              v-else
               v-model="funnelInput"
               class="wa-input"
               type="text"
               placeholder="Mensagem"
+              @focus="onFunnelComposerInteract"
+              @click="onFunnelComposerInteract"
+              @keydown="onFunnelComposerKey"
               @keydown.enter.prevent="sendFunnelFreeText"
             />
             <button type="button" class="wa-composer-icon" aria-label="Anexar" @click="onFunnelAttach">
@@ -315,7 +306,7 @@
               <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
             </button>
             <button
-              v-if="funnelChatUnlocked && funnelInput.trim()"
+              v-if="funnelInput.trim()"
               type="button"
               class="wa-send"
               aria-label="Enviar"
@@ -526,6 +517,18 @@ function requireFunnelChatOrPay(): boolean {
   openChatPlans()
   return false
 }
+function onFunnelComposerInteract() {
+  if (!funnelChatUnlocked.value) {
+    openChatPlans()
+  }
+}
+function onFunnelComposerKey(e: KeyboardEvent) {
+  if (funnelChatUnlocked.value) return
+  // qualquer tecla ao tentar digitar abre o pop up surpresa
+  e.preventDefault()
+  openChatPlans()
+}
+
 function onFunnelCamera() {
   if (!requireFunnelChatOrPay()) return
   funnelCameraInput.value?.click()
@@ -1342,10 +1345,11 @@ function buildWaLink(prefill: string) {
 }
 
 
-async function sendFunnelFreeText() {
-  // Chat bloqueado — redireciona para planos
-  openChatPlans()
-  return
+async async function sendFunnelFreeText() {
+  if (!funnelChatUnlocked.value) {
+    openChatPlans()
+    return
+  }
   const text = (funnelInput.value || '').trim()
   if (!text || funnelTyping.value) return
   funnelInput.value = ''
