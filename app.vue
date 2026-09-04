@@ -234,7 +234,7 @@
               </div>
               <div class="wa-profile-row">
                 <span class="wa-profile-row-label">Sobre</span>
-                <span class="wa-profile-row-value">Conteúdo online · sem encontro presencial</span>
+                <span class="wa-profile-row-value">Eu não faço encontros. Não faço programa. Não adianta oferecer valor alto: a resposta continua sendo não. Só conteúdo e atendimento online.</span>
               </div>
             </div>
           </div>
