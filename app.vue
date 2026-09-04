@@ -1396,6 +1396,15 @@ function closeWaFunnel() {
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
   funnelShellStyle.value = {}
+  // Se entrou pela rota /chat/*, ao fechar mostra a home (senão fica tela roxa vazia)
+  if (isChatLanding.value) {
+    isChatLanding.value = false
+    try {
+      if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+        window.history.replaceState({}, '', '/')
+      }
+    } catch {}
+  }
 }
 
 function buildWaLink(prefill: string) {
