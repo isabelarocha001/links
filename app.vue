@@ -432,7 +432,7 @@
     <Teleport to="body">
       <div v-if="isAdmin" class="wl-overlay" @click.self="closeAdmin">
         <div class="wl-card" role="dialog" aria-modal="true" @click.stop>
-          <div class="wl-head"><h2>Editar apresentação</h2><button type="button" class="wl-x" @click="closeAdmin">×</button></div>
+          <div class="wl-head"><h2>Editar apresentação</h2><div class="wl-head-actions" style="display:flex;gap:8px;align-items:center"><button type="button" class="wl-x" style="width:auto;min-width:52px;padding:0 10px;font-size:13px" @click="doLogout">Sair</button><button type="button" class="wl-x" @click="closeAdmin">×</button></div></div>
           <label class="wl-label">Nome</label>
           <input v-model="edit.name" type="text" maxlength="80" class="wl-input" />
           <label class="wl-label">Tagline / Bio</label>
@@ -2095,14 +2095,36 @@ onUnmounted(() => {
   if (photoTimer) clearInterval(photoTimer)
   if (typingTimer) clearTimeout(typingTimer)
 })
-function openLogin() { password.value = ''; loginError.value = ''; showLogin.value = true; nextTick(() => passInput.value?.focus()) }
+function openLogin() {
+  if (isAdmin.value) {
+    openEdit()
+    return
+  }
+  password.value = ''
+  loginError.value = ''
+  showLogin.value = true
+  nextTick(() => passInput.value?.focus())
+}
 function openEdit() {
   edit.name = config.name; edit.bio = config.bio; edit.highlight_label = config.highlight_label || DEFAULT_HIGHLIGHT
   edit.quiz_enabled = config.quiz_enabled === true
   edit.links = config.links.map((l) => ({ label: l.label, icon: l.icon, url: l.url, desc: l.desc || '', enabled: l.enabled !== false }))
   if (!edit.links.length) edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true })
 }
-function closeAdmin() { isAdmin.value = false; saveMsg.value = ''; saveError.value = '' }
+function closeAdmin() {
+  // só fecha o painel — sessão continua até clicar em Sair
+  saveMsg.value = ''
+  saveError.value = ''
+}
+async function doLogout() {
+  try {
+    await $fetch('/api/admin/logout', { method: 'POST' })
+  } catch {}
+  isAdmin.value = false
+  saveMsg.value = ''
+  saveError.value = ''
+}
+
 function addLink() { edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true }) }
 function removeLink(i: number) { edit.links.splice(i, 1) }
 
