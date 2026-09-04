@@ -797,6 +797,7 @@ async function onFunnelPaid() {
   await funnelType('Recebi o PIX aqui, meu amor ✅', 1200)
 
   if (isChat) {
+    funnelChatUnlocked.value = true
     await funnelType(
       'Pronto 🔥 O chat tá liberado aqui mesmo pra gente conversar.\n\nMe conta o que você quer em especial… sexting, uma conversa bem picante, trocar fotinhos… o que te deixa mais louco? Assim eu já entro no clima certo pra você 😏',
       2200,
