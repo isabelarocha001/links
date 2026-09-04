@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
     httpOnly: true,
     secure: true,
     sameSite: 'strict',
-    maxAge: 60 * 60 * 8,
+    maxAge: 60 * 60 * 24 * 30, // 30 dias — só some no logout
     path: '/'
   })
 
