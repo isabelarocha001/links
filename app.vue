@@ -1149,6 +1149,7 @@ const funnelOptions = computed(() => {
   if (funnelStep.value === 'menu') {
     return [
       { key: 'video', label: '📹 Videochamada', variant: 'wa-quick--yes' },
+      { key: 'video_avulso', label: '🎬 Vídeo avulso', variant: 'wa-quick--yes' },
       { key: 'pack', label: '🔥 Pack de conteúdo', variant: 'wa-quick--yes' },
       { key: 'webnamoro', label: '💕 Webnamoro', variant: 'wa-quick--yes' },
       { key: 'conversar', label: '💬 Só conversar', variant: 'wa-quick--no' },
@@ -1208,6 +1209,14 @@ const funnelOptions = computed(() => {
       { key: 'back_menu', label: '← Ver outras opções', variant: 'wa-quick--no' },
     ]
   }
+  
+  if (funnelStep.value === 'video_avulso_confirm') {
+    return [
+      { key: 'pix_yes', label: 'Sim, gera o PIX 💚', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+
   return []
 })
 
@@ -1394,6 +1403,44 @@ function buildWaLink(prefill: string) {
 }
 
 
+
+function scoreVideoComplexity(text: string): number {
+  let score = 1
+  const t = text.toLowerCase()
+  // duração / quantidade
+  if (/longo|demora|v[aá]rios|mais de|minut|hora/.test(t)) score += 1
+  // elementos
+  if (/brinquedo|consolo|vibrador|plug|algema|corda/.test(t)) score += 1
+  if (/cosplay|fantasia|uniforme|lingerie|salto/.test(t)) score += 1
+  if (/outra|amigo|casal|menage|com ela|com ele/.test(t)) score += 2
+  if (/anal|dp|goz|squirt|fisting/.test(t)) score += 1
+  if (/ao ar livre|carro|banheiro|publico|janela/.test(t)) score += 1
+  if (/nome|gemendo meu|falando meu nome|pedido especial/.test(t)) score += 1
+  if (t.length > 120) score += 1
+  if (t.length > 220) score += 1
+  return Math.min(score, 6)
+}
+
+function suggestVideoAvulsoPrice(complexity: number): number {
+  // sempre > 49.90
+  const bands: [number, number][] = [
+    [54.9, 69.9],   // 1 simples
+    [74.9, 89.9],   // 2
+    [94.9, 119.9],  // 3
+    [129.9, 149.9], // 4
+    [159.9, 179.9], // 5
+    [189.9, 219.9], // 6 muito complexo
+  ]
+  const idx = Math.max(0, Math.min(complexity - 1, bands.length - 1))
+  const [min, max] = bands[idx]
+  // valor "aleatório" mas estável o suficiente dentro da faixa
+  const raw = min + Math.random() * (max - min)
+  // arredonda para .90
+  const base = Math.floor(raw)
+  return base + 0.9
+}
+
+
 async function sendFunnelFreeText() {
   if (!funnelChatUnlocked.value) {
     openChatPlans()
@@ -1408,10 +1455,69 @@ async function sendFunnelFreeText() {
 
   const lower = text.toLowerCase()
 
+
+  // Vídeo avulso: lead descreveu o que quer → sugere preço por complexidade
+  if (funnelStep.value === 'video_avulso') {
+    const complexity = scoreVideoComplexity(lower)
+    const price = suggestVideoAvulsoPrice(complexity)
+    const priceLabel = price.toFixed(2).replace('.', ',')
+    selectedPack.value = {
+      key: 'video_avulso',
+      label: 'Vídeo avulso personalizado',
+      price: priceLabel,
+    }
+    track('whatsapp_funnel_video_avulso', {
+      offer_slug: 'video_avulso',
+      metric_value: price,
+      message: text.slice(0, 160),
+    })
+    await funnelType(
+      `Entendi, amor 🔥\n\nPro que você pediu eu faço por R$ ${priceLabel}.\n\nQuer que eu gere o PIX pra você garantir o vídeo?`,
+      1400,
+    )
+    funnelStep.value = 'video_avulso_confirm'
+    return
+  }
+
+  if (funnelStep.value === 'video_avulso_confirm') {
+    if (/sim|quero|pode|gera|pix|pagar|fechado|bora|vai|claro|ss|s/.test(lower)) {
+      await startFunnelCheckout()
+      return
+    }
+    if (/n[aã]o|depois|cancel|voltar|outro/.test(lower)) {
+      funnelStep.value = 'menu'
+      await funnelType('Beleza… me diz o que você prefere então 😘', 900)
+      return
+    }
+    // se mandar mais detalhe, recalcula
+    const complexity = scoreVideoComplexity(lower)
+    const price = suggestVideoAvulsoPrice(complexity)
+    const priceLabel = price.toFixed(2).replace('.', ',')
+    selectedPack.value = {
+      key: 'video_avulso',
+      label: 'Vídeo avulso personalizado',
+      price: priceLabel,
+    }
+    await funnelType(
+      `Atualizei pro que você pediu: R$ ${priceLabel} 💕\n\nGero o PIX?`,
+      1100,
+    )
+    return
+  }
+
+
   if (/pack|pacote|conte[uú]do|combo|gold/.test(lower)) {
     funnelStep.value = 'packs'
     await funnelType(
       'Tenho packs sim, amor 🔥\n\n• R$ 29,90 gostinho\n• R$ 79,90 Gold solo\n• R$ 109,90 Combo completo\n\nQual você quer? Ou continua falando comigo aqui 😘',
+      1200,
+    )
+    return
+  }
+    if (/v[ií]deo\s*avulso|video\s*personalizado|v[ií]deo\s*sob\s*medida|v[ií]deo\s*custom/.test(lower)) {
+    funnelStep.value = 'video_avulso'
+    await funnelType(
+      'Como você quer seu vídeo avulso, amor? 🎬\n\nMe conta o que você imagina… quanto mais detalhado, mais gostoso eu faço 😏',
       1200,
     )
     return
@@ -1580,7 +1686,18 @@ async function answerFunnel(opt: { key: string; label: string }) {
     return
   }
 
-  if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30') {
+  
+  if (opt.key === 'video_avulso') {
+    track('whatsapp_funnel_intent', { offer_slug: 'video_avulso' })
+    funnelStep.value = 'video_avulso'
+    await funnelType(
+      'Como você quer seu vídeo avulso, amor? 🎬\n\nMe conta o que você imagina… quanto mais detalhado, mais gostoso eu faço 😏',
+      1200,
+    )
+    return
+  }
+
+if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30') {
     const map: Record<string, { label: string; price: string; desc: string }> = {
       vid_10: { label: 'Videochamada 10 min', price: '99,90', desc: 'chamada ao vivo rápida e safada' },
       vid_20: { label: 'Videochamada 20 min', price: '149,90', desc: 'tempo pra gozar com calma' },
