@@ -2103,6 +2103,16 @@ function openEdit() {
 function closeAdmin() { isAdmin.value = false; saveMsg.value = ''; saveError.value = '' }
 function addLink() { edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true }) }
 function removeLink(i: number) { edit.links.splice(i, 1) }
+
+async function restoreAdminSession() {
+  try {
+    await $fetch('/api/admin/session')
+    isAdmin.value = true
+  } catch {
+    isAdmin.value = false
+  }
+}
+
 async function doLogin() {
   loginError.value = ''; loading.value = true
   try {
