@@ -927,7 +927,7 @@ function pixBubbleHtml(code: string, priceLabel: string) {
   const safe = String(code).replace(/</g, '&lt;')
   return (
     `<div style="line-height:1.45">` +
-    `<b>PIX gerado — R$ ${priceLabel}</b><br>` +
+    `<b>PIX gerado  R$ ${priceLabel}</b><br>` +
     `<span style="opacity:.85">Copia e cola no app do banco:</span><br><br>` +
     `<code style="display:block;word-break:break-all;font-size:0.72em;background:rgba(0,0,0,.25);padding:8px;border-radius:8px">${safe}</code><br>` +
     `Paga aí e toca em <b>Já paguei</b> que eu libero o próximo passo 💚` +
@@ -1156,32 +1156,32 @@ const funnelOptions = computed(() => {
   }
   if (funnelStep.value === 'packs') {
     return [
-      { key: 'pack_basic', label: 'Pack gostinho — R$ 29,90', variant: 'wa-quick--yes' },
-      { key: 'pack_gold', label: 'Pack Gold solo — R$ 79,90', variant: 'wa-quick--yes' },
-      { key: 'pack_combo', label: 'Combo completo — R$ 109,90', variant: 'wa-quick--yes' },
+      { key: 'pack_basic', label: 'Pack gostinho  R$ 29,90', variant: 'wa-quick--yes' },
+      { key: 'pack_gold', label: 'Pack Gold solo  R$ 79,90', variant: 'wa-quick--yes' },
+      { key: 'pack_combo', label: 'Combo completo  R$ 109,90', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
   if (funnelStep.value === 'video') {
     return [
-      { key: 'vid_10', label: '10 min — R$ 99,90', variant: 'wa-quick--yes' },
-      { key: 'vid_20', label: '20 min — R$ 149,90', variant: 'wa-quick--yes' },
-      { key: 'vid_30', label: '30 min — R$ 229,90', variant: 'wa-quick--yes' },
+      { key: 'vid_10', label: '10 min  R$ 99,90', variant: 'wa-quick--yes' },
+      { key: 'vid_20', label: '20 min  R$ 149,90', variant: 'wa-quick--yes' },
+      { key: 'vid_30', label: '30 min  R$ 229,90', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
   if (funnelStep.value === 'webnamoro') {
     return [
-      { key: 'web_7', label: '7 dias — R$ 179,90', variant: 'wa-quick--yes' },
-      { key: 'web_15', label: '15 dias — R$ 299,90', variant: 'wa-quick--yes' },
-      { key: 'web_30', label: '30 dias — R$ 499,90', variant: 'wa-quick--yes' },
+      { key: 'web_7', label: '7 dias  R$ 179,90', variant: 'wa-quick--yes' },
+      { key: 'web_15', label: '15 dias  R$ 299,90', variant: 'wa-quick--yes' },
+      { key: 'web_30', label: '30 dias  R$ 499,90', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
   if (funnelStep.value === 'chat') {
     return [
-      { key: 'chat_basic', label: 'Chat 30–40 min — R$ 49,90', variant: 'wa-quick--yes' },
-      { key: 'chat_midia', label: 'Chat + fotos/vídeos — R$ 79,90', variant: 'wa-quick--yes' },
+      { key: 'chat_basic', label: 'Chat 30-40 min  R$ 49,90', variant: 'wa-quick--yes' },
+      { key: 'chat_midia', label: 'Chat + fotos/vídeos  R$ 79,90', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
@@ -1411,7 +1411,7 @@ async function sendFunnelFreeText() {
   if (/pack|pacote|conte[uú]do|combo|gold/.test(lower)) {
     funnelStep.value = 'packs'
     await funnelType(
-      'Tenho packs sim, amor 🔥\n\n• R$ 29,90 — gostinho\n• R$ 79,90 — Gold solo\n• R$ 109,90 — Combo completo\n\nQual você quer? Ou continua falando comigo aqui 😘',
+      'Tenho packs sim, amor 🔥\n\n• R$ 29,90 gostinho\n• R$ 79,90 Gold solo\n• R$ 109,90 Combo completo\n\nQual você quer? Ou continua falando comigo aqui 😘',
       1200,
     )
     return
@@ -1419,7 +1419,7 @@ async function sendFunnelFreeText() {
   if (/video|chamada|call|cam/.test(lower)) {
     funnelStep.value = 'video'
     await funnelType(
-      'Videochamada eu faço sim 🔥\n\n• 10 min — R$ 99,90\n• 20 min — R$ 149,90\n• 30 min — R$ 229,90\n\nQual tempo você quer?',
+      'Videochamada eu faço sim 🔥\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n\nQual tempo você quer?',
       1200,
     )
     return
@@ -1427,7 +1427,7 @@ async function sendFunnelFreeText() {
   if (/webnamoro|namoro|namorada|exclusiv/.test(lower)) {
     funnelStep.value = 'webnamoro'
     await funnelType(
-      'Webnamoro é exclusividade comigo 💕\n\n• 7 dias — R$ 179,90\n• 15 dias — R$ 299,90\n• 30 dias — R$ 499,90\n\nQual pacote te interessa?',
+      'Webnamoro é exclusividade comigo 💕\n\n• 7 dias  R$ 179,90\n• 15 dias  R$ 299,90\n• 30 dias  R$ 499,90\n\nQual pacote te interessa?',
       1200,
     )
     return
@@ -1503,7 +1503,7 @@ async function answerFunnel(opt: { key: string; label: string }) {
     track('whatsapp_funnel_pack', { offer_slug: 'pack' })
     funnelStep.value = 'packs'
     await funnelType(
-      'Tenho 3 packs pra você, amor:\n\n• R$ 29,90 — um gostinho pra me conhecer melhor\n• R$ 79,90 — Pack Gold: solos longos, bem safadinha\n• R$ 109,90 — Combo completo: solo, transando, com outras mulheres, cosplay e tudo\n\nQual você quer?',
+      'Tenho 3 packs pra você, amor:\n\n• R$ 29,90 um gostinho pra me conhecer melhor\n• R$ 79,90 Pack Gold: solos longos, bem safadinha\n• R$ 109,90 Combo completo: solo, transando, com outras mulheres, cosplay e tudo\n\nQual você quer?',
       1400,
     )
     return
@@ -1574,7 +1574,7 @@ async function answerFunnel(opt: { key: string; label: string }) {
     track('whatsapp_funnel_intent', { offer_slug: 'videochamada' })
     funnelStep.value = 'video'
     await funnelType(
-      'Videochamada ao vivo comigo, amor 🔥 Escolhe o tempo:\n\n• 10 min — R$ 99,90\n• 20 min — R$ 149,90\n• 30 min — R$ 229,90\n\nQual combina com você?',
+      'Videochamada ao vivo comigo, amor 🔥 Escolhe o tempo:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n\nQual combina com você?',
       1300,
     )
     return
@@ -1597,7 +1597,7 @@ async function answerFunnel(opt: { key: string; label: string }) {
     track('whatsapp_funnel_intent', { offer_slug: 'webnamoro' })
     funnelStep.value = 'webnamoro'
     await funnelType(
-      'Webnamoro é pra quem quer exclusividade comigo 💕\n\n• 7 dias — R$ 179,90 (chat diário + áudios + 1 call curta)\n• 15 dias — R$ 299,90 (+ calls e conteúdo exclusivo)\n• 30 dias — R$ 499,90 (namorada virtual completa)\n\nQual pacote você quer?',
+      'Webnamoro é pra quem quer exclusividade comigo 💕\n\n• 7 dias  R$ 179,90 (chat diário + áudios + 1 call curta)\n• 15 dias  R$ 299,90 (+ calls e conteúdo exclusivo)\n• 30 dias  R$ 499,90 (namorada virtual completa)\n\nQual pacote você quer?',
       1400,
     )
     return
@@ -1620,7 +1620,7 @@ async function answerFunnel(opt: { key: string; label: string }) {
     track('whatsapp_funnel_intent', { offer_slug: 'conversar' })
     funnelStep.value = 'chat'
     await funnelType(
-      'Chat comigo também tem valor, amor 😘\n\n• R$ 49,90 — chat safado 30–40 min\n• R$ 79,90 — chat + fotos e vídeos no momento\n\nO que você prefere?',
+      'Chat comigo também tem valor, amor 😘\n\n• R$ 49,90 chat safado 30-40 min\n• R$ 79,90 chat + fotos e vídeos no momento\n\nO que você prefere?',
       1200,
     )
     return
