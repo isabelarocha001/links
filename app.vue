@@ -1214,6 +1214,10 @@ const funnelOptions = computed(() => {
 
 const FUNNEL_STORAGE_KEY = 'wanessa_wa_funnel_v1'
 const FUNNEL_SESSION_KEY = 'wanessa_wa_funnel_session'
+const FUNNEL_CONV_KEY = 'wanessa_wa_funnel_conversation'
+
+const funnelConversationId = ref('')
+const funnelAccessToken = ref('')
 
 function getFunnelSessionId(): string {
   try {
@@ -1230,12 +1234,44 @@ function getFunnelSessionId(): string {
   }
 }
 
+function loadFunnelConversationLocal() {
+  try {
+    const raw = localStorage.getItem(FUNNEL_CONV_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    if (data?.conversation_id && data?.access_token && data?.visitor_id === getOrCreateVisitorId()) {
+      funnelConversationId.value = data.conversation_id
+      funnelAccessToken.value = data.access_token
+    }
+  } catch {}
+}
+
+function saveFunnelConversationLocal(conversation_id: string, access_token: string) {
+  try {
+    funnelConversationId.value = conversation_id
+    funnelAccessToken.value = access_token
+    localStorage.setItem(
+      FUNNEL_CONV_KEY,
+      JSON.stringify({
+        conversation_id,
+        access_token,
+        visitor_id: getOrCreateVisitorId(),
+        savedAt: Date.now(),
+      }),
+    )
+  } catch {}
+}
+
 function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Record<string, any> = {}) {
   try {
     const visitor_id = getOrCreateVisitorId()
+    if (!funnelConversationId.value) loadFunnelConversationLocal()
     const payload = {
       visitor_id,
       session_id: getFunnelSessionId(),
+      conversation_id: funnelConversationId.value || null,
+      access_token: funnelAccessToken.value || null,
+      creator_slug: 'wanessabsx',
       direction,
       message: String(message || '').slice(0, 2000),
       step: funnelStep.value,
@@ -1244,7 +1280,15 @@ function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Rec
       metadata: extra,
     }
     const json = JSON.stringify(payload)
-    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+    const handleRes = async (res: any) => {
+      try {
+        if (res?.conversation_id && res?.access_token) {
+          saveFunnelConversationLocal(res.conversation_id, res.access_token)
+        }
+      } catch {}
+    }
+    // sendBeacon não lê resposta → usa fetch quando ainda não tem conversation_id
+    if (funnelConversationId.value && typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
       const blob = new Blob([json], { type: 'application/json' })
       navigator.sendBeacon('/api/funnel-chat', blob)
       return
@@ -1254,7 +1298,10 @@ function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Rec
       headers: { 'Content-Type': 'application/json' },
       body: json,
       keepalive: true,
-    }).catch(() => {})
+    })
+      .then((r) => r.json().catch(() => ({})))
+      .then(handleRes)
+      .catch(() => {})
   } catch {}
 }
 
@@ -1302,6 +1349,7 @@ function clearFunnelState() {
 
 function openWaFunnel(source = 'whatsapp') {
   warmSyncPay()
+  loadFunnelConversationLocal()
 
   track('whatsapp_funnel_open', { offer_slug: source || 'whatsapp' })
   try { onCardClick('WhatsApp Funnel', whatsappUrl.value) } catch {}
