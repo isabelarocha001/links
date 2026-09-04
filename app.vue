@@ -334,7 +334,6 @@
             <button type="button" class="chat-pix-status-btn" :disabled="pixStatusLoading" @click="checkPixStatus">
               {{ pixStatusLoading ? 'Consultando…' : 'Consultar status da transação' }}
             </button>
-            <button type="button" class="chat-pix-wa" @click="openWaAfterPix">Já paguei — abrir WhatsApp</button>
           </div>
         </div>
       </div>
@@ -567,15 +566,6 @@ async function checkPixStatus(silent = false) {
   } finally {
     if (!silent) pixStatusLoading.value = false
   }
-}
-function openWaAfterPix() {
-  const p = selectedChatPlan.value
-  const prefill = p
-    ? `Oi Wanessa! Acabei de pagar o ${p.title} (R$ ${p.priceLabel}) no PIX. Segue o comprovante.`
-    : 'Oi Wanessa! Acabei de pagar o chat no PIX.'
-  const url = buildWaLink(prefill)
-  try { track('chat_plan_wa_redirect', { offer_slug: p?.key || 'chat' }) } catch {}
-  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 
