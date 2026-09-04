@@ -1893,7 +1893,6 @@ onMounted(async () => {
       if (!showWaFunnel.value) openWaFunnel('chat_' + chatSlug)
     })
   } else if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
-  } else if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
     chatMessages.value = []
     typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
   } else if (gate.value === 'reject') {
