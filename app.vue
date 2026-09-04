@@ -1864,20 +1864,35 @@ onMounted(async () => {
   }
   if (gate.value == null) gate.value = 1
   gateReady.value = true
-  // Rota pública /chat/wanessabsx → abre direto no chat
-  let chatSlug = ''
+  // Landing pública do chat: /chat/wanessabsx ou /?chat=wanessabsx
+  let openChatDirect = false
+  let chatSlug = 'wanessabsx'
   try {
     const path = (window.location.pathname || '').replace(/\/+$/, '')
     const m = path.match(/^\/chat\/([^/]+)$/)
-    if (m) chatSlug = decodeURIComponent(m[1] || '').toLowerCase()
+    if (m) {
+      chatSlug = decodeURIComponent(m[1] || '').toLowerCase()
+      if (chatSlug === 'wanessabsx' || chatSlug === 'wanessa') openChatDirect = true
+    }
+    const q = new URLSearchParams(window.location.search || '')
+    const cq = (q.get('chat') || '').toLowerCase()
+    if (cq === 'wanessabsx' || cq === 'wanessa' || cq === '1' || cq === 'true') {
+      openChatDirect = true
+      chatSlug = cq === '1' || cq === 'true' ? 'wanessabsx' : cq
+    }
   } catch {}
-  if (chatSlug === 'wanessabsx' || chatSlug === 'wanessa') {
+  if (openChatDirect) {
     isChatLanding.value = true
     gate.value = 'pass'
     try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
     gateReady.value = true
-    track('page_view', { offer_slug: 'chat_' + chatSlug })
-    nextTick(() => openWaFunnel('chat_' + chatSlug))
+    try { track('page_view', { offer_slug: 'chat_' + chatSlug }) } catch {}
+    // abre na hora (e de novo no nextTick por garantia)
+    openWaFunnel('chat_' + chatSlug)
+    nextTick(() => {
+      if (!showWaFunnel.value) openWaFunnel('chat_' + chatSlug)
+    })
+  } else if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
   } else if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
     chatMessages.value = []
     typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
