@@ -983,12 +983,21 @@ async function generateFunnelPix() {
 
 
 async function adminPayWithBalance() {
-  if (!isAdmin.value) return
+  // Botão só aparece com isAdmin no UI — mas isAdmin no browser pode ser forjado.
+  // Liberação SÓ após o servidor validar o cookie httpOnly admin_token.
   const pack = selectedPack.value
   if (!pack) {
     await funnelType('Nenhum produto selecionado pra testar 😅', 800)
     return
   }
+  try {
+    await $fetch('/api/admin/test-pay', { method: 'POST' })
+  } catch {
+    isAdmin.value = false
+    await funnelType('Essa opção é só pra admin logado 🔒', 900)
+    return
+  }
+  isAdmin.value = true
   track('whatsapp_funnel_admin_pay', { offer_slug: pack.key || 'admin' })
   try {
     pixPaid.value = true
