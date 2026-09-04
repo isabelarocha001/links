@@ -1,14 +1,19 @@
 import { useServiceSupabase, getClientIp } from '../../utils/supabase'
 
-type PlanKey = 'chat_quick' | 'chat_basic' | 'chat_midia'
-
-const PLAN_FALLBACK: Record<PlanKey, { title: string; amount: number }> = {
+const PLAN_FALLBACK: Record<string, { title: string; amount: number }> = {
   chat_quick: { title: 'Chat rápido 10 min', amount: 9.9 },
   chat_basic: { title: 'Chat 30 min', amount: 19.9 },
   chat_midia: { title: 'Chat + mídias', amount: 29.9 },
+  pack_basic: { title: 'Pack gostinho', amount: 29.9 },
+  pack_gold: { title: 'Pack Gold solo', amount: 79.9 },
+  pack_combo: { title: 'Combo completo', amount: 109.9 },
+  vid_10: { title: 'Videochamada 10 min', amount: 99.9 },
+  vid_20: { title: 'Videochamada 20 min', amount: 149.9 },
+  vid_30: { title: 'Videochamada 30 min', amount: 229.9 },
+  web_7: { title: 'Webnamoro 7 dias', amount: 179.9 },
+  web_15: { title: 'Webnamoro 15 dias', amount: 299.9 },
+  web_30: { title: 'Webnamoro 30 dias', amount: 499.9 },
 }
-
-const MANUAL_PIX_KEY = '47992750967'
 
 async function getSyncPayToken(clientId: string, clientSecret: string) {
   const res = await fetch('https://api.syncpayments.com.br/api/partner/v1/auth-token', {
@@ -122,15 +127,17 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event).catch(() => ({} as any))
-  const planKey = String(body?.plan_key || '').trim() as PlanKey
+  const planKey = String(body?.plan_key || '').trim() || 'custom'
   const plan = PLAN_FALLBACK[planKey]
-  if (!plan) {
-    throw createError({ statusCode: 400, statusMessage: 'Plano inválido' })
-  }
-
   const amount = Number(body?.amount)
-  const finalAmount = Number.isFinite(amount) && amount > 0 ? Number(amount.toFixed(2)) : plan.amount
-  const title = String(body?.title || plan.title).slice(0, 80)
+  const finalAmount =
+    Number.isFinite(amount) && amount > 0
+      ? Number(amount.toFixed(2))
+      : plan?.amount
+  if (!finalAmount || finalAmount <= 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Valor inválido' })
+  }
+  const title = String(body?.title || plan?.title || planKey).slice(0, 80)
   const visitor_id = body?.visitor_id ? String(body.visitor_id).slice(0, 120) : null
   const source = String(body?.source || 'links_chat_lock').slice(0, 60)
 

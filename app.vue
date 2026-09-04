@@ -628,11 +628,166 @@ function unbindFunnelViewport() {
 }
 
 const showFunnelProfile = ref(false)
-const funnelStep = ref<'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'redirect' | 'other'>('menu')
+const funnelStep = ref<'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'awaiting_payment' | 'paid' | 'redirect' | 'other'>('menu')
 const funnelMessages = ref<{ from: 'her' | 'me'; text: string; html?: string; time: string }[]>([])
 const funnelTyping = ref(false)
 const funnelChatBox = ref<HTMLElement | null>(null)
 const selectedPack = ref<{ key: string; label: string; price: string } | null>(null)
+const funnelPixCode = ref('')
+const funnelPaymentId = ref('')
+const funnelExternalId = ref('')
+let funnelPayPoll: ReturnType<typeof setInterval> | null = null
+
+function priceToNumber(price: string): number {
+  return Number(String(price).replace(',', '.').replace(/[^0-9.]/g, '')) || 0
+}
+
+function stopFunnelPayPoll() {
+  if (funnelPayPoll) {
+    clearInterval(funnelPayPoll)
+    funnelPayPoll = null
+  }
+}
+
+function pixBubbleHtml(code: string, priceLabel: string) {
+  const safe = String(code).replace(/</g, '&lt;')
+  return (
+    `<div style="line-height:1.45">` +
+    `<b>PIX gerado — R$ ${priceLabel}</b><br>` +
+    `<span style="opacity:.85">Copia e cola no app do banco:</span><br><br>` +
+    `<code style="display:block;word-break:break-all;font-size:0.72em;background:rgba(0,0,0,.25);padding:8px;border-radius:8px">${safe}</code><br>` +
+    `Paga aí e toca em <b>Já paguei</b> que eu libero o próximo passo 💚` +
+    `</div>`
+  )
+}
+
+async function generateFunnelPix() {
+  const pack = selectedPack.value
+  if (!pack) return false
+  const amount = priceToNumber(pack.price)
+  try {
+    const visitor_id = (() => { try { return getOrCreateVisitorId() } catch { return null } })()
+    const res = await $fetch<{
+      ok: boolean
+      pix_code?: string
+      payment_id?: string
+      external_id?: string
+      error?: string
+    }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: pack.key,
+        amount,
+        title: pack.label,
+        visitor_id,
+        source: 'links_wa_funnel',
+      },
+    })
+    if (!res?.ok || !res.pix_code || !/^000201/.test(res.pix_code)) {
+      throw new Error(res?.error || 'Falha ao gerar PIX')
+    }
+    funnelPixCode.value = res.pix_code
+    funnelPaymentId.value = res.payment_id || ''
+    funnelExternalId.value = res.external_id || res.payment_id || ''
+    try { await navigator.clipboard.writeText(res.pix_code) } catch {}
+    return true
+  } catch (e: any) {
+    console.error('[funnel pix]', e)
+    await funnelType(
+      'Amor, deu um probleminha pra gerar o PIX agora 😢 Tenta de novo em instantes ou escolhe outra opção.',
+      1200,
+    )
+    return false
+  }
+}
+
+async function startFunnelCheckout() {
+  const pack = selectedPack.value
+  if (!pack) return
+  await funnelType(
+    `Fechado 🔥 ${pack.label} por R$ ${pack.price}.\n\nVou gerar o PIX aqui na conversa pra você pagar — assim que confirmar, eu te passo o WhatsApp pra eu te entregar 💕`,
+    1400,
+  )
+  const ok = await generateFunnelPix()
+  if (!ok) {
+    funnelStep.value = 'menu'
+    return
+  }
+  await funnelType('Prontinho, amor 💚', 900, pixBubbleHtml(funnelPixCode.value, pack.price))
+  funnelStep.value = 'awaiting_payment'
+  stopFunnelPayPoll()
+  let tries = 0
+  funnelPayPoll = setInterval(() => {
+    tries++
+    checkFunnelPayment(true)
+    if (tries > 60) stopFunnelPayPoll()
+  }, 5000)
+}
+
+async function checkFunnelPayment(silent = false) {
+  const id = funnelPaymentId.value || funnelExternalId.value
+  if (!id) {
+    if (!silent) await funnelType('Ainda não tenho o ID do pagamento… gera o PIX de novo 😘', 1000)
+    return
+  }
+  try {
+    const st = await $fetch<{ status?: string; message?: string }>('/api/checkout/status', { query: { id } })
+    const status = String(st?.status || '').toLowerCase()
+    if (['approved', 'paid', 'completed'].includes(status)) {
+      stopFunnelPayPoll()
+      await onFunnelPaid()
+    } else if (!silent) {
+      await funnelType('Ainda não caiu aqui, amor… assim que o PIX confirmar eu te aviso 👀', 1200)
+    }
+  } catch {
+    if (!silent) await funnelType('Não consegui consultar agora. Tenta de novo em alguns segundos 💚', 1000)
+  }
+}
+
+async function onFunnelPaid() {
+  const pack = selectedPack.value
+  funnelStep.value = 'paid'
+  track('whatsapp_funnel_paid', { offer_slug: pack?.key || 'paid' })
+  const isChat = !!(pack?.key || '').startsWith('chat_')
+  const isVideo = !!(pack?.key || '').startsWith('vid_')
+  const isPack = !!(pack?.key || '').startsWith('pack_')
+  const isWeb = !!(pack?.key || '').startsWith('web_')
+
+  await funnelType('Pagamento confirmado! ✅', 1000)
+
+  if (isChat) {
+    await funnelType(
+      'Chat liberado, amor 🔥 Pode continuar falando comigo por aqui — esse chat é tipo meu WhatsApp na web.\n\nMe conta o que você tá afim 😏',
+      1600,
+    )
+    funnelStep.value = 'other'
+    return
+  }
+
+  if (isVideo) {
+    await funnelType(
+      `Pronto 🔥 Agora me chama no WhatsApp pra eu te encaixar na videochamada (${pack?.label || 'call'}).\n\nNúmero: +55 47 99275-0967\n\nToca em Abrir WhatsApp e manda: "Paguei a videochamada"`,
+      1800,
+    )
+  } else if (isPack) {
+    await funnelType(
+      `Perfeito 🔥 Vou te enviar o ${pack?.label || 'conteúdo'} no WhatsApp.\n\nMe chama no +55 47 99275-0967 e manda "Paguei o pack" que eu liber o conteúdo pra você 💚`,
+      1800,
+    )
+  } else if (isWeb) {
+    await funnelType(
+      `Webnamoro ativado 💕 Me chama no WhatsApp +55 47 99275-0967 com "Paguei webnamoro" que eu já te adiciono e começo o papo exclusivo.`,
+      1800,
+    )
+  } else {
+    await funnelType(
+      'Pagou certinho 💚 Me chama no WhatsApp +55 47 99275-0967 que eu te atendo e entrego o que você comprou.',
+      1600,
+    )
+  }
+  funnelStep.value = 'redirect'
+}
+
 let funnelTimer: ReturnType<typeof setTimeout> | null = null
 
 function escapeHtml(s: string) {
@@ -724,14 +879,21 @@ const funnelOptions = computed(() => {
   }
   if (funnelStep.value === 'pix') {
     return [
-      { key: 'pix_yes', label: 'Sim, manda a chave PIX 💚', variant: 'wa-quick--yes' },
-      { key: 'pix_no', label: 'Ainda não', variant: 'wa-quick--no' },
+      { key: 'pix_generate', label: 'Gerar PIX agora 💚', variant: 'wa-quick--yes' },
+      { key: 'pix_no', label: 'Agora não', variant: 'wa-quick--no' },
     ]
   }
-  if (funnelStep.value === 'redirect') {
+  if (funnelStep.value === 'awaiting_payment') {
+    return [
+      { key: 'pix_check', label: 'Já paguei — verificar ✅', variant: 'wa-quick--yes' },
+      { key: 'pix_copy', label: 'Copiar código PIX', variant: 'wa-quick--yes' },
+      { key: 'pix_regen', label: 'Gerar PIX de novo', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'paid' || funnelStep.value === 'redirect') {
     return [
       { key: 'go_wa', label: 'Abrir WhatsApp agora →', variant: 'wa-quick--yes' },
-      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+      { key: 'back_menu', label: '← Menu', variant: 'wa-quick--no' },
     ]
   }
   if (funnelStep.value === 'other') {
@@ -859,6 +1021,7 @@ function openWaFunnel() {
 }
 
 function closeWaFunnel() {
+  stopFunnelPayPoll()
   if (funnelTimer) clearTimeout(funnelTimer)
   funnelTyping.value = false
   unbindFunnelViewport()
@@ -916,7 +1079,7 @@ async function sendFunnelFreeText() {
     if (selectedPack.value) {
       funnelStep.value = 'pix'
       await funnelType(
-        `O ${selectedPack.value.label} fica R$ ${selectedPack.value.price}. Posso te mandar a chave PIX agora?`,
+        `O ${selectedPack.value.label} fica R$ ${selectedPack.value.price}. Posso gerar o PIX aqui na conversa agora?`,
         1100,
       )
     } else {
@@ -1010,24 +1173,33 @@ async function answerFunnel(opt: { key: string; label: string }) {
     const p = map[opt.key]
     selectedPack.value = { key: opt.key, label: p.label, price: p.price }
     track('whatsapp_funnel_pack_select', { offer_slug: opt.key, metric_value: Number(p.price.replace(',', '.')) })
-    funnelStep.value = 'pix'
-    await funnelType(
-      `Perfeito 🔥 Você escolheu o ${p.label} por R$ ${p.price} — ${p.desc}.\n\nPosso te mandar a chave PIX agora?`,
-      1200,
-    )
+    await startFunnelCheckout()
     return
   }
 
-  if (opt.key === 'pix_yes') {
+  if (opt.key === 'pix_yes' || opt.key === 'pix_generate') {
     track('whatsapp_funnel_pix', { offer_slug: selectedPack.value?.key || 'pack' })
-    const pixHtml =
-      'Chave PIX (telefone):<br><b style="font-size:1.05em;letter-spacing:0.02em">47992750967</b><br><br>Nome: confira no app do banco antes de confirmar 💚'
-    await funnelType('Prontinho, amor 💕', 800, pixHtml)
-    funnelStep.value = 'redirect'
-    await funnelType(
-      'Agora vou te redirecionar pro meu WhatsApp. Faz o PIX e me manda o comprovante assim que me chamar — eu já te mando tudo 🔥',
-      1400,
-    )
+    await startFunnelCheckout()
+    return
+  }
+
+  if (opt.key === 'pix_check') {
+    await checkFunnelPayment(false)
+    return
+  }
+
+  if (opt.key === 'pix_copy') {
+    if (funnelPixCode.value) {
+      try { await navigator.clipboard.writeText(funnelPixCode.value) } catch {}
+      await funnelType('Código PIX copiado! Cola no app do banco e paga 💚', 900)
+    } else {
+      await funnelType('Ainda não tenho o código… toca em Gerar PIX de novo', 900)
+    }
+    return
+  }
+
+  if (opt.key === 'pix_regen') {
+    await startFunnelCheckout()
     return
   }
 
@@ -1060,11 +1232,7 @@ async function answerFunnel(opt: { key: string; label: string }) {
     const p = map[opt.key]
     selectedPack.value = { key: opt.key, label: p.label, price: p.price }
     track('whatsapp_funnel_select', { offer_slug: opt.key })
-    funnelStep.value = 'pix'
-    await funnelType(
-      `Fechado 🔥 ${p.label} por R$ ${p.price} — ${p.desc}.\n\nPosso te mandar a chave PIX agora?`,
-      1200,
-    )
+    await startFunnelCheckout()
     return
   }
 
@@ -1087,11 +1255,7 @@ async function answerFunnel(opt: { key: string; label: string }) {
     const p = map[opt.key]
     selectedPack.value = { key: opt.key, label: p.label, price: p.price }
     track('whatsapp_funnel_select', { offer_slug: opt.key })
-    funnelStep.value = 'pix'
-    await funnelType(
-      `Amor, você escolheu ${p.label} por R$ ${p.price} — ${p.desc} 💕\n\nPosso te mandar a chave PIX agora?`,
-      1200,
-    )
+    await startFunnelCheckout()
     return
   }
 
@@ -1113,11 +1277,7 @@ async function answerFunnel(opt: { key: string; label: string }) {
     const p = map[opt.key]
     selectedPack.value = { key: opt.key, label: p.label, price: p.price }
     track('whatsapp_funnel_select', { offer_slug: opt.key })
-    funnelStep.value = 'pix'
-    await funnelType(
-      `Perfeito 🔥 ${p.label} por R$ ${p.price} — ${p.desc}.\n\nPosso te mandar a chave PIX agora?`,
-      1200,
-    )
+    await startFunnelCheckout()
     return
   }
 
@@ -1125,10 +1285,11 @@ async function answerFunnel(opt: { key: string; label: string }) {
     const pack = selectedPack.value
     let prefill = 'Oi Wanessa! Vim do site e quero falar com você.'
     if (pack) {
-      prefill = `Oi Wanessa! Quero ${pack.label} (R$ ${pack.price}). Vou fazer o PIX na chave 47992750967 e te mando o comprovante.`
+      prefill = `Oi Wanessa! Já paguei o ${pack.label} (R$ ${pack.price}) no PIX do site. Pode me liberar?`
     }
     track('whatsapp_funnel_redirect', { offer_slug: pack?.key || 'whatsapp' })
     const url = buildWaLink(prefill)
+    stopFunnelPayPoll()
     clearFunnelState()
     window.open(url, '_blank', 'noopener,noreferrer')
     showWaFunnel.value = false
