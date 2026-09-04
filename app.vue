@@ -1495,11 +1495,13 @@ function scrollFunnel() {
   })
 }
 
-function pushFunnel(from: 'her' | 'me', text: string, html?: string) {
+function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean }) {
   funnelMessages.value.push({ from, text, html, time: nowTime() })
   scrollFunnel()
   // grava no Supabase (lead = me, bot = her)
-  logFunnelMessage(from === 'me' ? 'lead' : 'bot', text, { has_html: !!html })
+  if (!opts?.skipLog) {
+    logFunnelMessage(from === 'me' ? 'lead' : 'bot', text, { has_html: !!html })
+  }
 }
 
 /** Delay humano: lê o tamanho da msg + jitter (evita parecer bot) */
@@ -1685,6 +1687,7 @@ function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Rec
   try {
     const visitor_id = getOrCreateVisitorId()
     if (!funnelConversationId.value) loadFunnelConversationLocal()
+    const unlocked = !!funnelChatUnlocked.value
     const payload = {
       visitor_id,
       session_id: getFunnelSessionId(),
@@ -1696,7 +1699,9 @@ function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Rec
       step: funnelStep.value,
       selected_offer: selectedPack.value?.key || selectedPack.value?.label || null,
       selected_price: selectedPack.value?.price || null,
-      metadata: extra,
+      chat_unlocked: unlocked,
+      unlocked,
+      metadata: { ...extra, chat_unlocked: unlocked },
     }
     const json = JSON.stringify(payload)
     const handleRes = async (res: any) => {
@@ -1706,8 +1711,14 @@ function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Rec
         }
       } catch {}
     }
-    // sendBeacon não lê resposta → usa fetch quando ainda não tem conversation_id
-    if (funnelConversationId.value && typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+    // Com chat desbloqueado sempre fetch (notifica Telegram no server)
+    // sendBeacon só no funil automático sem unlock
+    if (
+      !unlocked &&
+      funnelConversationId.value &&
+      typeof navigator !== 'undefined' &&
+      typeof navigator.sendBeacon === 'function'
+    ) {
       const blob = new Blob([json], { type: 'application/json' })
       navigator.sendBeacon('/api/funnel-chat', blob)
       return
@@ -1723,6 +1734,57 @@ function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Rec
       .catch(() => {})
   } catch {}
 }
+
+let liveChatPollTimer: ReturnType<typeof setInterval> | null = null
+const seenLiveMsgIds = ref<Record<string, true>>({})
+
+function stopLiveChatPoll() {
+  if (liveChatPollTimer) {
+    clearInterval(liveChatPollTimer)
+    liveChatPollTimer = null
+  }
+}
+
+async function pullLiveAdminReplies() {
+  if (!funnelChatUnlocked.value) return
+  if (!funnelConversationId.value || !funnelAccessToken.value) return
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    const res = await $fetch<{
+      ok?: boolean
+      messages?: Array<{ id: string; direction: string; message: string; created_at?: string }>
+    }>('/api/funnel-chat', {
+      query: {
+        conversation_id: funnelConversationId.value,
+        access_token: funnelAccessToken.value,
+        visitor_id,
+      },
+    })
+    const list = res?.messages || []
+    for (const m of list) {
+      if (m.direction !== 'bot') continue
+      if (!m.id || seenLiveMsgIds.value[m.id]) continue
+      // evita duplicar mensagens automáticas antigas do funil: só live_admin ou novas após unlock
+      const text = String(m.message || '').trim()
+      if (!text) continue
+      seenLiveMsgIds.value[m.id] = true
+      // se já existe texto idêntico no final, pula
+      const last = funnelMessages.value[funnelMessages.value.length - 1]
+      if (last?.from === 'her' && last.text === text) continue
+      pushFunnel('her', text, undefined, { skipLog: true })
+    }
+  } catch {}
+}
+
+function startLiveChatPoll() {
+  stopLiveChatPoll()
+  if (!funnelChatUnlocked.value) return
+  pullLiveAdminReplies()
+  liveChatPollTimer = setInterval(() => {
+    pullLiveAdminReplies()
+  }, 3000)
+}
+
 
 
 function saveFunnelState() {
@@ -1796,6 +1858,7 @@ function openWaFunnel(source = 'whatsapp') {
 }
 
 function closeWaFunnel() {
+  stopLiveChatPoll()
   stopFunnelPayPoll()
   if (funnelTimer) clearTimeout(funnelTimer)
   funnelTyping.value = false
