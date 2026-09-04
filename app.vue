@@ -1,5 +1,5 @@
 <template>
-  <div class="page" :class="{ 'page--locked': showLogin || isAdmin, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
+  <div class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="bg-grain" aria-hidden="true"></div>
     <button class="lock-btn" type="button" aria-label="Editar página" @click="openLogin">
@@ -457,7 +457,7 @@
       </div>
     </Teleport>
     <Teleport to="body">
-      <div v-if="isAdmin" class="wl-overlay" @click.self="closeAdmin">
+      <div v-if="isAdmin && showAdminPanel" class="wl-overlay" @click.self="closeAdmin">
         <div class="wl-card" role="dialog" aria-modal="true" @click.stop>
           <div class="wl-head"><h2>Editar apresentação</h2><div class="wl-head-actions" style="display:flex;gap:8px;align-items:center"><button type="button" class="wl-x" style="width:auto;min-width:52px;padding:0 10px;font-size:13px" @click="doLogout">Sair</button><button type="button" class="wl-x" @click="closeAdmin">×</button></div></div>
           <label class="wl-label">Nome</label>
@@ -2008,6 +2008,7 @@ const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_
 const configReady = ref(false)
 const showLogin = ref(false)
 const isAdmin = ref(false)
+const showAdminPanel = ref(false)
 const password = ref('')
 const showAdminPass = ref(false)
 const loginError = ref('')
@@ -2200,13 +2201,15 @@ function openLogin() {
   nextTick(() => passInput.value?.focus())
 }
 function openEdit() {
+  showAdminPanel.value = true
   edit.name = config.name; edit.bio = config.bio; edit.highlight_label = config.highlight_label || DEFAULT_HIGHLIGHT
   edit.quiz_enabled = config.quiz_enabled === true
   edit.links = config.links.map((l) => ({ label: l.label, icon: l.icon, url: l.url, desc: l.desc || '', enabled: l.enabled !== false }))
   if (!edit.links.length) edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true })
 }
 function closeAdmin() {
-  // só fecha o painel — sessão continua até clicar em Sair
+  // fecha só o painel — sessão admin continua até Sair
+  showAdminPanel.value = false
   saveMsg.value = ''
   saveError.value = ''
 }
@@ -2215,6 +2218,7 @@ async function doLogout() {
     await $fetch('/api/admin/logout', { method: 'POST' })
   } catch {}
   isAdmin.value = false
+  showAdminPanel.value = false
   saveMsg.value = ''
   saveError.value = ''
 }
