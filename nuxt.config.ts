@@ -13,6 +13,7 @@ export default defineNuxtConfig({
     syncpayClientId: process.env.SYNCPAY_CLIENT_ID || '',
     syncpayClientSecret: process.env.SYNCPAY_CLIENT_SECRET || '',
     syncpayWebhookUrl: process.env.SYNCPAY_WEBHOOK_URL || '',
+    syncpayWebhookSecret: process.env.SYNCPAY_WEBHOOK_SECRET || '',
     public: {
       supabaseUrl:
         process.env.SUPABASE_URL || 'https://sgolmmhbufosmtigaakx.supabase.co',
