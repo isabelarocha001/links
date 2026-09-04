@@ -22,20 +22,49 @@ async function getSyncPayToken(clientId: string, clientSecret: string) {
 }
 
 async function loadSyncPayCredentials() {
-  const config = useRuntimeConfig()
-  let clientId = String(config.syncpayClientId || process.env.SYNCPAY_CLIENT_ID || '').trim()
-  let clientSecret = String(config.syncpayClientSecret || process.env.SYNCPAY_CLIENT_SECRET || '').trim()
+  const config = useRuntimeConfig() as any
+  const env = process.env as Record<string, string | undefined>
+
+  const idKeys = [
+    'SYNCPAY_CLIENT_ID',
+    'SYCPAY_CLIENT_ID',
+    'SYNC_PAY_CLIENT_ID',
+    'SYNCPAY_CLIENTID',
+    'SYNC_CLIENT_ID',
+  ]
+  const secretKeys = [
+    'SYNCPAY_CLIENT_SECRET',
+    'SYCPAY_CLIENT_SECRET',
+    'SYNC_PAY_CLIENT_SECRET',
+    'SYNCPAY_CLIENTSECRET',
+    'SYNC_CLIENT_SECRET',
+  ]
+
+  let clientId = String(config.syncpayClientId || '').trim()
+  let clientSecret = String(config.syncpayClientSecret || '').trim()
+
+  if (!clientId) {
+    for (const k of idKeys) {
+      if (env[k]) { clientId = String(env[k]).trim(); break }
+    }
+  }
+  if (!clientSecret) {
+    for (const k of secretKeys) {
+      if (env[k]) { clientSecret = String(env[k]).trim(); break }
+    }
+  }
 
   if (!clientId || !clientSecret) {
     try {
       const supabase = useServiceSupabase()
-      const { data } = await supabase
-        .from('app_secrets')
-        .select('key, value')
-        .in('key', ['SYNCPAY_CLIENT_ID', 'SYNCPAY_CLIENT_SECRET'])
+      const keys = [...idKeys, ...secretKeys]
+      const { data } = await supabase.from('app_secrets').select('key, value').in('key', keys)
       for (const row of data || []) {
-        if (row.key === 'SYNCPAY_CLIENT_ID' && row.value) clientId = String(row.value).trim()
-        if (row.key === 'SYNCPAY_CLIENT_SECRET' && row.value) clientSecret = String(row.value).trim()
+        const k = String(row.key || '')
+        const v = row.value ? String(row.value).trim() : ''
+        if (!v) continue
+        if (!clientId && idKeys.includes(k)) clientId = v
+        if (!clientSecret && secretKeys.includes(k)) clientSecret = v
       }
     } catch {}
   }
