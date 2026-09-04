@@ -1,5 +1,5 @@
 <template>
-  <div class="page" :class="{ 'page--locked': showLogin || isAdmin }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
+  <div class="page" :class="{ 'page--locked': showLogin || isAdmin, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="bg-grain" aria-hidden="true"></div>
     <button class="lock-btn" type="button" aria-label="Editar página" @click="openLogin">
@@ -1877,76 +1877,90 @@ async function warmSyncPay() {
   try { await $fetch('/api/checkout/warm') } catch {}
 }
 onMounted(async () => {
-  warmSyncPay()
-
-  locale.value = detectLocale()
-  try { document.documentElement.lang = locale.value } catch {}
-  const visitor_id = getOrCreateVisitorId()
-  if (!alreadyViewedToday()) {
-    markViewedToday()
-    track('page_view', { offer_slug: 'wanessa_links' })
-  }
-  let restored: string | null = null
-  try { restored = localStorage.getItem(GATE_KEY) } catch {}
-  if (restored === 'pass' || restored === 'reject') gate.value = restored
-  else if (restored === '1' || restored === '2' || restored === '3' || restored === '4') gate.value = Number(restored) as 1 | 2 | 3 | 4
-  else if (restored === '4') gate.value = 1 // legacy progress -> restart
-  const fingerprint = await getDeviceFingerprint()
-  if (gate.value !== 'pass' && gate.value !== 'reject') {
-    try {
-      const res = await $fetch<{ status: string | null }>('/api/quiz', { query: { visitor_id, fingerprint } })
-      if (res?.status === 'pass' || res?.status === 'reject') {
-        gate.value = res.status
-        try { localStorage.setItem(GATE_KEY, res.status) } catch {}
-      }
-    } catch {}
-  } else if (visitor_id && (gate.value === 'pass' || gate.value === 'reject')) {
-    try {
-      fetch('/api/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitor_id, fingerprint, status: gate.value }), keepalive: true }).catch(() => {})
-    } catch {}
-  }
-  // Quiz desativado temporariamente (toggle no admin)
-  if (!config.quiz_enabled) {
-    gate.value = 'pass'
-    try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
-  }
-  if (gate.value == null) gate.value = 1
-  gateReady.value = true
-  // Landing pública do chat: /chat/wanessabsx ou /?chat=wanessabsx
+  // 1) PRIMEIRO: landing do chat (Telegram / ads) — antes de qualquer await
   let openChatDirect = false
   let chatSlug = 'wanessabsx'
   try {
-    const path = (window.location.pathname || '').replace(/\/+$/, '')
-    const m = path.match(/^\/chat\/([^/]+)$/)
+    const path = (window.location.pathname || '').replace(/\/+$/, '') || '/'
+    const m = path.match(/\/chat\/([^/]+)/i)
     if (m) {
       chatSlug = decodeURIComponent(m[1] || '').toLowerCase()
       if (chatSlug === 'wanessabsx' || chatSlug === 'wanessa') openChatDirect = true
     }
     const q = new URLSearchParams(window.location.search || '')
-    const cq = (q.get('chat') || '').toLowerCase()
-    if (cq === 'wanessabsx' || cq === 'wanessa' || cq === '1' || cq === 'true') {
+    const cq = (q.get('chat') || q.get('open') || '').toLowerCase()
+    if (cq === 'wanessabsx' || cq === 'wanessa' || cq === '1' || cq === 'true' || cq === 'whatsapp') {
       openChatDirect = true
-      chatSlug = cq === '1' || cq === 'true' ? 'wanessabsx' : cq
+      if (cq !== '1' && cq !== 'true' && cq !== 'whatsapp') chatSlug = cq
     }
+    // hash fallback #chat
+    if ((window.location.hash || '').toLowerCase().includes('chat')) openChatDirect = true
   } catch {}
+
   if (openChatDirect) {
     isChatLanding.value = true
     gate.value = 'pass'
-    try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
     gateReady.value = true
+    try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
     try { track('page_view', { offer_slug: 'chat_' + chatSlug }) } catch {}
-    // abre na hora (e de novo no nextTick por garantia)
+    loadFunnelConversationLocal()
     openWaFunnel('chat_' + chatSlug)
-    nextTick(() => {
+    // reforço (Telegram WebView às vezes atrasa o paint)
+    setTimeout(() => {
       if (!showWaFunnel.value) openWaFunnel('chat_' + chatSlug)
-    })
-  } else if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
-    chatMessages.value = []
-    typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
-  } else if (gate.value === 'reject') {
-    chatMessages.value = []
-    pushMsg('her', t('rejectIg'))
+    }, 300)
+    setTimeout(() => {
+      if (!showWaFunnel.value) openWaFunnel('chat_' + chatSlug)
+    }, 1000)
   }
+
+  warmSyncPay()
+
+  locale.value = detectLocale()
+  try { document.documentElement.lang = locale.value } catch {}
+  const visitor_id = getOrCreateVisitorId()
+  if (!alreadyViewedToday() && !openChatDirect) {
+    markViewedToday()
+    track('page_view', { offer_slug: 'wanessa_links' })
+  }
+
+  if (!openChatDirect) {
+    let restored: string | null = null
+    try { restored = localStorage.getItem(GATE_KEY) } catch {}
+    if (restored === 'pass' || restored === 'reject') gate.value = restored
+    else if (restored === '1' || restored === '2' || restored === '3' || restored === '4') gate.value = Number(restored) as 1 | 2 | 3 | 4
+    else if (restored === '4') gate.value = 1
+    try {
+      const fingerprint = await getDeviceFingerprint()
+      if (gate.value !== 'pass' && gate.value !== 'reject') {
+        try {
+          const res = await $fetch<{ status: string | null }>('/api/quiz', { query: { visitor_id, fingerprint } })
+          if (res?.status === 'pass' || res?.status === 'reject') {
+            gate.value = res.status
+            try { localStorage.setItem(GATE_KEY, res.status) } catch {}
+          }
+        } catch {}
+      } else if (visitor_id && (gate.value === 'pass' || gate.value === 'reject')) {
+        try {
+          fetch('/api/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitor_id, fingerprint, status: gate.value }), keepalive: true }).catch(() => {})
+        } catch {}
+      }
+    } catch {}
+    if (!config.quiz_enabled) {
+      gate.value = 'pass'
+      try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
+    }
+    if (gate.value == null) gate.value = 1
+    gateReady.value = true
+    if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
+      chatMessages.value = []
+      typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
+    } else if (gate.value === 'reject') {
+      chatMessages.value = []
+      pushMsg('her', t('rejectIg'))
+    }
+  }
+
   photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 4200)
 })
 onUnmounted(() => {

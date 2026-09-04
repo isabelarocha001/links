@@ -1174,3 +1174,15 @@ button.direct-btn {
 .wa-more-item{display:block;width:100%;text-align:left;border:none;background:transparent;color:#e9edef;padding:12px 16px;font-size:.92rem;cursor:pointer}
 .wa-more-item:active{background:rgba(255,255,255,.06)}
 .wa-more-item--cancel{color:#8696a0;border-top:1px solid rgba(255,255,255,.06);margin-top:4px}
+
+/* Landing /chat: esconde links por baixo do funil */
+.page--chat-landing > .container,
+.page--chat-landing > .lock-btn,
+.page--chat-landing > .bg-glow,
+.page--chat-landing > .bg-grain {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+.page--chat-landing .wa-funnel-overlay {
+  z-index: 20000;
+}
