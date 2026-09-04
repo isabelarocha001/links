@@ -1,5 +1,48 @@
 import { useServiceSupabase } from '../../utils/supabase'
 
+/** Rate limit in-memory (por instância serverless). Chave: IP + payment id */
+const STATUS_RL_WINDOW_MS = 4000 // 1 consulta a cada 4s por IP+id
+const STATUS_RL_MAX_HITS = 1
+const statusRateMap = new Map<string, { ts: number; hits: number }>()
+
+function clientIp(event: any): string {
+  const xf = getHeader(event, 'x-forwarded-for')
+  if (xf) return String(xf).split(',')[0].trim()
+  const real = getHeader(event, 'x-real-ip')
+  if (real) return String(real).trim()
+  try {
+    return String(event?.node?.req?.socket?.remoteAddress || 'unknown')
+  } catch {
+    return 'unknown'
+  }
+}
+
+function assertStatusRateLimit(event: any, paymentId: string) {
+  const ip = clientIp(event)
+  const key = `${ip}::${paymentId}`
+  const now = Date.now()
+  // limpa entradas antigas de vez em quando
+  if (statusRateMap.size > 5000) {
+    for (const [k, v] of statusRateMap) {
+      if (now - v.ts > STATUS_RL_WINDOW_MS * 3) statusRateMap.delete(k)
+    }
+  }
+  const prev = statusRateMap.get(key)
+  if (!prev || now - prev.ts > STATUS_RL_WINDOW_MS) {
+    statusRateMap.set(key, { ts: now, hits: 1 })
+    return
+  }
+  if (prev.hits >= STATUS_RL_MAX_HITS) {
+    throw createError({
+      statusCode: 429,
+      statusMessage: 'Muitas consultas de status. Aguarde alguns segundos.',
+    })
+  }
+  prev.hits += 1
+  statusRateMap.set(key, prev)
+}
+
+
 async function loadSyncPayCredentials() {
   const config = useRuntimeConfig() as any
   const env = process.env as Record<string, string | undefined>
@@ -42,6 +85,9 @@ export default defineEventHandler(async (event) => {
   if (!id) {
     throw createError({ statusCode: 400, statusMessage: 'id required' })
   }
+
+  // Rate limit: 1 req / 4s por IP + id (protege SyncPay e o server)
+  assertStatusRateLimit(event, id)
 
   const supabase = useServiceSupabase()
 
