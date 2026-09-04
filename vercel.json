@@ -5,10 +5,16 @@
       "schedule": "0 3 * * *"
     }
   ],
-  "rewrites": [
+  "redirects": [
     {
-      "source": "/chat/:path*",
-      "destination": "/"
+      "source": "/chat/wanessabsx",
+      "destination": "/?chat=wanessabsx",
+      "permanent": false
+    },
+    {
+      "source": "/chat/wanessa",
+      "destination": "/?chat=wanessabsx",
+      "permanent": false
     }
   ]
 }
