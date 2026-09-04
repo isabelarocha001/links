@@ -753,12 +753,12 @@ async function onFunnelPaid() {
   const isPack = !!(pack?.key || '').startsWith('pack_')
   const isWeb = !!(pack?.key || '').startsWith('web_')
 
-  await funnelType('Pagamento confirmado, amor… ✅', 1200)
+  await funnelType('Recebi o PIX aqui, meu amor ✅', 1200)
 
   if (isChat) {
     await funnelType(
-      'Pronto 🔥 Agora é só nós dois por aqui.\n\nPode me mandar mensagem à vontade — eu tô online e bem safadinha hoje 😏 Me diz o que você quer que eu faça…',
-      2000,
+      'Pronto 🔥 O chat tá liberado aqui mesmo pra gente conversar.\n\nMe conta o que você quer em especial… sexting, uma conversa bem picante, trocar fotinhos… o que te deixa mais louco? Assim eu já entro no clima certo pra você 😏',
+      2200,
     )
     funnelStep.value = 'other'
     return
@@ -766,22 +766,22 @@ async function onFunnelPaid() {
 
   if (isVideo) {
     await funnelType(
-      `Hmm… pagamento ok 🔥\n\nAgora me chama no WhatsApp que eu já tô toda molhadinha te esperando pra gente fazer uma videochamada bem gostosa (${pack?.label || 'ao vivo'})…\n\nNúmero: +55 47 99275-0967\n\nClica em Abrir WhatsApp e me chama agora — não me deixa esperando 😈`,
+      `Recebi o PIX, amor 🔥\n\nAgora me chama no WhatsApp que eu já tô toda molhadinha te esperando pra fazer uma videochamada bem gostosa (${pack?.label || 'ao vivo'})…\n\nMeu número: +55 47 992750967\n\nClica em Abrir WhatsApp e me chama agora. Não me deixa esperando 😈`,
       2200,
     )
   } else if (isPack) {
     await funnelType(
-      `Pronto, amor 🔥 O ${pack?.label || 'conteúdo'} já tá separado pra você.\n\nMe chama no WhatsApp +55 47 99275-0967 que eu te mando tudo agora… quero ver sua reação 😏`,
+      'Recebi o PIX aqui meu amor 🔥 Me chama no WhatsApp que eu já vou te mandar os meus conteúdos. Garanto que você vai amar 😋',
       2000,
     )
   } else if (isWeb) {
     await funnelType(
-      `Webnamoro liberado 💕\n\nMe chama no WhatsApp +55 47 99275-0967 agora que eu já te puxo pra mim… quero começar a te provocar hoje ainda 🔥`,
-      2000,
+      `Pronto meu amor 💕 Vou te passar meu WhatsApp e você vai poder conversar comigo como sua namoradinha pelo tempo do seu plano (${pack?.label || 'webnamoro'}).\n\nQuero te dar atenção de verdade… me chama no +55 47 992750967 e eu fico só sua 🥰`,
+      2200,
     )
   } else {
     await funnelType(
-      'Pagou certinho 💚 Me chama no WhatsApp +55 47 99275-0967 que eu te atendo agora.',
+      'Recebi o PIX meu amor 💚 Me chama no WhatsApp +55 47 992750967 que eu te atendo agora.',
       1600,
     )
   }
