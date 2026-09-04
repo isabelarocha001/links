@@ -383,7 +383,7 @@
             </div>
             <p class="chat-pix-status" :class="{ 'is-ok': pixPaid }">{{ pixStatusText }}</p>
             <button type="button" class="chat-pix-status-btn" :disabled="pixStatusLoading" @click="checkPixStatus">
-              {{ pixStatusLoading ? 'Consultando…' : 'Consultar status da transação' }}
+              {{ pixStatusLoading ? 'Consultando Banco Central…' : 'Consultar status da transação' }}
             </button>
           </div>
         </div>
@@ -575,9 +575,29 @@ function closeChatPlans() {
   if (chatPayLoading.value) return
   showChatPlans.value = false
 }
+function pushPixIntoFunnelChat() {
+  const code = funnelPixCode.value || pixCopyCode.value
+  const price = selectedPack.value?.price || selectedChatPlan.value?.priceLabel || ''
+  if (!code || !/^000201/.test(code)) return
+  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}`
+  const safe = code.replace(/</g, '&lt;')
+  const html =
+    `<div style="line-height:1.4">` +
+    `<b>PIX R$ ${price}</b><br>` +
+    `<img src="${qr}" alt="QR PIX" style="width:180px;height:180px;border-radius:10px;background:#fff;padding:6px;margin:8px 0;display:block" />` +
+    `<span style="opacity:.85">Copia e cola:</span><br>` +
+    `<code style="display:block;word-break:break-all;font-size:0.68em;background:rgba(0,0,0,.22);padding:8px;border-radius:8px;margin-top:4px">${safe}</code>` +
+    `</div>`
+  pushFunnel('her', `PIX gerado R$ ${price}`, html)
+}
+
 function closePixModal() {
   showPixModal.value = false
-  if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
+  // NÃO para o poll do funil: continua verificando pagamento
+  if (funnelStep.value === 'awaiting_payment' && (funnelPixCode.value || pixCopyCode.value)) {
+    pushPixIntoFunnelChat()
+    // só um botão natural depois do PIX na conversa
+  }
 }
 async function copyPixCode() {
   try {
@@ -675,23 +695,22 @@ async function checkPixStatus(silent = false) {
     const status = String(st?.status || '').toLowerCase()
     if (['approved', 'paid', 'completed'].includes(status)) {
       pixPaid.value = true
-      pixStatusText.value = 'Pagamento confirmado! ✅'
+      pixStatusText.value = 'Pagamento confirmado junto ao Banco Central do Brasil ✅'
       if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
       try { track('chat_plan_paid', { offer_slug: selectedChatPlan.value?.key || selectedPack.value?.key || 'chat' }) } catch {}
-      // se veio do funil, fecha popup e libera próximo passo na conversa
       if (funnelStep.value === 'awaiting_payment' || funnelStep.value === 'pix') {
         stopFunnelPayPoll()
         showPixModal.value = false
         onFunnelPaid()
       }
     } else if (!silent) {
-      pixStatusText.value = st?.message || 'Ainda pendente — aguardando PIX'
+      pixStatusText.value = 'Consultamos o status do PIX junto ao Banco Central do Brasil: ainda pendente. Assim que cair, libera na hora.'
     } else if (status === 'pending') {
-      pixStatusText.value = 'Aguardando pagamento…'
+      pixStatusText.value = 'Aguardando confirmação do PIX no Banco Central…'
     }
   } catch (e: any) {
     if (!silent) {
-      pixStatusText.value = e?.data?.statusMessage || e?.message || 'Erro ao consultar status'
+      pixStatusText.value = e?.data?.statusMessage || e?.message || 'Não foi possível consultar o status agora'
     }
   } finally {
     if (!silent) pixStatusLoading.value = false
@@ -819,7 +838,6 @@ async function generateFunnelPix() {
     funnelPixCode.value = res.pix_code
     funnelPaymentId.value = res.payment_id || ''
     funnelExternalId.value = res.external_id || res.payment_id || ''
-    try { await navigator.clipboard.writeText(res.pix_code) } catch {}
     return true
   } catch (e: any) {
     console.error('[funnel pix]', e)
@@ -901,7 +919,7 @@ async function checkFunnelPayment(silent = false) {
       pixPaid.value = true
       await onFunnelPaid()
     } else if (!silent) {
-      await funnelType('Ainda não caiu aqui, amor… assim que o PIX confirmar eu te aviso 👀', 1200)
+      await funnelType('Consultei o PIX junto ao Banco Central… ainda não caiu, amor. Assim que confirmar eu te libero 👀', 1200)
     }
   } catch {
     if (!silent) await funnelType('Não consegui consultar agora. Tenta de novo em alguns segundos 💚', 1000)
@@ -1050,9 +1068,7 @@ const funnelOptions = computed(() => {
   }
   if (funnelStep.value === 'awaiting_payment') {
     return [
-      { key: 'pix_check', label: 'Já paguei — verificar ✅', variant: 'wa-quick--yes' },
-      { key: 'pix_copy', label: 'Copiar código PIX', variant: 'wa-quick--yes' },
-      { key: 'pix_regen', label: 'Gerar PIX de novo', variant: 'wa-quick--no' },
+      { key: 'pix_check', label: 'Já paguei verificar ✅', variant: 'wa-quick--yes' },
     ]
   }
   if (funnelStep.value === 'paid' || funnelStep.value === 'redirect') {
@@ -1160,6 +1176,8 @@ function clearFunnelState() {
 }
 
 function openWaFunnel() {
+  warmSyncPay()
+
   track('whatsapp_funnel_open', { offer_slug: 'whatsapp' })
   onCardClick('WhatsApp Funnel', whatsappUrl.value)
   try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open' }) } catch {}
@@ -1681,7 +1699,12 @@ const { data: remoteConfig } = await useAsyncData('link-page-config', () => $fet
 if (remoteConfig.value) applyServerConfig(remoteConfig.value)
 else config.links = DEFAULT_LINKS.map(attachLogo)
 configReady.value = true
+async function warmSyncPay() {
+  try { await $fetch('/api/checkout/warm') } catch {}
+}
 onMounted(async () => {
+  warmSyncPay()
+
   locale.value = detectLocale()
   try { document.documentElement.lang = locale.value } catch {}
   const visitor_id = getOrCreateVisitorId()
