@@ -25,7 +25,7 @@ export function getClientIp(event: any): string {
 }
 
 export function signAdminToken(secret: string): string {
-  const exp = Date.now() + 1000 * 60 * 60 * 8 // 8h
+  const exp = Date.now() + 1000 * 60 * 60 * 24 * 30 // 30 dias — encerra só no logout
   const payload = `admin:${exp}`
   const sig = createHmac('sha256', secret).update(payload).digest('hex')
   return Buffer.from(`${payload}.${sig}`).toString('base64url')
