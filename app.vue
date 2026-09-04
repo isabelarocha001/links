@@ -422,7 +422,34 @@
       <div v-if="showLogin && !isAdmin" class="wl-overlay" @click.self="showLogin = false">
         <div class="wl-card" role="dialog" aria-modal="true" @click.stop>
           <h2>Acesso admin</h2>
-          <input ref="passInput" v-model="password" type="password" placeholder="Senha" autocomplete="current-password" class="wl-input" @keyup.enter="doLogin" />
+          <div class="wl-pass-wrap" style="position:relative;display:flex;align-items:center">
+            <input
+              ref="passInput"
+              v-model="password"
+              :type="showAdminPass ? 'text' : 'password'"
+              placeholder="Senha"
+              autocomplete="current-password"
+              class="wl-input wl-input-pass" style="padding-right:44px;width:100%"
+              @keyup.enter="doLogin"
+            />
+            <button
+              type="button"
+              class="wl-pass-eye" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;padding:4px;cursor:pointer;color:rgba(255,255,255,0.65);display:flex;align-items:center;justify-content:center"
+              :aria-label="showAdminPass ? 'Ocultar senha' : 'Mostrar senha'"
+              @click="showAdminPass = !showAdminPass"
+            >
+              <svg v-if="!showAdminPass" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
           <p v-if="loginError" class="wl-error">{{ loginError }}</p>
           <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doLogin">{{ loading ? 'Entrando...' : 'Entrar' }}</button>
           <button type="button" class="wl-btn wl-btn-ghost" @click="showLogin = false">Cancelar</button>
@@ -1982,6 +2009,7 @@ const configReady = ref(false)
 const showLogin = ref(false)
 const isAdmin = ref(false)
 const password = ref('')
+const showAdminPass = ref(false)
 const loginError = ref('')
 const saveMsg = ref('')
 const saveError = ref('')
@@ -2166,6 +2194,7 @@ function openLogin() {
     return
   }
   password.value = ''
+  showAdminPass.value = false
   loginError.value = ''
   showLogin.value = true
   nextTick(() => passInput.value?.focus())
