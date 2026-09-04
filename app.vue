@@ -553,7 +553,13 @@ async function checkPixStatus(silent = false) {
       pixPaid.value = true
       pixStatusText.value = 'Pagamento confirmado! ✅'
       if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
-      try { track('chat_plan_paid', { offer_slug: selectedChatPlan.value?.key || 'chat' }) } catch {}
+      try { track('chat_plan_paid', { offer_slug: selectedChatPlan.value?.key || selectedPack.value?.key || 'chat' }) } catch {}
+      // se veio do funil, fecha popup e libera próximo passo na conversa
+      if (funnelStep.value === 'awaiting_payment' || funnelStep.value === 'pix') {
+        stopFunnelPayPoll()
+        showPixModal.value = false
+        onFunnelPaid()
+      }
     } else if (!silent) {
       pixStatusText.value = st?.message || 'Ainda pendente — aguardando PIX'
     } else if (status === 'pending') {
@@ -705,7 +711,7 @@ async function startFunnelCheckout() {
   const pack = selectedPack.value
   if (!pack) return
   await funnelType(
-    `Fechado 🔥 ${pack.label} por R$ ${pack.price}.\n\nVou gerar o PIX aqui na conversa pra você pagar — assim que confirmar, eu te passo o WhatsApp pra eu te entregar 💕`,
+    `Fechado 🔥 ${pack.label} por R$ ${pack.price}.\n\nVou abrir o PIX pra você pagar agora. Assim que confirmar eu te falo o próximo passo 💕`,
     1400,
   )
   const ok = await generateFunnelPix()
@@ -713,14 +719,45 @@ async function startFunnelCheckout() {
     funnelStep.value = 'menu'
     return
   }
-  await funnelType('Prontinho, amor 💚', 900, pixBubbleHtml(funnelPixCode.value, pack.price))
+
+  // abre o mesmo popup de PIX (QR + copia e cola + status)
+  selectedChatPlan.value = {
+    key: pack.key,
+    title: pack.label,
+    desc: '',
+    price: priceToNumber(pack.price),
+    priceLabel: pack.price,
+  }
+  pixPaid.value = false
+  pixCopyCode.value = funnelPixCode.value
+  const isEmv = /^000201/.test(funnelPixCode.value)
+  pixQrImage.value = isEmv
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(funnelPixCode.value)}`
+    : ''
+  pixPaymentId.value = funnelPaymentId.value
+  pixExternalId.value = funnelExternalId.value
+  pixStatusText.value = 'Aguardando pagamento… use o QR ou o copia e cola'
+  showPixModal.value = true
   funnelStep.value = 'awaiting_payment'
+
+  await funnelType('Abri o PIX na tela pra você, amor 💚 Paga e toca em consultar status.', 1200)
+
   stopFunnelPayPoll()
   let tries = 0
   funnelPayPoll = setInterval(() => {
     tries++
     checkFunnelPayment(true)
     if (tries > 60) stopFunnelPayPoll()
+  }, 5000)
+  if (pixPollTimer) clearInterval(pixPollTimer)
+  let tries2 = 0
+  pixPollTimer = setInterval(() => {
+    checkPixStatus(true)
+    tries2++
+    if (tries2 > 45 && pixPollTimer) {
+      clearInterval(pixPollTimer)
+      pixPollTimer = null
+    }
   }, 5000)
 }
 
@@ -735,6 +772,9 @@ async function checkFunnelPayment(silent = false) {
     const status = String(st?.status || '').toLowerCase()
     if (['approved', 'paid', 'completed'].includes(status)) {
       stopFunnelPayPoll()
+      if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
+      showPixModal.value = false
+      pixPaid.value = true
       await onFunnelPaid()
     } else if (!silent) {
       await funnelType('Ainda não caiu aqui, amor… assim que o PIX confirmar eu te aviso 👀', 1200)
