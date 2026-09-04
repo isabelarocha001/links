@@ -519,12 +519,19 @@ function requireFunnelChatOrPay(): boolean {
   return false
 }
 function onFunnelComposerInteract() {
-  if (!funnelChatUnlocked.value) {
-    openChatPlans()
-  }
+  if (
+    funnelChatUnlocked.value ||
+    funnelStep.value === 'video_avulso' ||
+    funnelStep.value === 'video_avulso_confirm'
+  ) return
+  openChatPlans()
 }
 function onFunnelComposerKey(e: KeyboardEvent) {
-  if (funnelChatUnlocked.value) return
+  if (
+    funnelChatUnlocked.value ||
+    funnelStep.value === 'video_avulso' ||
+    funnelStep.value === 'video_avulso_confirm'
+  ) return
   // qualquer tecla ao tentar digitar abre o pop up surpresa
   e.preventDefault()
   openChatPlans()
@@ -974,9 +981,40 @@ async function generateFunnelPix() {
   }
 }
 
+
+async function adminPayWithBalance() {
+  if (!isAdmin.value) return
+  const pack = selectedPack.value
+  if (!pack) {
+    await funnelType('Nenhum produto selecionado pra testar 😅', 800)
+    return
+  }
+  track('whatsapp_funnel_admin_pay', { offer_slug: pack.key || 'admin' })
+  try {
+    pixPaid.value = true
+    showPixModal.value = false
+  } catch {}
+  funnelChatUnlocked.value = true
+  funnelStep.value = 'paid'
+  await funnelType(
+    `✅ Pago com saldo admin (∞)\n\n${pack.label} R$ ${pack.price} liberado em modo teste.\nPode validar o fluxo sem PIX real.`,
+    1000,
+  )
+  await funnelType('Pode continuar testando o chat por aqui 😘', 800)
+}
+
 async function startFunnelCheckout() {
   const pack = selectedPack.value
   if (!pack) return
+  // Admin: oferece saldo infinito pra testar sem PIX real
+  if (isAdmin.value) {
+    funnelStep.value = 'pix'
+    await funnelType(
+      `Fechado 🔥 ${pack.label} por R$ ${pack.price}.\n\nVocê está como admin — pode pagar com saldo (∞) pra testar ou gerar PIX real.`,
+      1200,
+    )
+    return
+  }
   await funnelType(
     `Fechado 🔥 ${pack.label} por R$ ${pack.price}.\n\nVou abrir o PIX pra você pagar agora. Assim que confirmar eu te falo o próximo passo 💕`,
     1400,
@@ -1187,10 +1225,14 @@ const funnelOptions = computed(() => {
     ]
   }
   if (funnelStep.value === 'pix') {
-    return [
+    const opts = [
       { key: 'pix_generate', label: 'Gerar PIX agora 💚', variant: 'wa-quick--yes' },
       { key: 'pix_no', label: 'Agora não', variant: 'wa-quick--no' },
     ]
+    if (isAdmin.value) {
+      opts.unshift({ key: 'admin_pay', label: '🛠 Pagar com saldo admin (∞)', variant: 'wa-quick--yes' })
+    }
+    return opts
   }
   if (funnelStep.value === 'awaiting_payment') {
     return [
@@ -1211,10 +1253,14 @@ const funnelOptions = computed(() => {
   }
   
   if (funnelStep.value === 'video_avulso_confirm') {
-    return [
+    const opts = [
       { key: 'pix_yes', label: 'Sim, gera o PIX 💚', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
+    if (isAdmin.value) {
+      opts.unshift({ key: 'admin_pay', label: '🛠 Pagar com saldo admin (∞)', variant: 'wa-quick--yes' })
+    }
+    return opts
   }
 
   return []
@@ -1451,7 +1497,12 @@ function suggestVideoAvulsoPrice(complexity: number): number {
 
 
 async function sendFunnelFreeText() {
-  if (!funnelChatUnlocked.value) {
+  // Vídeo avulso: precisa digitar a descrição sem pagar antes
+  const allowFree =
+    funnelChatUnlocked.value ||
+    funnelStep.value === 'video_avulso' ||
+    funnelStep.value === 'video_avulso_confirm'
+  if (!allowFree) {
     openChatPlans()
     return
   }
@@ -1646,6 +1697,11 @@ async function answerFunnel(opt: { key: string; label: string }) {
     selectedPack.value = { key: opt.key, label: p.label, price: p.price }
     track('whatsapp_funnel_pack_select', { offer_slug: opt.key, metric_value: Number(p.price.replace(',', '.')) })
     await startFunnelCheckout()
+    return
+  }
+
+  if (opt.key === 'admin_pay') {
+    await adminPayWithBalance()
     return
   }
 
