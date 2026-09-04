@@ -496,6 +496,7 @@ const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeU
 
 const PIX_KEY = '47992750967'
 const showWaFunnel = ref(false)
+const isChatLanding = ref(false)
 const showFunnelPhoto = ref(false)
 
 const funnelInput = ref('')
@@ -1299,12 +1300,12 @@ function clearFunnelState() {
   selectedPack.value = null
 }
 
-function openWaFunnel() {
+function openWaFunnel(source = 'whatsapp') {
   warmSyncPay()
 
-  track('whatsapp_funnel_open', { offer_slug: 'whatsapp' })
-  onCardClick('WhatsApp Funnel', whatsappUrl.value)
-  try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open' }) } catch {}
+  track('whatsapp_funnel_open', { offer_slug: source || 'whatsapp' })
+  try { onCardClick('WhatsApp Funnel', whatsappUrl.value) } catch {}
+  try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open', source }) } catch {}
   showWaFunnel.value = true
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
@@ -1863,7 +1864,21 @@ onMounted(async () => {
   }
   if (gate.value == null) gate.value = 1
   gateReady.value = true
-  if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
+  // Rota pública /chat/wanessabsx → abre direto no chat
+  let chatSlug = ''
+  try {
+    const path = (window.location.pathname || '').replace(/\/+$/, '')
+    const m = path.match(/^\/chat\/([^/]+)$/)
+    if (m) chatSlug = decodeURIComponent(m[1] || '').toLowerCase()
+  } catch {}
+  if (chatSlug === 'wanessabsx' || chatSlug === 'wanessa') {
+    isChatLanding.value = true
+    gate.value = 'pass'
+    try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
+    gateReady.value = true
+    track('page_view', { offer_slug: 'chat_' + chatSlug })
+    nextTick(() => openWaFunnel('chat_' + chatSlug))
+  } else if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
     chatMessages.value = []
     typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
   } else if (gate.value === 'reject') {

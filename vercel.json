@@ -4,5 +4,11 @@
       "path": "/api/quiz-daily-report",
       "schedule": "0 3 * * *"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/chat/:path*",
+      "destination": "/"
+    }
   ]
 }
