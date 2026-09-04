@@ -378,33 +378,90 @@
 
       <!-- Planos low-ticket do chat (SyncPay) -->
       
-      <!-- Videochamada com vídeos gravados (após pagamento) -->
-      <div v-if="showVideoCallPlayer" class="chat-plans-overlay" style="z-index:30000" @click.self="closeVideoCallPlayer">
-        <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop style="max-width:420px;padding-bottom:16px">
+
+      <!-- Chamada entrando -->
+      <div v-if="showIncomingCall" class="vc-incoming" style="position:fixed;inset:0;z-index:40000;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:48px 24px 40px;background:rgba(6,8,12,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)">
+        <div style="text-align:center;margin-top:24px">
+          <p style="margin:0;font-size:13px;letter-spacing:.12em;text-transform:uppercase;opacity:.75;color:#fff">Chamada de vídeo</p>
+          <p style="margin:8px 0 0;font-size:22px;font-weight:700;color:#fff">Wanessa está te ligando…</p>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+          <div style="width:148px;height:148px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.35);box-shadow:0 0 0 10px rgba(37,211,102,.12),0 20px 50px rgba(0,0,0,.45)">
+            <img src="/model.jpg" alt="Wanessa" style="width:100%;height:100%;object-fit:cover" draggable="false" />
+          </div>
+          <p style="margin:0;color:#fff;opacity:.85;font-size:15px">tocando…</p>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:48px;width:100%;max-width:360px;margin-bottom:12px">
+          <button type="button" @click="declineIncomingCall" style="display:flex;flex-direction:column;align-items:center;gap:8px;background:transparent;border:0;color:#fff;cursor:pointer">
+            <span style="width:68px;height:68px;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(239,68,68,.4)">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M16 8l-8 8M8 8l8 8"/></svg>
+            </span>
+            <span style="font-size:13px;opacity:.9">Recusar</span>
+          </button>
+          <button type="button" @click="acceptIncomingCall" style="display:flex;flex-direction:column;align-items:center;gap:8px;background:transparent;border:0;color:#fff;cursor:pointer">
+            <span style="width:68px;height:68px;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(34,197,94,.45)">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.22.35-.61.23-1.01-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+            </span>
+            <span style="font-size:13px;opacity:.9">Atender</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Por que recusou -->
+      <div v-if="showDeclineWhy" class="chat-plans-overlay" style="z-index:40001" @click.self="showDeclineWhy = false">
+        <div class="chat-plans-sheet" role="dialog" @click.stop style="max-width:400px">
           <div class="chat-plans-head">
             <div>
-              <p class="chat-plans-kicker">Videochamada</p>
-              <h3>Ao vivo comigo 🔥</h3>
-              <p class="chat-plans-sub">{{ videoCallIndex + 1 }} / {{ videoCallVideos.length }}</p>
+              <p class="chat-plans-kicker">Pode falar</p>
+              <h3>Por que recusou?</h3>
+              <p class="chat-plans-sub">Pode ser sincero, sem julgar 💕</p>
             </div>
-            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeVideoCallPlayer">✕</button>
+            <button type="button" class="chat-plans-x" @click="showDeclineWhy = false">✕</button>
           </div>
-          <div style="padding:0 4px 8px">
-            <video
-              v-if="videoCallVideos[videoCallIndex]"
-              :key="videoCallVideos[videoCallIndex]"
-              :src="videoCallVideos[videoCallIndex]"
-              controls
-              autoplay
-              playsinline
-              style="width:100%;max-height:60vh;border-radius:12px;background:#000"
-            ></video>
-            <p v-else style="opacity:.8;text-align:center;padding:24px">Nenhum vídeo configurado no painel admin.</p>
+          <div style="padding:0 4px 12px;display:flex;flex-direction:column;gap:10px">
+            <textarea v-model="declineWhyText" rows="3" placeholder="Ex: tá caro, agora não posso, tenho vergonha…" style="width:100%;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.35);color:#fff;padding:10px 12px;font-size:14px;resize:vertical"></textarea>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <button type="button" class="wa-quick wa-quick--no" style="font-size:12px" @click="declineWhyText = 'Tá caro agora'; submitDeclineWhy()">Tá caro</button>
+              <button type="button" class="wa-quick wa-quick--no" style="font-size:12px" @click="declineWhyText = 'Agora não posso'; submitDeclineWhy()">Agora não</button>
+              <button type="button" class="wa-quick wa-quick--no" style="font-size:12px" @click="declineWhyText = 'Tenho vergonha'; submitDeclineWhy()">Vergonha</button>
+            </div>
+            <button type="button" class="wl-btn wl-btn-primary" @click="submitDeclineWhy">Enviar</button>
           </div>
-          <div style="display:flex;gap:8px;justify-content:center;padding:0 8px 8px">
-            <button type="button" class="wl-btn" :disabled="videoCallIndex <= 0" @click="prevVideoCallClip">Anterior</button>
-            <button type="button" class="wl-btn wl-btn-primary" :disabled="videoCallIndex >= videoCallVideos.length - 1" @click="nextVideoCallClip">Próximo</button>
+        </div>
+      </div>
+
+      <!-- Videochamada ao vivo (após pagamento) -->
+      <div v-if="showVideoCallPlayer" class="vc-live" style="position:fixed;inset:0;z-index:40000;background:#0a0a0c;display:flex;flex-direction:column">
+        <div style="position:absolute;top:0;left:0;right:0;padding:16px 16px 8px;display:flex;justify-content:space-between;align-items:center;z-index:2;background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <img src="/model.jpg" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.3)" />
+            <div>
+              <p style="margin:0;color:#fff;font-weight:600;font-size:14px">Wanessa · ao vivo</p>
+              <p style="margin:0;color:#4ade80;font-size:12px">{{ formatCallClock(videoCallSecondsUsed) }} · resta {{ formatCallClock(videoCallSecondsLeft) }}</p>
+            </div>
           </div>
+          <button type="button" @click="endLiveVideoCall('hangup')" style="border:0;border-radius:999px;padding:8px 14px;background:#ef4444;color:#fff;font-weight:600;cursor:pointer">Encerrar</button>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;background:#000">
+          <video
+            v-if="videoCallVideos[videoCallIndex]"
+            :key="videoCallVideos[videoCallIndex]"
+            :src="videoCallVideos[videoCallIndex]"
+            autoplay
+            playsinline
+            @ended="onVideoCallMediaEnded"
+            style="width:100%;height:100%;max-height:100vh;object-fit:contain;background:#000"
+          ></video>
+          <div v-else style="color:#fff;opacity:.8;text-align:center;padding:24px">
+            <img src="/model.jpg" alt="" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:12px;border:3px solid rgba(255,255,255,.25)" />
+            <p>Videochamada ao vivo</p>
+            <p style="font-size:13px;opacity:.7">Configure os vídeos no painel admin</p>
+          </div>
+        </div>
+        <div style="padding:16px;display:flex;justify-content:center;background:linear-gradient(to top,rgba(0,0,0,.8),transparent)">
+          <button type="button" @click="endLiveVideoCall('hangup')" style="width:64px;height:64px;border-radius:50%;border:0;background:#ef4444;color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(239,68,68,.45)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M16 8l-8 8M8 8l8 8"/></svg>
+          </button>
         </div>
       </div>
 
@@ -658,11 +715,7 @@ function onFunnelVideoCall() {
     openVideoCallPlayer()
     return
   }
-  pushFunnel('me', 'Videochamada')
-  setTimeout(() => {
-    funnelType('Quer videochamada comigo agora, amor? Escolhe o tempo, paga o PIX e a chamada libera aqui no chat 🔥', 900)
-    funnelStep.value = 'video'
-  }, 300)
+  startIncomingVideoCall()
 }
 function onFunnelVoiceCall() {
   if (!requireFunnelChatOrPay()) return
@@ -1111,19 +1164,140 @@ async function generateFunnelPix() {
 
 
 
-function openVideoCallPlayer() {
-  if (!videoCallUnlocked.value && !isAdmin.value) {
-    funnelType('A videochamada libera depois do pagamento, amor 🔥', 900)
+
+function stopVideoCallTimer() {
+  if (videoCallTimer) {
+    clearInterval(videoCallTimer)
+    videoCallTimer = null
+  }
+}
+
+function startIncomingVideoCall() {
+  showDeclineWhy.value = false
+  declineWhyText.value = ''
+  videoCallEndedUpsell.value = false
+  showIncomingCall.value = true
+  try {
+    // vibração leve se o browser permitir
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([200, 100, 200])
+  } catch {}
+}
+
+function acceptIncomingCall() {
+  showIncomingCall.value = false
+  funnelStep.value = 'video'
+  funnelType(
+    'Que bom que atendeu, amor 🔥\n\nEscolhe quanto tempo você quer comigo na videochamada:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n\nAssim que pagar, a gente entra ao vivo aqui.',
+    1400,
+  )
+}
+
+function declineIncomingCall() {
+  showIncomingCall.value = false
+  showDeclineWhy.value = true
+  funnelStep.value = 'video_declined'
+  funnelType(
+    'Poxa… você recusou minha chamada 🥺\n\nFica tranquilo, sem pressão. Me conta o que te segurou? Às vezes é só o horário ou o valor — a gente ajeita.',
+    1400,
+  )
+}
+
+async function submitDeclineWhy() {
+  const why = (declineWhyText.value || '').trim()
+  showDeclineWhy.value = false
+  if (why) {
+    pushFunnel('me', why)
+    track('whatsapp_funnel_call_declined', { message: why.slice(0, 160) })
+  }
+  const lower = why.toLowerCase()
+  let reply =
+    'Entendi, amor. Se mudar de ideia é só tocar no ícone de vídeo que eu te ligo de novo 💕\n\nEnquanto isso posso te mostrar packs ou um vídeo avulso bem safado…'
+  if (/caro|pre[cç]o|valor|dinheiro|saldo/.test(lower)) {
+    reply =
+      'Sobre o valor: o de 10 min já dá pra sentir o clima todinho 🔥\n\nMuita gente começa pelo menor e depois aumenta. Quer que eu te mostre de novo os tempos?'
+    funnelStep.value = 'video'
+  } else if (/hora|agora|depois|trabalho|ocupado|momento/.test(lower)) {
+    reply =
+      'Sem problema, amor. Quando liberar você me chama que eu te ligo de novo na hora 😘\n\nPosso te deixar um pack pra você ir se aquecendo enquanto isso?'
+  } else if (/medo|vergonha|insegur|n[aã]o sei/.test(lower)) {
+    reply =
+      'Relaxa… aqui é só nós dois, sem gravação pra fora e no seu ritmo 😌\n\nSe quiser só 10 min pra testar, eu te recebo bem gostoso. Atende na próxima?'
+  } else if (/whats|zap|ligar|telefone/.test(lower)) {
+    reply =
+      'A chamada é aqui mesmo no chat, com vídeo liberado depois do PIX — mais discreto que WhatsApp 🔒\n\nQuer tentar de novo?'
+  }
+  await funnelType(reply, 1600)
+  if (funnelStep.value === 'video') {
+    // opções de preço já no step video
+  } else {
+    funnelStep.value = 'menu'
+  }
+}
+
+function formatCallClock(totalSec: number) {
+  const m = Math.floor(Math.max(0, totalSec) / 60)
+  const s = Math.max(0, totalSec) % 60
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+function beginLiveVideoCall() {
+  showVideoCallPlayer.value = true
+  videoCallActive.value = true
+  videoCallEndedUpsell.value = false
+  videoCallIndex.value = 0
+  const mins = videoCallPurchasedMin.value || 10
+  videoCallSecondsLeft.value = mins * 60
+  videoCallSecondsUsed.value = 0
+  stopVideoCallTimer()
+  videoCallTimer = setInterval(() => {
+    videoCallSecondsUsed.value += 1
+    videoCallSecondsLeft.value = Math.max(0, mins * 60 - videoCallSecondsUsed.value)
+    if (videoCallSecondsLeft.value <= 0) {
+      endLiveVideoCall('timer')
+    }
+  }, 1000)
+}
+
+function endLiveVideoCall(reason: 'timer' | 'video_end' | 'hangup' = 'hangup') {
+  stopVideoCallTimer()
+  videoCallActive.value = false
+  showVideoCallPlayer.value = false
+  videoCallEndedUpsell.value = true
+  funnelStep.value = 'video_upsell'
+  const used = formatCallClock(videoCallSecondsUsed.value)
+  funnelType(
+    reason === 'timer' || reason === 'video_end'
+      ? `Seu tempo de chamada acabou, amor ⏱ (${used})\n\nSe quiser continuar comigo, assina mais minutos:\n\n• +10 min  R$ 99,90\n• +20 min  R$ 149,90\n• +30 min  R$ 229,90\n\nBora prorrogar?`
+      : `Chamada encerrada (${used}). Se quiser voltar pra mim, é só assinar mais minutos 🔥`,
+    1600,
+  )
+}
+
+function onVideoCallMediaEnded() {
+  // acabou o arquivo de vídeo: tenta próximo; se não houver, encerra
+  if (videoCallIndex.value < videoCallVideos.value.length - 1) {
+    videoCallIndex.value += 1
     return
   }
-  if (!videoCallVideos.value.length) {
+  endLiveVideoCall('video_end')
+}
+
+function openVideoCallPlayer() {
+  if (!videoCallUnlocked.value && !isAdmin.value) {
+    startIncomingVideoCall()
+    return
+  }
+  if (!videoCallVideos.value.length && !isAdmin.value) {
     funnelType('Ainda não subi os vídeos da chamada… tenta de novo em instantes 😘', 1000)
     return
   }
-  videoCallIndex.value = 0
-  showVideoCallPlayer.value = true
+  beginLiveVideoCall()
 }
 function closeVideoCallPlayer() {
+  if (videoCallActive.value) {
+    endLiveVideoCall('hangup')
+    return
+  }
   showVideoCallPlayer.value = false
 }
 function nextVideoCallClip() {
@@ -1393,6 +1567,14 @@ const funnelOptions = computed(() => {
       { key: 'chat_basic', label: 'Chat 30-40 min  R$ 49,90', variant: 'wa-quick--yes' },
       { key: 'chat_midia', label: 'Chat + fotos/vídeos  R$ 79,90', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'video_upsell') {
+    return [
+      { key: 'vid_10', label: '+10 min  R$ 99,90', variant: 'wa-quick--yes' },
+      { key: 'vid_20', label: '+20 min  R$ 149,90', variant: 'wa-quick--yes' },
+      { key: 'vid_30', label: '+30 min  R$ 229,90', variant: 'wa-quick--yes' },
+      { key: 'upsell_no', label: 'Agora não', variant: 'wa-quick--no' },
     ]
   }
   if (funnelStep.value === 'video_call_ready') {
@@ -1765,11 +1947,7 @@ async function sendFunnelFreeText() {
     return
   }
   if (/video|chamada|call|cam/.test(lower)) {
-    funnelStep.value = 'video'
-    await funnelType(
-      'Videochamada eu faço sim 🔥\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n\nQual tempo você quer?',
-      1200,
-    )
+    startIncomingVideoCall()
     return
   }
   if (/webnamoro|namoro|namorada|exclusiv/.test(lower)) {
@@ -1882,6 +2060,13 @@ async function answerFunnel(opt: { key: string; label: string }) {
     return
   }
 
+  if (opt.key === 'upsell_no') {
+    showDeclineWhy.value = true
+    declineWhyText.value = ''
+    await funnelType('Tudo bem, amor. Me conta rapidinho o que te fez parar? Assim eu te atendo melhor da próxima 💕', 1200)
+    return
+  }
+
   if (opt.key === 'start_video_call') {
     openVideoCallPlayer()
     return
@@ -1928,15 +2113,12 @@ async function answerFunnel(opt: { key: string; label: string }) {
     return
   }
 
-  if (opt.key === 'video') {
+    if (opt.key === 'video') {
     track('whatsapp_funnel_intent', { offer_slug: 'videochamada' })
-    funnelStep.value = 'video'
-    await funnelType(
-      'Videochamada ao vivo comigo, amor 🔥 Escolhe o tempo:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n\nQual combina com você?',
-      1300,
-    )
+    startIncomingVideoCall()
     return
   }
+
 
   
   if (opt.key === 'video_avulso') {
@@ -1955,8 +2137,9 @@ if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30') {
       vid_20: { label: 'Videochamada 20 min', price: '149,90', desc: 'tempo pra gozar com calma' },
       vid_30: { label: 'Videochamada 30 min', price: '229,90', desc: 'sessão completa comigo' },
     }
-    const p = map[opt.key]
+        const p = map[opt.key]
     selectedPack.value = { key: opt.key, label: p.label, price: p.price }
+    videoCallPurchasedMin.value = opt.key === 'vid_10' ? 10 : opt.key === 'vid_20' ? 20 : 30
     track('whatsapp_funnel_select', { offer_slug: opt.key })
     await startFunnelCheckout()
     return
@@ -2165,6 +2348,15 @@ const showVideoCallPlayer = ref(false)
 const videoCallIndex = ref(0)
 const videoCallUnlocked = ref(false)
 const editVideoCallUrls = ref('')
+const showIncomingCall = ref(false)
+const showDeclineWhy = ref(false)
+const declineWhyText = ref('')
+const videoCallActive = ref(false)
+const videoCallSecondsLeft = ref(0)
+const videoCallSecondsUsed = ref(0)
+const videoCallPurchasedMin = ref(10)
+let videoCallTimer: ReturnType<typeof setInterval> | null = null
+const videoCallEndedUpsell = ref(false)
 const password = ref('')
 const showAdminPass = ref(false)
 const loginError = ref('')
