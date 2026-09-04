@@ -1628,7 +1628,7 @@ async function answerFunnel(opt: { key: string; label: string }) {
 
   if (opt.key === 'chat_basic' || opt.key === 'chat_midia') {
     const map: Record<string, { label: string; price: string; desc: string }> = {
-      chat_basic: { label: 'Chat 30–40 min', price: '49,90', desc: 'papo safado só nosso' },
+      chat_basic: { label: 'Chat 30-40 min', price: '49,90', desc: 'papo safado só nosso' },
       chat_midia: { label: 'Chat + mídia', price: '79,90', desc: 'chat com fotos e vídeos no momento' },
     }
     const p = map[opt.key]
