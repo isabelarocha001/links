@@ -171,7 +171,7 @@
     <Teleport to="body">
 
       <div v-if="showWaFunnel" class="wa-funnel-overlay" @click.self="closeWaFunnel">
-        <div class="wa-funnel-shell" role="dialog" aria-modal="true" :style="funnelShellStyle" @click.stop>
+        <div class="wa-funnel-shell" role="dialog" aria-modal="true" :style="funnelShellStyle" style="position:relative" @click.stop>
           <header class="wa-header wa-funnel-header">
             <button type="button" class="wa-avatar-btn" aria-label="Ver foto de perfil" @click="showFunnelPhoto = true">
               <span class="wa-avatar-wrap wa-avatar-wrap--lg">
@@ -189,9 +189,6 @@
             <div class="wa-header-actions">
               <button type="button" class="wa-header-icon-btn" aria-label="Videochamada" @click="onFunnelVideoCall">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-              </button>
-              <button type="button" class="wa-header-icon-btn" aria-label="Chamada de voz" @click="onFunnelVoiceCall">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               </button>
               <button type="button" class="wa-header-icon-btn" aria-label="Mais opcoes" @click="showFunnelMoreMenu = true">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
@@ -275,6 +272,32 @@
             <div v-else class="wa-funnel-quick-placeholder" aria-hidden="true"></div>
           </div>
 
+
+          <!-- Balão flutuante: lead descreve o vídeo avulso -->
+          <div
+            v-if="funnelStep === 'video_avulso' && !funnelTyping"
+            class="wa-float-reply"
+            style="position:absolute;left:12px;right:12px;bottom:72px;z-index:30;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:rgba(17,24,28,.96);border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.45)"
+          >
+            <p style="margin:0;font-size:13px;opacity:.9;line-height:1.35">✏️ Descreve como você quer o vídeo…</p>
+            <textarea
+              v-model="funnelInput"
+              rows="3"
+              placeholder="Ex: quero você de lingerie vermelha, gemendo meu nome…"
+              style="width:100%;resize:vertical;min-height:72px;max-height:140px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.35);color:#fff;padding:10px 12px;font-size:14px;line-height:1.4;outline:none;box-sizing:border-box"
+              @keydown.enter.exact.prevent="sendFunnelFreeText"
+            ></textarea>
+            <button
+              type="button"
+              :disabled="!funnelInput.trim() || funnelTyping"
+              @click="sendFunnelFreeText"
+              style="align-self:flex-end;border:0;border-radius:999px;padding:10px 18px;font-weight:600;font-size:14px;cursor:pointer;background:#25d366;color:#06280f;opacity:1"
+              :style="{ opacity: (!funnelInput.trim() || funnelTyping) ? 0.5 : 1 }"
+            >
+              Enviar pedido
+            </button>
+          </div>
+
           <div class="wa-composer wa-funnel-composer">
             <button type="button" class="wa-composer-icon" aria-label="Emoji" @click="onFunnelEmoji">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
@@ -354,6 +377,37 @@
       </div>
 
       <!-- Planos low-ticket do chat (SyncPay) -->
+      
+      <!-- Videochamada com vídeos gravados (após pagamento) -->
+      <div v-if="showVideoCallPlayer" class="chat-plans-overlay" style="z-index:30000" @click.self="closeVideoCallPlayer">
+        <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop style="max-width:420px;padding-bottom:16px">
+          <div class="chat-plans-head">
+            <div>
+              <p class="chat-plans-kicker">Videochamada</p>
+              <h3>Ao vivo comigo 🔥</h3>
+              <p class="chat-plans-sub">{{ videoCallIndex + 1 }} / {{ videoCallVideos.length }}</p>
+            </div>
+            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeVideoCallPlayer">✕</button>
+          </div>
+          <div style="padding:0 4px 8px">
+            <video
+              v-if="videoCallVideos[videoCallIndex]"
+              :key="videoCallVideos[videoCallIndex]"
+              :src="videoCallVideos[videoCallIndex]"
+              controls
+              autoplay
+              playsinline
+              style="width:100%;max-height:60vh;border-radius:12px;background:#000"
+            ></video>
+            <p v-else style="opacity:.8;text-align:center;padding:24px">Nenhum vídeo configurado no painel admin.</p>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;padding:0 8px 8px">
+            <button type="button" class="wl-btn" :disabled="videoCallIndex <= 0" @click="prevVideoCallClip">Anterior</button>
+            <button type="button" class="wl-btn wl-btn-primary" :disabled="videoCallIndex >= videoCallVideos.length - 1" @click="nextVideoCallClip">Próximo</button>
+          </div>
+        </div>
+      </div>
+
       <div v-if="showChatPlans" class="chat-plans-overlay" @click.self="closeChatPlans">
         <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
           <div class="chat-plans-handle" aria-hidden="true"></div>
@@ -504,7 +558,12 @@
           <p v-if="saveMsg" class="wl-ok">{{ saveMsg }}</p>
           <p v-if="saveError" class="wl-error">{{ saveError }}</p>
           <div class="wl-row">
-            <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doSave">{{ loading ? 'Salvando...' : 'Salvar' }}</button>
+            
+          <label class="wl-label">Vídeos da videochamada (URLs, um por linha)</label>
+          <textarea v-model="editVideoCallUrls" class="wl-input" rows="3" placeholder="https://.../video1.mp4" style="min-height:72px;resize:vertical"></textarea>
+          <p class="wl-hint" style="opacity:.7;font-size:12px;margin:4px 0 12px">Depois do PIX da videochamada, o lead assiste esses vídeos aqui no chat (não vai pro WhatsApp).</p>
+
+          <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doSave">{{ loading ? 'Salvando...' : 'Salvar' }}</button>
             <button type="button" class="wl-btn wl-btn-ghost" @click="closeAdmin">Fechar</button>
           </div>
         </div>
@@ -594,11 +653,14 @@ function onFunnelEmoji() {
   funnelInput.value = (funnelInput.value || '') + '😊'
 }
 function onFunnelVideoCall() {
-  if (!requireFunnelChatOrPay()) return
   showFunnelMoreMenu.value = false
+  if (videoCallUnlocked.value || isAdmin.value) {
+    openVideoCallPlayer()
+    return
+  }
   pushFunnel('me', 'Videochamada')
   setTimeout(() => {
-    funnelType('Quer videochamada comigo agora, amor? Escolhe o tempo que eu te passo o PIX e a gente liga 🔥', 900)
+    funnelType('Quer videochamada comigo agora, amor? Escolhe o tempo, paga o PIX e a chamada libera aqui no chat 🔥', 900)
     funnelStep.value = 'video'
   }, 300)
 }
@@ -1048,6 +1110,31 @@ async function generateFunnelPix() {
 }
 
 
+
+function openVideoCallPlayer() {
+  if (!videoCallUnlocked.value && !isAdmin.value) {
+    funnelType('A videochamada libera depois do pagamento, amor 🔥', 900)
+    return
+  }
+  if (!videoCallVideos.value.length) {
+    funnelType('Ainda não subi os vídeos da chamada… tenta de novo em instantes 😘', 1000)
+    return
+  }
+  videoCallIndex.value = 0
+  showVideoCallPlayer.value = true
+}
+function closeVideoCallPlayer() {
+  showVideoCallPlayer.value = false
+}
+function nextVideoCallClip() {
+  if (videoCallIndex.value < videoCallVideos.value.length - 1) {
+    videoCallIndex.value += 1
+  }
+}
+function prevVideoCallClip() {
+  if (videoCallIndex.value > 0) videoCallIndex.value -= 1
+}
+
 async function adminPayWithBalance() {
   // Botão só aparece com isAdmin no UI — mas isAdmin no browser pode ser forjado.
   // Liberação SÓ após o servidor validar o cookie httpOnly admin_token.
@@ -1070,12 +1157,19 @@ async function adminPayWithBalance() {
     showPixModal.value = false
   } catch {}
   funnelChatUnlocked.value = true
-  funnelStep.value = 'paid'
+  if ((pack.key || '').startsWith('vid_') || pack.key === 'video_avulso') {
+    videoCallUnlocked.value = true
+  }
+  funnelStep.value = (pack.key || '').startsWith('vid_') ? 'video_call_ready' : 'paid'
   await funnelType(
-    `✅ Pago com saldo admin (∞)\n\n${pack.label} R$ ${pack.price} liberado em modo teste.\nPode validar o fluxo sem PIX real.`,
+    `✅ Pago com saldo admin (∞)\n\n${pack.label} R$ ${pack.price} liberado em modo teste.`,
     1000,
   )
-  await funnelType('Pode continuar testando o chat por aqui 😘', 800)
+  if ((pack.key || '').startsWith('vid_')) {
+    await funnelType('Toque em Iniciar videochamada pra testar os vídeos 📹', 900)
+  } else {
+    await funnelType('Pode continuar testando o chat por aqui 😘', 800)
+  }
 }
 
 async function startFunnelCheckout() {
@@ -1164,7 +1258,7 @@ async function checkFunnelPayment(silent = false) {
   }
 }
 
-async function onFunnelPaid() {
+async async function onFunnelPaid() {
   const pack = selectedPack.value
   funnelStep.value = 'paid'
   track('whatsapp_funnel_paid', { offer_slug: pack?.key || 'paid' })
@@ -1185,11 +1279,13 @@ async function onFunnelPaid() {
     return
   }
 
-  if (isVideo) {
+    if (isVideo) {
+    videoCallUnlocked.value = true
     await funnelType(
-      `Recebi o PIX, amor 🔥\n\nAgora me chama no WhatsApp que eu já tô toda molhadinha te esperando pra fazer uma videochamada bem gostosa (${pack?.label || 'ao vivo'})…\n\nMeu número: +55 47 992750967\n\nClica em Abrir WhatsApp e me chama agora. Não me deixa esperando 😈`,
-      2200,
+      `Recebi o PIX, amor 🔥\n\nSua videochamada (${pack?.label || 'ao vivo'}) tá liberada aqui no chat.\n\nToque em Iniciar videochamada pra me ver agora 😈`,
+      1800,
     )
+    funnelStep.value = 'video_call_ready'
   } else if (isPack) {
     await funnelType(
       'Recebi o PIX aqui meu amor 🔥 Me chama no WhatsApp que eu já vou te mandar os meus conteúdos. Garanto que você vai amar 😋',
@@ -1299,7 +1395,13 @@ const funnelOptions = computed(() => {
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
-  if (funnelStep.value === 'pix') {
+  if (funnelStep.value === 'video_call_ready') {
+    return [
+      { key: 'start_video_call', label: '📹 Iniciar videochamada', variant: 'wa-quick--yes' },
+    ]
+  }
+
+    if (funnelStep.value === 'pix') {
     const opts = [
       { key: 'pix_generate', label: 'Gerar PIX agora 💚', variant: 'wa-quick--yes' },
       { key: 'pix_no', label: 'Agora não', variant: 'wa-quick--no' },
@@ -1780,6 +1882,11 @@ async function answerFunnel(opt: { key: string; label: string }) {
     return
   }
 
+  if (opt.key === 'start_video_call') {
+    openVideoCallPlayer()
+    return
+  }
+
   if (opt.key === 'admin_pay') {
     await adminPayWithBalance()
     return
@@ -2053,6 +2160,11 @@ const configReady = ref(false)
 const showLogin = ref(false)
 const isAdmin = ref(false)
 const showAdminPanel = ref(false)
+const videoCallVideos = ref<string[]>([])
+const showVideoCallPlayer = ref(false)
+const videoCallIndex = ref(0)
+const videoCallUnlocked = ref(false)
+const editVideoCallUrls = ref('')
 const password = ref('')
 const showAdminPass = ref(false)
 const loginError = ref('')
@@ -2246,6 +2358,7 @@ function openLogin() {
 }
 function openEdit() {
   showAdminPanel.value = true
+  editVideoCallUrls.value = videoCallVideos.value.join('\n')
   edit.name = config.name; edit.bio = config.bio; edit.highlight_label = config.highlight_label || DEFAULT_HIGHLIGHT
   edit.quiz_enabled = config.quiz_enabled === true
   edit.links = config.links.map((l) => ({ label: l.label, icon: l.icon, url: l.url, desc: l.desc || '', enabled: l.enabled !== false }))
@@ -2269,6 +2382,25 @@ async function doLogout() {
 
 function addLink() { edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true }) }
 function removeLink(i: number) { edit.links.splice(i, 1) }
+
+
+function loadVideoCallVideos() {
+  try {
+    const raw = localStorage.getItem('wanessa_video_call_urls')
+    if (raw) {
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr)) videoCallVideos.value = arr.filter((u: any) => typeof u === 'string' && u.trim())
+    }
+  } catch {}
+}
+function saveVideoCallVideos() {
+  const urls = editVideoCallUrls.value
+    .split(/\n|,/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  videoCallVideos.value = urls
+  try { localStorage.setItem('wanessa_video_call_urls', JSON.stringify(urls)) } catch {}
+}
 
 async function restoreAdminSession() {
   try {
