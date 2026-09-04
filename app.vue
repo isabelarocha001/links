@@ -666,17 +666,28 @@ function pushFunnel(from: 'her' | 'me', text: string, html?: string) {
   logFunnelMessage(from === 'me' ? 'lead' : 'bot', text, { has_html: !!html })
 }
 
-function funnelType(text: string, delay = 1000, html?: string) {
+/** Delay humano: lê o tamanho da msg + jitter (evita parecer bot) */
+function humanDelay(text: string, base = 0): number {
+  const len = (text || '').replace(/\s+/g, ' ').trim().length
+  // ~38ms por caractere, piso 1.8s, teto 5.8s + jitter 200–900ms
+  const reading = Math.min(5800, Math.max(1800, Math.round(len * 38)))
+  const jitter = 200 + Math.floor(Math.random() * 700)
+  const extra = base > 0 ? Math.round(base * 0.35) : 0
+  return reading + jitter + extra
+}
+
+function funnelType(text: string, delay = 0, html?: string) {
   return new Promise<void>((resolve) => {
     funnelTyping.value = true
     scrollFunnel()
     if (funnelTimer) clearTimeout(funnelTimer)
+    const wait = humanDelay(text, delay)
     funnelTimer = setTimeout(() => {
       funnelTyping.value = false
       pushFunnel('her', text, html)
       saveFunnelState()
       resolve()
-    }, delay)
+    }, wait)
   })
 }
 
@@ -1168,14 +1179,15 @@ function pushMsg(from: 'her' | 'me', text: string) {
   chatMessages.value.push({ from, text, time: nowTime() })
   scrollChat()
 }
-function typeThenAsk(text: string, delay = 900) {
+function typeThenAsk(text: string, delay = 0) {
   isTyping.value = true
   scrollChat()
   if (typingTimer) clearTimeout(typingTimer)
+  const wait = humanDelay(text, delay)
   typingTimer = setTimeout(() => {
     isTyping.value = false
     pushMsg('her', text)
-  }, delay)
+  }, wait)
 }
 const questionText = (g: 1 | 2 | 3 | 4) => {
   if (g === 1) return t('q1')
