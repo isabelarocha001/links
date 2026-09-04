@@ -2003,6 +2003,8 @@ async function warmSyncPay() {
   try { await $fetch('/api/checkout/warm') } catch {}
 }
 onMounted(async () => {
+  // restaura sessão admin se o cookie ainda for válido (não bloqueia o chat)
+  restoreAdminSession()
   // 1) PRIMEIRO: landing do chat (Telegram / ads) — antes de qualquer await
   let openChatDirect = false
   let chatSlug = 'wanessabsx'
