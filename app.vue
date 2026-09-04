@@ -753,12 +753,12 @@ async function onFunnelPaid() {
   const isPack = !!(pack?.key || '').startsWith('pack_')
   const isWeb = !!(pack?.key || '').startsWith('web_')
 
-  await funnelType('Pagamento confirmado! ✅', 1000)
+  await funnelType('Pagamento confirmado, amor… ✅', 1200)
 
   if (isChat) {
     await funnelType(
-      'Chat liberado, amor 🔥 Pode continuar falando comigo por aqui — esse chat é tipo meu WhatsApp na web.\n\nMe conta o que você tá afim 😏',
-      1600,
+      'Pronto 🔥 Agora é só nós dois por aqui.\n\nPode me mandar mensagem à vontade — eu tô online e bem safadinha hoje 😏 Me diz o que você quer que eu faça…',
+      2000,
     )
     funnelStep.value = 'other'
     return
@@ -766,22 +766,22 @@ async function onFunnelPaid() {
 
   if (isVideo) {
     await funnelType(
-      `Pronto 🔥 Agora me chama no WhatsApp pra eu te encaixar na videochamada (${pack?.label || 'call'}).\n\nNúmero: +55 47 99275-0967\n\nToca em Abrir WhatsApp e manda: "Paguei a videochamada"`,
-      1800,
+      `Hmm… pagamento ok 🔥\n\nAgora me chama no WhatsApp que eu já tô toda molhadinha te esperando pra gente fazer uma videochamada bem gostosa (${pack?.label || 'ao vivo'})…\n\nNúmero: +55 47 99275-0967\n\nClica em Abrir WhatsApp e me chama agora — não me deixa esperando 😈`,
+      2200,
     )
   } else if (isPack) {
     await funnelType(
-      `Perfeito 🔥 Vou te enviar o ${pack?.label || 'conteúdo'} no WhatsApp.\n\nMe chama no +55 47 99275-0967 e manda "Paguei o pack" que eu liber o conteúdo pra você 💚`,
-      1800,
+      `Pronto, amor 🔥 O ${pack?.label || 'conteúdo'} já tá separado pra você.\n\nMe chama no WhatsApp +55 47 99275-0967 que eu te mando tudo agora… quero ver sua reação 😏`,
+      2000,
     )
   } else if (isWeb) {
     await funnelType(
-      `Webnamoro ativado 💕 Me chama no WhatsApp +55 47 99275-0967 com "Paguei webnamoro" que eu já te adiciono e começo o papo exclusivo.`,
-      1800,
+      `Webnamoro liberado 💕\n\nMe chama no WhatsApp +55 47 99275-0967 agora que eu já te puxo pra mim… quero começar a te provocar hoje ainda 🔥`,
+      2000,
     )
   } else {
     await funnelType(
-      'Pagou certinho 💚 Me chama no WhatsApp +55 47 99275-0967 que eu te atendo e entrego o que você comprou.',
+      'Pagou certinho 💚 Me chama no WhatsApp +55 47 99275-0967 que eu te atendo agora.',
       1600,
     )
   }
