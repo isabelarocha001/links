@@ -241,7 +241,7 @@
           <!-- Foto de perfil tela cheia (fixed acima de tudo do chat) -->
           <Teleport to="body">
             <div
-              v-if="showFunnelPhoto && showWaFunnel"
+              v-if="showFunnelPhoto"
               class="wa-profile-photo-overlay"
               @click.self="closeFunnelPhoto"
             >
@@ -925,7 +925,9 @@ const showWaFunnel = ref(false)
 const isChatLanding = ref(false)
 const showFunnelPhoto = ref(false)
 function openFunnelPhoto() {
-  if (leadBlockedWanessa?.value) return
+  try {
+    if (typeof leadBlockedWanessa !== 'undefined' && leadBlockedWanessa.value) return
+  } catch {}
   showFunnelPhoto.value = true
 }
 function closeFunnelPhoto() {
@@ -1136,7 +1138,7 @@ function onFunnelMediaHtmlClick(e: Event) {
   const t = e.target as HTMLElement | null
   if (!t) return
   const img = t.closest?.('img') as HTMLImageElement | null
-  if (img?.src) {
+  if (img?.src && !img.closest?.('.wa-video-modern')) {
     openChatMediaFullscreen(img.src)
     return
   }
@@ -1157,6 +1159,25 @@ function onFunnelMediaHtmlClick(e: Event) {
       playBtn.textContent = '▶'
     }
     audio.onended = () => { playBtn.textContent = '▶' }
+    return
+  }
+  const vWrap = t.closest?.('.wa-video-modern') as HTMLElement | null
+  if (vWrap) {
+    const video = vWrap.querySelector('video') as HTMLVideoElement | null
+    const btn = vWrap.querySelector('.wa-video-play-btn') as HTMLElement | null
+    if (!video) return
+    if (video.paused) {
+      document.querySelectorAll('.wa-video-modern video').forEach((v) => {
+        try { (v as HTMLVideoElement).pause() } catch {}
+      })
+      document.querySelectorAll('.wa-video-play-btn').forEach((b) => { (b as HTMLElement).style.opacity = '1'; (b as HTMLElement).textContent = '▶' })
+      video.play().catch(() => {})
+      if (btn) { btn.textContent = '⏸'; btn.style.opacity = '0' }
+      video.onended = () => { if (btn) { btn.textContent = '▶'; btn.style.opacity = '1' } }
+    } else {
+      video.pause()
+      if (btn) { btn.textContent = '▶'; btn.style.opacity = '1' }
+    }
   }
 }
 
@@ -1437,7 +1458,16 @@ function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc
   if (resolved === 'photo') {
     pushFunnel('me', 'Foto', `<img class="wa-media-img" src="${url}" alt="foto" />`, { mediaKind: 'photo', mediaUrl: url })
   } else if (resolved === 'video') {
-    pushFunnel('me', 'Video', `<video class="wa-media-video" src="${url}" controls playsinline preload="metadata"></video>`, { mediaKind: 'video', mediaUrl: url })
+    pushFunnel(
+      'me',
+      'Video',
+      `<div class="wa-video-modern" data-src="${url}">
+        <video class="wa-media-video" src="${url}" playsinline preload="metadata"></video>
+        <button type="button" class="wa-video-play-btn" aria-label="Play">▶</button>
+        <div class="wa-video-gradient"></div>
+      </div>`,
+      { mediaKind: 'video', mediaUrl: url },
+    )
   } else if (resolved === 'doc') {
     pushFunnel('me', 'Documento', `<div class="wa-media-doc">📄 ${file.name || 'documento'}</div>`, { mediaKind: 'doc' })
   } else {
@@ -1612,23 +1642,25 @@ function closePixModal() {
   }
 }
 async function copyPixCode() {
+  const code = String(pixCopyCode.value || funnelPixCode.value || '').trim()
+  if (!code) return
   try {
-    await navigator.clipboard.writeText(pixCopyCode.value)
-    pixCopied.value = true
-    setTimeout(() => { pixCopied.value = false }, 2000)
+    await navigator.clipboard.writeText(code)
   } catch {
-    // fallback
     try {
       const ta = document.createElement('textarea')
-      ta.value = pixCopyCode.value
+      ta.value = code
+      ta.setAttribute('readonly', '')
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
       document.body.appendChild(ta)
       ta.select()
       document.execCommand('copy')
       document.body.removeChild(ta)
-      pixCopied.value = true
-      setTimeout(() => { pixCopied.value = false }, 2000)
     } catch {}
   }
+  pixCopied.value = true
+  setTimeout(() => { pixCopied.value = false }, 2000)
 }
 
 async function adminUnlockChat() {
@@ -1835,20 +1867,25 @@ async function checkPixStatus(silent = false) {
 function syncFunnelViewport() {
   try {
     const vv = window.visualViewport
+    let next: Record<string, string>
     if (!vv) {
-      funnelShellStyle.value = { height: '100dvh' }
+      next = { height: '100dvh', top: '0px' }
+    } else {
+      const h = Math.round(vv.height)
+      const top = Math.round(vv.offsetTop)
+      next = {
+        height: h + 'px',
+        top: top + 'px',
+        maxHeight: h + 'px',
+      }
+    }
+    const cur = funnelShellStyle.value || {}
+    if (cur.height === next.height && cur.top === (next.top || '0px') && cur.maxHeight === next.maxHeight) {
       return
     }
-    // altura real visível (desconta teclado)
-    const h = Math.round(vv.height)
-    const top = Math.round(vv.offsetTop)
-    funnelShellStyle.value = {
-      height: h + 'px',
-      top: top + 'px',
-      maxHeight: h + 'px',
-    }
+    funnelShellStyle.value = next
   } catch {
-    funnelShellStyle.value = {}
+    // não limpa estilo a toa (evita flash)
   }
 }
 
@@ -3603,11 +3640,23 @@ async function answerFunnel(opt: { key: string; label: string }) {
   }
 
   if (opt.key === 'pix_copy') {
-    if (funnelPixCode.value) {
-      try { await navigator.clipboard.writeText(funnelPixCode.value) } catch {}
-      await funnelType('Código PIX copiado! Cola no app do banco e paga 💚', 900)
-    } else {
-      await funnelType('Ainda não tenho o código… toca em Gerar PIX de novo', 900)
+    const code = String(funnelPixCode.value || pixCopyCode.value || '').trim()
+    if (code) {
+      try {
+        await navigator.clipboard.writeText(code)
+      } catch {
+        try {
+          const ta = document.createElement('textarea')
+          ta.value = code
+          document.body.appendChild(ta)
+          ta.select()
+          document.execCommand('copy')
+          document.body.removeChild(ta)
+        } catch {}
+      }
+      pixCopied.value = true
+      setTimeout(() => { pixCopied.value = false }, 2000)
+      // feedback instantâneo no botão/UI — sem esperar mensagem da Wanessa
     }
     return
   }
