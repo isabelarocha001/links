@@ -4597,7 +4597,7 @@ const telegramPrivateUrl = 'https://t.me/wanessabsx'
 const logoPriv = LOGO_PRIVSEX
 const logoTg = LOGO_TG_BLUE
 const logoTgPurple = LOGO_TG_PURPLE
-const gallery = ['/model.jpg', '/model.jpg', '/model.jpg']
+const gallery = ['/model.jpg', '/hero-1.jpg', '/hero-2.jpg', '/hero-3.jpg']
 const photoIndex = ref(0)
 let photoTimer: ReturnType<typeof setInterval> | null = null
 
@@ -4992,7 +4992,7 @@ onMounted(async () => {
     }
   }
 
-  photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 4200)
+  photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 5500)
 })
 onUnmounted(() => {
   if (photoTimer) clearInterval(photoTimer)
