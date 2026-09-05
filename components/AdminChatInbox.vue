@@ -62,7 +62,11 @@ async function checkSession() {
     await $fetch('/api/admin/session')
     authed.value = true
   } catch {
+    // Sem sessão: não oferece login aqui — rota deve ter dado 404 pelo middleware
     authed.value = false
+    if (import.meta.client) {
+      await navigateTo('/', { replace: true })
+    }
   } finally {
     authChecking.value = false
   }
@@ -267,20 +271,8 @@ if (typeof window !== 'undefined') {
   <div class="ac">
     <div v-if="authChecking" class="ac-center">Verificando sessão…</div>
 
-    <div v-else-if="!authed" class="ac-login">
-      <h1>Admin · Chat</h1>
-      <p class="ac-hint">Somente autenticado. Sessão via cookie httpOnly.</p>
-      <input
-        v-model="password"
-        type="password"
-        class="ac-input"
-        placeholder="Senha admin"
-        @keydown.enter="doLogin"
-      />
-      <button type="button" class="ac-btn" :disabled="loginLoading" @click="doLogin">
-        {{ loginLoading ? 'Entrando…' : 'Entrar' }}
-      </button>
-      <p v-if="loginError" class="ac-err">{{ loginError }}</p>
+    <div v-else-if="!authed" class="ac-center">
+      <p>Acesso negado.</p>
     </div>
 
     <template v-else>
