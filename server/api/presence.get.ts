@@ -2,16 +2,16 @@ import { useServiceSupabase } from '../utils/supabase'
 
 /**
  * Status público de presença da criadora (para o chat do lead).
- * online se last_seen_at < 45s; senão "visto por último às HH:MM" (fuso America/Sao_Paulo).
- * Não expõe tokens nem dados sensíveis.
+ * online só se is_online=true E last_seen_at < 30s.
+ * Logout seta is_online=false → some online na hora (não espera expirar).
  */
-const ONLINE_MS = 45_000
+const ONLINE_MS = 30_000
 
 function formatLastSeen(iso: string | null | undefined): string {
-  if (!iso) return 'visto por último recentemente'
+  if (!iso) return 'offline'
   try {
     const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return 'visto por último recentemente'
+    if (Number.isNaN(d.getTime())) return 'offline'
     const fmt = new Intl.DateTimeFormat('pt-BR', {
       timeZone: 'America/Sao_Paulo',
       hour: '2-digit',
@@ -29,7 +29,7 @@ function formatLastSeen(iso: string | null | undefined): string {
     if (today === that) return `visto por último às ${time}`
     return `visto por último ${that} às ${time}`
   } catch {
-    return 'visto por último recentemente'
+    return 'offline'
   }
 }
 
@@ -42,17 +42,22 @@ export default defineEventHandler(async () => {
     .maybeSingle()
 
   if (error || !data) {
+    return { ok: true, online: false, last_seen_at: null, label: 'offline' }
+  }
+
+  // Flag offline do logout tem prioridade absoluta
+  if (data.is_online !== true) {
     return {
       ok: true,
       online: false,
-      last_seen_at: null,
-      label: 'offline',
+      last_seen_at: data.last_seen_at || null,
+      label: formatLastSeen(data.last_seen_at),
     }
   }
 
   const last = data.last_seen_at ? new Date(String(data.last_seen_at)).getTime() : 0
   const fresh = last > 0 && Date.now() - last < ONLINE_MS
-  const online = !!data.is_online && fresh
+  const online = fresh
 
   return {
     ok: true,
