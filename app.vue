@@ -1,4 +1,5 @@
 <template>
+  <NuxtPage />
   <div class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="bg-grain" aria-hidden="true"></div>
@@ -83,7 +84,7 @@
           </div>
           <!-- identity title removed -->
         </header>
-        <section class="main-cards" v-if="configReady">
+        <section class="main-cards" :class="{ 'main-cards--single': hidePublicChannel }" v-if="configReady">
           <div class="card-col">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
               <div class="portal-spiral" aria-hidden="true">
@@ -103,7 +104,7 @@
             </a>
             <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
           </div>
-          <div class="card-col">
+          <div class="card-col" v-if="!hidePublicChannel">
             <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
               <div class="card-glow"></div>
               <div class="card-top">
@@ -636,6 +637,18 @@ import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 import { getDeviceFingerprint } from '~/utils/fingerprint'
 import { IG_PROFILE_SRC as igProfileSrc } from '~/utils/ig-profile'
 import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i18n'
+
+/** Lead veio de /CanalPublico (tráfego do canal) → esconde botão do canal público (checkout direto) */
+const route = useRoute()
+const hidePublicChannel = computed(() => {
+  const raw = (route.path || '') + ' ' + (route.fullPath || '')
+  const p = raw.toLowerCase().replace(/\/+$/, '')
+  return (
+    p.includes('/canalpublico') ||
+    p.includes('canalpublico') ||
+    (typeof window !== 'undefined' && /\/canalpublico/i.test(window.location.pathname || ''))
+  )
+})
 import '~/assets/css/links-page.css'
 
 const DEFAULT_HIGHLIGHT = 'PrivSex'
