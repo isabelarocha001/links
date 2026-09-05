@@ -250,6 +250,56 @@
 .d-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px; height: 28px; color: #c084fc; }
 .direct-wa .d-icon { color: #25d366; }
 .direct-tg .d-icon { color: #2aabee; }
+
+/* WhatsApp luxury card — bounce + colorful outline */
+.direct-wa {
+  position: relative;
+  overflow: visible;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(145deg, rgba(20, 40, 30, 0.95), rgba(12, 22, 18, 0.98)) padding-box,
+    linear-gradient(135deg, #25d366, #c084fc, #2aabee, #25d366) border-box;
+  background-size: 100% 100%, 300% 300%;
+  animation: wa-border-flow 4s linear infinite;
+  box-shadow:
+    0 0 0 1px rgba(37, 211, 102, 0.25),
+    0 8px 28px rgba(37, 211, 102, 0.18),
+    0 0 40px rgba(168, 85, 247, 0.12);
+}
+.direct-wa:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(37, 211, 102, 0.45),
+    0 12px 36px rgba(37, 211, 102, 0.28),
+    0 0 48px rgba(168, 85, 247, 0.22);
+}
+@keyframes wa-border-flow {
+  0%   { background-position: 0% 50%, 0% 50%; }
+  50%  { background-position: 0% 50%, 100% 50%; }
+  100% { background-position: 0% 50%, 0% 50%; }
+}
+.direct-wa .d-icon {
+  animation: wa-icon-bounce 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(37, 211, 102, 0.65));
+}
+.direct-wa .d-btn-title {
+  animation: wa-title-bounce 1.8s ease-in-out infinite;
+  color: #e8fff0;
+  text-shadow: 0 0 12px rgba(37, 211, 102, 0.35);
+}
+.direct-wa .d-btn-sub {
+  color: rgba(200, 255, 220, 0.7);
+}
+@keyframes wa-icon-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40%      { transform: translateY(-7px) scale(1.12); }
+  60%      { transform: translateY(-3px) scale(1.05); }
+}
+@keyframes wa-title-bounce {
+  0%, 100% { transform: translateY(0); }
+  40%      { transform: translateY(-5px); }
+  60%      { transform: translateY(-2px); }
+}
 @media (max-width: 360px) { .main-cards { gap: 8px; } .lux-card { padding: 12px 10px; min-height: 136px; } .card-title { font-size: 0.95rem; } .direct-btn { font-size: 0.8rem; padding: 12px 14px; } .wa-shell { height: min(94dvh, 680px); } }
 .wl-overlay { position: fixed !important; inset: 0 !important; z-index: 2147483646 !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: 16px !important; background: rgba(18, 8, 26, 0.92) !important; overflow-y: auto !important; }
 .wl-card { background: #1e1230 !important; border: 1px solid rgba(168, 85, 247, 0.25) !important; border-radius: 16px !important; padding: 20px !important; width: 100% !important; max-width: 400px !important; max-height: min(88dvh, 720px) !important; overflow-y: auto !important; color: #fff !important; box-shadow: 0 24px 80px rgba(0,0,0,0.75) !important; -webkit-user-select: text !important; user-select: text !important; }
