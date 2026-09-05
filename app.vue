@@ -866,6 +866,26 @@
           <p v-if="saveError" class="wl-error">{{ saveError }}</p>
           <div class="wl-row">
             
+          <label class="wl-label">Enquadramento do avatar</label>
+          <div class="wl-avatar-frame">
+            <div class="wl-avatar-frame-preview">
+              <img
+                src="/model.jpg"
+                alt="Preview avatar"
+                draggable="false"
+                :style="{ objectPosition: avatarFocusX + '% ' + avatarFocusY + '%' }"
+              />
+            </div>
+            <div class="wl-avatar-frame-controls">
+              <label class="wl-avatar-slider-label">Horizontal <span>{{ avatarFocusX }}%</span></label>
+              <input v-model.number="avatarFocusX" class="wl-range" type="range" min="0" max="100" step="1" @input="applyAvatarFocus" />
+              <label class="wl-avatar-slider-label">Vertical <span>{{ avatarFocusY }}%</span></label>
+              <input v-model.number="avatarFocusY" class="wl-range" type="range" min="0" max="100" step="1" @input="applyAvatarFocus" />
+              <button type="button" class="wl-btn wl-btn-sm wl-btn-ghost" style="margin-top:8px" @click="resetAvatarFocus">Resetar enquadramento</button>
+            </div>
+          </div>
+          <p class="wl-hint" style="opacity:.7;font-size:12px;margin:4px 0 14px">Arraste os controles para centralizar o rosto no círculo (vale no chat e na foto em tela cheia).</p>
+
           <label class="wl-label">Vídeos da videochamada (URLs, um por linha)</label>
           <textarea v-model="editVideoCallUrls" class="wl-input" rows="3" placeholder="https://.../video1.mp4" style="min-height:72px;resize:vertical"></textarea>
           <p class="wl-hint" style="opacity:.7;font-size:12px;margin:4px 0 12px">Depois do PIX da videochamada, o lead assiste esses vídeos aqui no chat (não vai pro WhatsApp).</p>
@@ -3915,6 +3935,42 @@ const showVideoCallPlayer = ref(false)
 const videoCallIndex = ref(0)
 const videoCallUnlocked = ref(false)
 const editVideoCallUrls = ref('')
+const AVATAR_FOCUS_KEY = 'wanessa_avatar_focus_v1'
+const avatarFocusX = ref(50)
+const avatarFocusY = ref(20)
+
+function applyAvatarFocus() {
+  const x = Math.min(100, Math.max(0, Number(avatarFocusX.value) || 50))
+  const y = Math.min(100, Math.max(0, Number(avatarFocusY.value) || 20))
+  avatarFocusX.value = x
+  avatarFocusY.value = y
+  try {
+    document.documentElement.style.setProperty('--avatar-focus-x', x + '%')
+    document.documentElement.style.setProperty('--avatar-focus-y', y + '%')
+  } catch {}
+  try {
+    localStorage.setItem(AVATAR_FOCUS_KEY, JSON.stringify({ x, y }))
+  } catch {}
+}
+
+function resetAvatarFocus() {
+  avatarFocusX.value = 50
+  avatarFocusY.value = 20
+  applyAvatarFocus()
+}
+
+function loadAvatarFocus() {
+  try {
+    const raw = localStorage.getItem(AVATAR_FOCUS_KEY)
+    if (raw) {
+      const d = JSON.parse(raw)
+      if (d && typeof d.x === 'number') avatarFocusX.value = d.x
+      if (d && typeof d.y === 'number') avatarFocusY.value = d.y
+    }
+  } catch {}
+  applyAvatarFocus()
+}
+
 const showIncomingCall = ref(false)
 const showDeclineWhy = ref(false)
 const declineWhyText = ref('')
