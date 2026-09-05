@@ -253,6 +253,13 @@
             </div>
           </Teleport>
 
+          <Teleport to="body">
+            <div v-if="chatMediaFullscreenUrl" class="wa-chat-media-fs" @click.self="closeChatMediaFullscreen">
+              <button type="button" class="wa-chat-media-fs-close" aria-label="Fechar" @click="closeChatMediaFullscreen">✕</button>
+              <img class="wa-chat-media-fs-img" :src="chatMediaFullscreenUrl" alt="foto" draggable="false" @click.stop />
+            </div>
+          </Teleport>
+
           <!-- Perfil / bio (estilo WhatsApp) -->
           <div v-if="showFunnelProfile" class="wa-profile-panel">
             <header class="wa-profile-panel-top">
@@ -313,7 +320,12 @@
                   </div>
                 </template>
                 <template v-else>
-                  <div v-if="m.html" class="wa-media" v-html="m.html"></div>
+                  <div
+                    v-if="m.html"
+                    class="wa-media"
+                    v-html="m.html"
+                    @click="onFunnelMediaHtmlClick"
+                  ></div>
                   <p v-else class="wa-text">{{ m.text }}</p>
                   <span v-if="m.edited" class="wa-edited">editada</span>
                 </template>
@@ -1110,6 +1122,44 @@ function messageMatchesSearch(m: { text?: string }): boolean {
   if (!q) return true
   return String(m.text || '').toLowerCase().includes(q)
 }
+
+function openChatMediaFullscreen(url?: string | null) {
+  const u = String(url || '').trim()
+  if (!u) return
+  chatMediaFullscreenUrl.value = u
+}
+function closeChatMediaFullscreen() {
+  chatMediaFullscreenUrl.value = null
+}
+
+function onFunnelMediaHtmlClick(e: Event) {
+  const t = e.target as HTMLElement | null
+  if (!t) return
+  const img = t.closest?.('img') as HTMLImageElement | null
+  if (img?.src) {
+    openChatMediaFullscreen(img.src)
+    return
+  }
+  const playBtn = t.closest?.('.wa-audio-play') as HTMLElement | null
+  if (playBtn) {
+    const wrap = playBtn.closest('.wa-audio-modern') as HTMLElement | null
+    const audio = wrap?.querySelector('audio') as HTMLAudioElement | null
+    if (!audio) return
+    if (audio.paused) {
+      document.querySelectorAll('.wa-audio-modern audio').forEach((a) => {
+        try { (a as HTMLAudioElement).pause() } catch {}
+      })
+      document.querySelectorAll('.wa-audio-modern .wa-audio-play').forEach((b) => { b.textContent = '▶' })
+      audio.play().catch(() => {})
+      playBtn.textContent = '⏸'
+    } else {
+      audio.pause()
+      playBtn.textContent = '▶'
+    }
+    audio.onended = () => { playBtn.textContent = '▶' }
+  }
+}
+
 
 const previewAudioPlaying = ref(false)
 const previewAudioLabel = ref('0:00')
