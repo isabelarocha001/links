@@ -1,6 +1,6 @@
 <template>
   <NuxtPage />
-  <div class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
+  <div v-if="!isAdminRoute" class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="bg-grain" aria-hidden="true"></div>
     <button class="lock-btn" type="button" aria-label="Editar página" @click="openLogin">
@@ -184,7 +184,8 @@
               <p class="wa-name">Wanessa</p>
               <p class="wa-status">
                 <span v-if="funnelTyping" class="wa-status-typing">digitando…</span>
-                <span v-else class="wa-status-online">online</span>
+                <span v-else-if="adminPresenceOnline" class="wa-status-online">online</span>
+                <span v-else class="wa-status-last">{{ adminPresenceLabel }}</span>
               </p>
             </button>
             <div class="wa-header-actions">
@@ -766,6 +767,10 @@ import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i1
 
 /** Lead veio de /CanalPublico (tráfego do canal) → esconde botão do canal público (checkout direto) */
 const route = useRoute()
+const isAdminRoute = computed(() => {
+  const p = String(route.path || '').toLowerCase()
+  return p === '/admin' || p.startsWith('/admin/')
+})
 const hidePublicChannel = computed(() => {
   const raw = (route.path || '') + ' ' + (route.fullPath || '')
   const p = raw.toLowerCase().replace(/\/+$/, '')
@@ -2190,6 +2195,32 @@ function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Rec
   } catch {}
 }
 
+const adminPresenceOnline = ref(false)
+const adminPresenceLabel = ref('offline')
+let presencePollTimer: ReturnType<typeof setInterval> | null = null
+
+async function pullAdminPresence() {
+  try {
+    const res = await $fetch<{ online?: boolean; label?: string }>('/api/presence')
+    adminPresenceOnline.value = !!res?.online
+    adminPresenceLabel.value = String(res?.label || (res?.online ? 'online' : 'offline'))
+  } catch {
+    adminPresenceOnline.value = false
+    adminPresenceLabel.value = 'offline'
+  }
+}
+function startPresencePoll() {
+  stopPresencePoll()
+  pullAdminPresence()
+  presencePollTimer = setInterval(pullAdminPresence, 20000)
+}
+function stopPresencePoll() {
+  if (presencePollTimer) {
+    clearInterval(presencePollTimer)
+    presencePollTimer = null
+  }
+}
+
 let liveChatPollTimer: ReturnType<typeof setInterval> | null = null
 const seenLiveMsgIds = ref<Record<string, true>>({})
 
@@ -2198,6 +2229,7 @@ function stopLiveChatPoll() {
     clearInterval(liveChatPollTimer)
     liveChatPollTimer = null
   }
+  stopPresencePoll()
 }
 
 async function pullLiveAdminReplies() {
@@ -2233,6 +2265,7 @@ async function pullLiveAdminReplies() {
 
 function startLiveChatPoll() {
   stopLiveChatPoll()
+  startPresencePoll()
   if (!funnelChatUnlocked.value) return
   pullLiveAdminReplies()
   liveChatPollTimer = setInterval(() => {
@@ -2294,6 +2327,7 @@ function openWaFunnel(source = 'whatsapp') {
   try { onCardClick('WhatsApp Funnel', whatsappUrl.value) } catch {}
   try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open', source }) } catch {}
   showWaFunnel.value = true
+  startPresencePoll()
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
   funnelTyping.value = false
