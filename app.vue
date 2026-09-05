@@ -2252,6 +2252,35 @@ async function funnelTypeParts(raw: string, baseDelay = 900) {
   }
 }
 
+
+function parseVideoCallChoice(lower: string): { key: string; label: string; price: string; min: number } | null {
+  const t = String(lower || '').toLowerCase()
+  // ordem: mais específico primeiro
+  if (/\b(1|uma)\s*hora\b/.test(t) || /\b60\s*min/.test(t) || /\b1\s*h\b/.test(t) || t.includes('1hr') || t.includes('1 hr') || t.includes('uma hr')) {
+    return { key: 'vid_60', label: 'Videochamada 1 hora', price: '399,90', min: 60 }
+  }
+  if (/\b30\s*min/.test(t) || /\bmeia\s*hora\b/.test(t) || /\b30m\b/.test(t) || t.trim() === '30') {
+    return { key: 'vid_30', label: 'Videochamada 30 min', price: '229,90', min: 30 }
+  }
+  if (/\b20\s*min/.test(t) || /\b20m\b/.test(t) || t.trim() === '20') {
+    return { key: 'vid_20', label: 'Videochamada 20 min', price: '149,90', min: 20 }
+  }
+  if (/\b10\s*min/.test(t) || /\b10m\b/.test(t) || t.trim() === '10') {
+    return { key: 'vid_10', label: 'Videochamada 10 min', price: '99,90', min: 10 }
+  }
+  // "quero o de 20", "o de 10", "vou de 30"
+  if (/\b(de\s*)?20\b/.test(t) && /min|quero|vou|esse|esse de|pega|fecha|bora/.test(t)) {
+    return { key: 'vid_20', label: 'Videochamada 20 min', price: '149,90', min: 20 }
+  }
+  if (/\b(de\s*)?30\b/.test(t) && /min|quero|vou|esse|esse de|pega|fecha|bora/.test(t)) {
+    return { key: 'vid_30', label: 'Videochamada 30 min', price: '229,90', min: 30 }
+  }
+  if (/\b(de\s*)?10\b/.test(t) && /min|quero|vou|esse|esse de|pega|fecha|bora/.test(t)) {
+    return { key: 'vid_10', label: 'Videochamada 10 min', price: '99,90', min: 10 }
+  }
+  return null
+}
+
 async function sendFunnelFreeText() {
   // Digitar mensagens é sempre livre. Cobra só por packs / vídeo / mídia / etc.
   if (funnelBlocked.value) return
@@ -2361,22 +2390,20 @@ async function sendFunnelFreeText() {
     return
   }
 
-  // Pediu 1 hora / 60 min explicitamente
-  if (
-    (funnelStep.value === 'video' || funnelStep.value === 'video_consult' || funnelStep.value === 'menu') &&
-    (/\b(1|uma)\s*hora\b/.test(lower) || /\b60\s*min/.test(lower) || lower.includes('uma hr') || lower.includes('1hr') || lower.includes('1 hr'))
-  ) {
-    selectedPack.value = { key: 'vid_60', label: 'Videochamada 1 hora', price: '399,90' }
-    videoCallPurchasedMin.value = 60
-    funnelStep.value = 'video'
-    track('whatsapp_funnel_select', { offer_slug: 'vid_60' })
-    await funnelType(
-      'Uma hora inteira comigo 🔥\n\nVideochamada 1h — R$ 399,90.\n\nÉ tempo de sobra pra fazer do jeito que você quiser, sem pressa.\n\nQuer que eu prepare o PIX dessa de 1 hora?',
-      1800,
-    )
-    // botões: confirmar checkout
-    funnelStep.value = 'pix_ask_hour'
-    return
+  // Lead digitou o tempo da videochamada (10/20/30/60) em vez de clicar no botão
+  if (funnelStep.value === 'video' || funnelStep.value === 'video_consult' || funnelStep.value === 'video_upsell') {
+    const choice = parseVideoCallChoice(lower)
+    if (choice) {
+      selectedPack.value = { key: choice.key, label: choice.label, price: choice.price }
+      videoCallPurchasedMin.value = choice.min
+      track('whatsapp_funnel_select', { offer_slug: choice.key, source: 'typed_time' })
+      await funnelTypeParts(
+        `Fechado: ${choice.label} por R$ ${choice.price}.|||Vou preparar o PIX pra você.`,
+        1000,
+      )
+      await startFunnelCheckout()
+      return
+    }
   }
 
 
