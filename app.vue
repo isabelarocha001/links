@@ -300,25 +300,26 @@
           </div>
 
           <div class="wa-composer wa-funnel-composer" :class="{ 'wa-composer--blocked': funnelBlocked }">
-            <button type="button" class="wa-composer-icon" aria-label="Emoji" :disabled="funnelBlocked" @click="onFunnelEmoji">
+            <button type="button" class="wa-composer-icon" aria-label="Emoji" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelEmoji()">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             </button>
             <input
               v-model="funnelInput"
               class="wa-input"
               type="text"
-              :placeholder="funnelBlocked ? 'Conversa encerrada' : 'Mensagem'"
-              :disabled="funnelBlocked || funnelTyping"
+              :placeholder="funnelBlocked ? 'Toque para desbloquear' : 'Mensagem'"
+              :disabled="funnelTyping && !funnelBlocked"
               :readonly="funnelBlocked"
               @focus="onFunnelComposerInteract"
               @click="onFunnelComposerInteract"
+              @pointerdown="funnelBlocked ? onFunnelComposerInteract() : undefined"
               @keydown="onFunnelComposerKey"
               @keydown.enter.prevent="sendFunnelFreeText"
             />
-            <button type="button" class="wa-composer-icon" aria-label="Anexar" :disabled="funnelBlocked" @click="onFunnelAttach">
+            <button type="button" class="wa-composer-icon" aria-label="Anexar" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelAttach()">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
             </button>
-            <button type="button" class="wa-composer-icon" aria-label="Camera" :disabled="funnelBlocked" @click="onFunnelCamera">
+            <button type="button" class="wa-composer-icon" aria-label="Camera" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelCamera()">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </button>
             <button
@@ -326,8 +327,7 @@
               class="wa-composer-icon wa-composer-mic"
               :class="{ 'is-rec': funnelRecording }"
               aria-label="Audio"
-              :disabled="funnelBlocked"
-              @click="onFunnelAudio"
+              @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelAudio()"
             >
               <svg v-if="!funnelRecording" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
               <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
@@ -466,6 +466,40 @@
           <button type="button" @click="endLiveVideoCall('hangup')" style="width:64px;height:64px;border-radius:50%;border:0;background:#ef4444;color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(239,68,68,.45)">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M16 8l-8 8M8 8l8 8"/></svg>
           </button>
+        </div>
+      </div>
+
+
+      <!-- Unlock após bloqueio (programa/presencial) -->
+      <div v-if="showBlockedUnlock" class="chat-plans-overlay" style="z-index:40050" @click.self="showBlockedUnlock = false">
+        <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
+          <div class="chat-plans-handle" aria-hidden="true"></div>
+          <div class="chat-plans-head">
+            <div>
+              <p class="chat-plans-kicker">Chat bloqueado</p>
+              <h3>Desbloquear conversa</h3>
+              <p class="chat-plans-sub">Você pode liberar o chat de novo por R$ 49,90 e continuar falando comigo 🔥</p>
+            </div>
+            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="showBlockedUnlock = false">✕</button>
+          </div>
+          <button
+            type="button"
+            class="chat-plan-card chat-plan-card--hot"
+            :disabled="blockedUnlockLoading"
+            @click="buyBlockedUnlock"
+          >
+            <div class="chat-plan-left">
+              <span class="chat-plan-badge">Desbloqueio</span>
+              <span class="chat-plan-title">Liberar chat</span>
+              <span class="chat-plan-desc">volta a digitar e conversar</span>
+            </div>
+            <div class="chat-plan-right">
+              <span class="chat-plan-price">R$ 49,90</span>
+              <span class="chat-plan-cta">{{ blockedUnlockLoading ? 'Gerando PIX…' : 'Pagar' }}</span>
+            </div>
+          </button>
+          <p v-if="blockedUnlockError" class="chat-plans-error">{{ blockedUnlockError }}</p>
+          <p class="chat-plans-note">Pagamento via PIX · libera na hora</p>
         </div>
       </div>
 
@@ -679,6 +713,10 @@ const funnelInput = ref('')
 const funnelShellStyle = ref<Record<string, string>>({})
 const funnelChatUnlocked = ref(false)
 const funnelBlocked = ref(false) // lead insistiu em programa/encontro presencial
+const showBlockedUnlock = ref(false)
+const blockedUnlockLoading = ref(false)
+const blockedUnlockError = ref('')
+const BLOCKED_UNLOCK_PLAN = { key: 'chat_unlock_blocked', title: 'Desbloquear chat', desc: 'libera a conversa de novo', price: 49.9, priceLabel: '49,90' }
 const funnelRecording = ref(false)
 const showFunnelAttachMenu = ref(false)
 const showFunnelMoreMenu = ref(false)
@@ -695,8 +733,11 @@ function requireFunnelChatOrPay(): boolean {
   return true
 }
 function onFunnelComposerInteract() {
-  // Digitar é livre — sem paywall ao focar o input
-  return
+  if (funnelBlocked.value) {
+    blockedUnlockError.value = ''
+    showBlockedUnlock.value = true
+    try { track('chat_blocked_unlock_open', { offer_slug: 'chat_unlock_blocked' }) } catch {}
+  }
 }
 function onFunnelComposerKey(e: KeyboardEvent) {
   // Digitar é livre
@@ -976,12 +1017,92 @@ async function adminUnlockChat() {
   }
   isAdmin.value = true
   funnelChatUnlocked.value = true
+  funnelBlocked.value = false
     startLiveChatPoll()
   showChatPlans.value = false
   chatPayLoading.value = ''
   try {
     await funnelType('Chat liberado com saldo admin (∞) ✅ Pode testar à vontade.', 900)
   } catch {}
+}
+
+
+async function buyBlockedUnlock() {
+  blockedUnlockError.value = ''
+  blockedUnlockLoading.value = true
+  selectedChatPlan.value = {
+    key: BLOCKED_UNLOCK_PLAN.key,
+    title: BLOCKED_UNLOCK_PLAN.title,
+    desc: BLOCKED_UNLOCK_PLAN.desc,
+    price: BLOCKED_UNLOCK_PLAN.price,
+    priceLabel: BLOCKED_UNLOCK_PLAN.priceLabel,
+  }
+  selectedPack.value = {
+    key: BLOCKED_UNLOCK_PLAN.key,
+    label: BLOCKED_UNLOCK_PLAN.title,
+    price: BLOCKED_UNLOCK_PLAN.priceLabel,
+  }
+  try {
+    let visitor_id: string | null = null
+    try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
+    const res = await $fetch<{
+      ok: boolean
+      pix_code?: string
+      qr_image?: string
+      payment_id?: string
+      external_id?: string
+      hint?: string
+      error?: string
+    }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: BLOCKED_UNLOCK_PLAN.key,
+        amount: BLOCKED_UNLOCK_PLAN.price,
+        title: BLOCKED_UNLOCK_PLAN.title,
+        visitor_id,
+        source: 'links_blocked_unlock',
+      },
+    })
+    if (!res?.ok || !res.pix_code) {
+      throw new Error(res?.error || 'Falha ao gerar PIX')
+    }
+    pixPaid.value = false
+    pixCopyCode.value = res.pix_code
+    funnelPixCode.value = res.pix_code
+    const isEmv = /^000201/.test(res.pix_code)
+    pixQrImage.value = isEmv
+      ? (res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`)
+      : ''
+    pixPaymentId.value = res.payment_id || ''
+    pixExternalId.value = res.external_id || res.payment_id || ''
+    funnelPaymentId.value = pixPaymentId.value
+    funnelExternalId.value = pixExternalId.value
+    pixStatusText.value = isEmv
+      ? 'Aguardando pagamento… use o QR ou o copia e cola'
+      : (res.hint || 'Pague o PIX e confirme o status')
+    showBlockedUnlock.value = false
+    showPixModal.value = true
+    funnelStep.value = 'awaiting_payment'
+    try { track('chat_blocked_unlock_checkout', { offer_slug: 'chat_unlock_blocked', amount: 49.9 }) } catch {}
+    // poll
+    if (pixExternalId.value || pixPaymentId.value) {
+      if (pixPollTimer) clearInterval(pixPollTimer)
+      let tries = 0
+      pixPollTimer = setInterval(() => {
+        checkPixStatus(true)
+        tries++
+        if (tries > 45 && pixPollTimer) {
+          clearInterval(pixPollTimer)
+          pixPollTimer = null
+        }
+      }, 5000)
+    }
+  } catch (e: any) {
+    blockedUnlockError.value =
+      e?.data?.statusMessage || e?.data?.message || e?.message || 'Não deu pra gerar o PIX agora'
+  } finally {
+    blockedUnlockLoading.value = false
+  }
 }
 
 async function buyChatPlan(p: typeof chatPlans[number]) {
@@ -1461,6 +1582,7 @@ async function adminPayWithBalance() {
     showPixModal.value = false
   } catch {}
   funnelChatUnlocked.value = true
+  funnelBlocked.value = false
     startLiveChatPoll()
   if ((pack.key || '').startsWith('vid_') || pack.key === 'video_avulso') {
     videoCallUnlocked.value = true
@@ -1580,6 +1702,7 @@ async function onFunnelPaid() {
 
   if (isChat) {
     funnelChatUnlocked.value = true
+    funnelBlocked.value = false
     startLiveChatPoll()
     await funnelType(
       'Recebi 🔥 Agora a gente pode ir mais fundo…\n\nMe conta o que você quer em especial: sexting, fotos, vídeo, videochamada… o que te deixa mais louco? Assim eu já entro no clima certo pra você 😏',
