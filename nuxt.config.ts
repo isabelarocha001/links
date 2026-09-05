@@ -52,6 +52,8 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/chat/**': { ssr: true },
+    '/CanalPublico': { ssr: true },
+    '/canalpublico': { ssr: true },
   },
 })
 
