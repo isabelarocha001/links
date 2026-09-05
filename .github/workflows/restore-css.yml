@@ -1,0 +1,43 @@
+name: Restore links-page.css
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/restore-css.yml'
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore CSS from last good commit
+        run: |
+          git show 8b59f0f:assets/css/links-page.css > assets/css/links-page.css
+          # white typing status
+          python3 - <<'PY'
+          p = 'assets/css/links-page.css'
+          css = open(p).read()
+          old = '.wa-status-typing { color: #25d366; font-style: italic; }'
+          new = '''.wa-status-typing { color: #ffffff; font-style: italic; }
+.wa-funnel-header .wa-status-typing,
+.wa-header .wa-status-typing { color: #fff !important; }'''
+          if old in css:
+              css = css.replace(old, new, 1)
+              open(p,'w').write(css)
+              print('applied typing fix')
+          print('size', len(css))
+          PY
+      - name: Commit if changed
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add assets/css/links-page.css
+          if git diff --staged --quiet; then
+            echo 'No changes'
+          else
+            git commit -m 'fix: restaurar CSS completo da pagina de links (truncado)'
+            git push
+          fi
