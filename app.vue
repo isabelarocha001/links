@@ -289,17 +289,67 @@
           </Teleport>
 
           <Teleport to="body">
-            <div v-if="chatMediaFullscreenUrl" class="wa-chat-media-fs" @click.self="closeChatMediaFullscreen">
-              <button type="button" class="wa-chat-media-fs-close" aria-label="Fechar" @click="closeChatMediaFullscreen">✕</button>
-              <video
-                v-if="chatMediaFullscreenIsVideo"
-                class="wa-chat-media-fs-video"
-                :src="chatMediaFullscreenUrl"
-                controls
-                playsinline
-                preload="metadata"
-                @click.stop
-              ></video>
+            <div
+              v-if="chatMediaFullscreenUrl"
+              class="wa-chat-media-fs"
+              :class="{ 'wa-chat-media-fs--video': chatMediaFullscreenIsVideo }"
+              @click.self="closeChatMediaFullscreen"
+            >
+              <header class="wa-fs-top">
+                <div class="wa-fs-top-left">
+                  <img src="/model.jpg" alt="" class="wa-fs-avatar" draggable="false" />
+                  <div class="wa-fs-top-meta">
+                    <span class="wa-fs-title">{{ chatMediaFullscreenIsVideo ? 'Vídeo' : 'Foto' }}</span>
+                    <span class="wa-fs-sub">Wanessa</span>
+                  </div>
+                </div>
+                <button type="button" class="wa-fs-close" aria-label="Fechar" @click="closeChatMediaFullscreen">✕</button>
+              </header>
+
+              <div v-if="chatMediaFullscreenIsVideo" class="wa-fs-stage" @click.stop>
+                <video
+                  ref="fsVideoEl"
+                  class="wa-chat-media-fs-video"
+                  :src="chatMediaFullscreenUrl"
+                  playsinline
+                  preload="metadata"
+                  @timeupdate="onFsVideoTime"
+                  @loadedmetadata="onFsVideoMeta"
+                  @ended="onFsVideoEnded"
+                  @click="toggleFsVideoPlay"
+                ></video>
+
+                <button
+                  v-if="!fsVideoPlaying"
+                  type="button"
+                  class="wa-fs-center-play"
+                  aria-label="Play"
+                  @click.stop="toggleFsVideoPlay"
+                >
+                  <span>▶</span>
+                </button>
+
+                <div class="wa-fs-controls" @click.stop>
+                  <button type="button" class="wa-fs-ctrl-btn" aria-label="Play/Pause" @click="toggleFsVideoPlay">
+                    {{ fsVideoPlaying ? '⏸' : '▶' }}
+                  </button>
+                  <span class="wa-fs-time">{{ fsVideoTimeLabel }}</span>
+                  <input
+                    class="wa-fs-seek"
+                    type="range"
+                    min="0"
+                    max="1000"
+                    step="1"
+                    :value="fsVideoSeek"
+                    @input="onFsVideoSeek($event)"
+                  />
+                  <span class="wa-fs-time">{{ fsVideoDurLabel }}</span>
+                  <button type="button" class="wa-fs-ctrl-btn" aria-label="Mudo" @click="toggleFsMute">
+                    {{ fsVideoMuted ? '🔇' : '🔊' }}
+                  </button>
+                </div>
+              </div>
+
               <img
                 v-else
                 class="wa-chat-media-fs-img"
@@ -1456,15 +1506,92 @@ function messageMatchesSearch(m: { text?: string }): boolean {
   return String(m.text || '').toLowerCase().includes(q)
 }
 
+const fsVideoEl = ref<HTMLVideoElement | null>(null)
+const fsVideoPlaying = ref(false)
+const fsVideoMuted = ref(false)
+const fsVideoSeek = ref(0)
+const fsVideoTimeLabel = ref('0:00')
+const fsVideoDurLabel = ref('0:00')
+
+function formatFsTime(sec: number) {
+  const s = Math.max(0, Math.floor(sec || 0))
+  const m = Math.floor(s / 60)
+  const r = s % 60
+  return `${m}:${String(r).padStart(2, '0')}`
+}
+
 function openChatMediaFullscreen(url?: string | null, isVideo = false) {
   const u = String(url || '').trim()
   if (!u) return
   chatMediaFullscreenIsVideo.value = !!isVideo
   chatMediaFullscreenUrl.value = u
+  fsVideoPlaying.value = false
+  fsVideoMuted.value = false
+  fsVideoSeek.value = 0
+  fsVideoTimeLabel.value = '0:00'
+  fsVideoDurLabel.value = '0:00'
+  // sem autoplay — usuário toca play
 }
+
 function closeChatMediaFullscreen() {
+  try {
+    const v = fsVideoEl.value
+    if (v) {
+      v.pause()
+      v.removeAttribute('src')
+      v.load()
+    }
+  } catch {}
   chatMediaFullscreenUrl.value = null
   chatMediaFullscreenIsVideo.value = false
+  fsVideoPlaying.value = false
+}
+
+function toggleFsVideoPlay() {
+  const v = fsVideoEl.value
+  if (!v) return
+  if (v.paused) {
+    v.play().then(() => { fsVideoPlaying.value = true }).catch(() => { fsVideoPlaying.value = false })
+  } else {
+    v.pause()
+    fsVideoPlaying.value = false
+  }
+}
+
+function toggleFsMute() {
+  const v = fsVideoEl.value
+  if (!v) return
+  v.muted = !v.muted
+  fsVideoMuted.value = v.muted
+}
+
+function onFsVideoTime() {
+  const v = fsVideoEl.value
+  if (!v) return
+  const dur = v.duration || 0
+  const cur = v.currentTime || 0
+  fsVideoTimeLabel.value = formatFsTime(cur)
+  if (dur > 0) fsVideoSeek.value = Math.round((cur / dur) * 1000)
+  fsVideoPlaying.value = !v.paused
+}
+
+function onFsVideoMeta() {
+  const v = fsVideoEl.value
+  if (!v) return
+  fsVideoDurLabel.value = formatFsTime(v.duration || 0)
+}
+
+function onFsVideoEnded() {
+  fsVideoPlaying.value = false
+  fsVideoSeek.value = 0
+}
+
+function onFsVideoSeek(ev: Event) {
+  const v = fsVideoEl.value
+  if (!v || !v.duration) return
+  const raw = Number((ev.target as HTMLInputElement).value || 0)
+  v.currentTime = (raw / 1000) * v.duration
+  fsVideoSeek.value = raw
 }
 
 function onFunnelMediaHtmlClick(e: Event) {
