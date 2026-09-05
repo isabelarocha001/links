@@ -2433,13 +2433,52 @@ async function sendFunnelFreeText() {
     return
   }
 
-  const replies = [
-    'Hmm entendi… me conta melhor o que você tá a fim, amor 😏 Pode escrever à vontade.',
-    'Tô aqui 🔥 Quer conteúdo, call ao vivo ou webnamoro? Pode digitar ou usar os botões.',
-    'Gostei de você falando comigo 😘 O que te deixa mais louco: pack, videochamada ou ser meu webnamorado?',
-  ]
-  const reply = replies[Math.floor(Math.random() * replies.length)]
-  await funnelType(reply, 1100)
+  // Resposta real via Gemini (não genérica)
+  try {
+    const history = funnelMessages.value.slice(-12).map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`)
+    const res = await $fetch<{
+      ok?: boolean
+      intent?: string
+      reply?: string
+      show_menu?: boolean
+      suggest_step?: string | null
+    }>('/api/funnel-intent', {
+      method: 'POST',
+      body: {
+        message: text,
+        history,
+        visitor_id: getOrCreateVisitorId(),
+      },
+    })
+    const reply = (res?.reply || '').trim()
+    const intent = String(res?.intent || 'unknown')
+    const step = res?.suggest_step ? String(res.suggest_step) : null
+
+    if (intent === 'encontros' || step === 'closed_offline') {
+      funnelBlocked.value = true
+      funnelStep.value = 'closed_offline'
+      funnelInput.value = ''
+      await funnelType(reply || 'Ok, não tenho interesse no que você está me oferecendo.', 900)
+      try { logFunnelMessage('bot', reply || 'blocked', { event: 'blocked_offline_intent', intent }) } catch {}
+      try { saveFunnelState() } catch {}
+      return
+    }
+
+    await funnelType(reply || 'Me conta mais um pouco, amor 😘', 1200)
+
+    if (step === 'video_consult') funnelStep.value = 'video_consult'
+    else if (step === 'video_avulso') funnelStep.value = 'video_avulso'
+    else if (step === 'packs') funnelStep.value = 'packs'
+    else if (step === 'webnamoro') funnelStep.value = 'webnamoro'
+    else if (step === 'chat') funnelStep.value = 'chat'
+    else if (res?.show_menu || step === 'menu') funnelStep.value = 'menu'
+
+    try { logFunnelMessage('bot', reply || '', { event: 'gemini_reply', intent, step: funnelStep.value }) } catch {}
+    try { saveFunnelState() } catch {}
+  } catch (e) {
+    console.warn('[funnel gemini fallback]', e)
+    await funnelType('Me conta um pouco mais, amor… quero te entender direito 😘', 1000)
+  }
 }
 
 async function answerFunnel(opt: { key: string; label: string }) {
