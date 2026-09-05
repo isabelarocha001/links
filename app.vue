@@ -218,11 +218,25 @@
               <button type="button" class="wa-close-btn" aria-label="Fechar chat" @click="closeWaFunnel">✕</button>
             </div>
             <input ref="funnelCameraInput" type="file" accept="image/*" capture="environment" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'photo')" />
-            <input ref="funnelPhotoInput" type="file" accept="image/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'photo')" />
+            <input ref="funnelPhotoInput" type="file" accept="image/*,video/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'gallery')" />
             <input ref="funnelVideoInput" type="file" accept="video/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'video')" />
             <input ref="funnelAudioInput" type="file" accept="audio/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'audio')" />
             <input ref="funnelDocInput" type="file" accept=".pdf,.doc,.docx,.txt,image/*,application/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'doc')" />
           </header>
+
+          <div v-if="showFunnelSearch" class="wa-search-bar">
+            <input
+              ref="funnelSearchInput"
+              v-model="funnelSearchQuery"
+              class="wa-search-input"
+              type="search"
+              placeholder="Pesquisar na conversa…"
+              autocomplete="off"
+              @keydown.esc="closeFunnelSearch"
+            />
+            <span v-if="funnelSearchQuery.trim()" class="wa-search-count">{{ funnelSearchMatchCount }}</span>
+            <button type="button" class="wa-search-close" aria-label="Fechar busca" @click="closeFunnelSearch">✕</button>
+          </div>
 
           <!-- Foto de perfil tela cheia (fixed acima de tudo do chat) -->
           <Teleport to="body">
@@ -278,6 +292,8 @@
                   m.from === 'me' ? 'wa-bubble--me' : 'wa-bubble--her',
                   m.mediaKind ? 'wa-bubble--media' : '',
                   m.deleted ? 'wa-bubble--deleted' : '',
+                  showFunnelSearch && funnelSearchQuery.trim() && messageMatchesSearch(m) ? 'wa-bubble--search-hit' : '',
+                  showFunnelSearch && funnelSearchQuery.trim() && !messageMatchesSearch(m) ? 'wa-bubble--search-dim' : '',
                 ]"
                 @contextmenu.prevent="m.from === 'me' && !m.deleted && openFunnelMsgMenu(i)"
                 @touchstart.passive="m.from === 'me' && !m.deleted && onFunnelMsgTouchStart(i, $event)"
@@ -397,8 +413,23 @@
           </div>
 
           <!-- Preview áudio: após parar gravação → descartar ou enviar -->
-          <div v-if="funnelAudioPreviewUrl" class="wa-audio-preview">
-            <audio :src="funnelAudioPreviewUrl" controls preload="metadata"></audio>
+          <div v-if="funnelAudioPreviewUrl" class="wa-audio-preview wa-audio-preview--modern">
+            <div class="wa-audio-modern">
+              <button type="button" class="wa-audio-play" aria-label="Play/Pause" @click="togglePreviewAudioPlay">
+                {{ previewAudioPlaying ? '⏸' : '▶' }}
+              </button>
+              <div class="wa-audio-wave">
+                <span v-for="n in 12" :key="n" class="wa-audio-bar" :class="{ on: previewAudioPlaying }"></span>
+              </div>
+              <span class="wa-audio-time">{{ previewAudioLabel }}</span>
+              <audio
+                ref="funnelPreviewAudioEl"
+                :src="funnelAudioPreviewUrl"
+                preload="metadata"
+                @timeupdate="onPreviewAudioTime"
+                @ended="previewAudioPlaying = false"
+              ></audio>
+            </div>
             <button type="button" class="wa-audio-preview-btn wa-audio-preview-btn--discard" @click="discardFunnelAudio">Descartar</button>
             <button type="button" class="wa-audio-preview-btn wa-audio-preview-btn--send" @click="sendFunnelAudioPreview">Enviar</button>
           </div>
@@ -488,9 +519,6 @@
                 <span class="wa-more-sheet-title">Opções</span>
                 <button type="button" class="wa-more-x" aria-label="Fechar opções" @click="showFunnelMoreMenu = false">✕</button>
               </div>
-              <button type="button" class="wa-more-item" @click="onFunnelMoreAction('ai')">Respostas da IA</button>
-              <button type="button" class="wa-more-item" @click="onFunnelMoreAction('charge')">Cobrar cliente</button>
-              <button type="button" class="wa-more-item" @click="onFunnelMoreAction('media')">Mídia, links e docs</button>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('search')">Pesquisar</button>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('mute')">Silenciar notificações</button>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('clear')">Limpar conversa</button>
@@ -915,7 +943,7 @@ const BLOCKED_UNLOCK_PLAN = { key: 'chat_unlock_blocked', title: 'Desbloquear ch
 const funnelRecording = ref(false)
 const funnelAudioPreviewUrl = ref('')
 const showFunnelEmojiPicker = ref(false)
-const FUNNEL_EMOJIS = ['😀','😂','😍','😘','😏','🔥','❤️','💕','😈','🫣','😋','🤤','💦','🍑','🍆','💋','😊','😉','🥰','😮','😢','🙏','👍','👏','🎉','✨','💯','🔞','🫣','😳','🥵','🛏️']
+const FUNNEL_EMOJIS = ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','😮‍💨','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👻','👽','🤖','👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','💪','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','💋','💯','🔥','⭐','🌟','✨','⚡','💥','💦','🍑','🍆','🍒','🍓','🌹','🥀','🔞','🥵','🥶','🛏️','🎁','🎉','🎊','👀','🫦','😻','🙈','🙉','🙊']
 const showFunnelAttachMenu = ref(false)
 const showFunnelMoreMenu = ref(false)
 const funnelCameraInput = ref<HTMLInputElement | null>(null)
@@ -1027,15 +1055,8 @@ function onFunnelAttachAction(kind: string) {
 }
 function onFunnelMoreAction(kind: string) {
   showFunnelMoreMenu.value = false
-  if (kind === 'ai') {
-    if (!requireFunnelChatOrPay()) return
-    setTimeout(() => {
-      funnelType('Posso te sugerir o que fazer… pack, chat safado ou videochamada. O que te deixa mais louco agora? 🔥', 900)
-    }, 200)
-    return
-  }
-  if (kind === 'charge') {
-    openChatPlans()
+  if (kind === 'search') {
+    openFunnelSearch()
     return
   }
   if (kind === 'clear') {
@@ -1044,6 +1065,7 @@ function onFunnelMoreAction(kind: string) {
     funnelBlocked.value = false
     selectedPack.value = null
     funnelInput.value = ''
+    funnelSearchQuery.value = ''
     try { clearFunnelState() } catch {}
     try { saveFunnelState() } catch {}
     setTimeout(() => {
@@ -1052,13 +1074,65 @@ function onFunnelMoreAction(kind: string) {
     return
   }
   if (kind === 'block') {
-    applyPermanentBlock()
+    try {
+      openBlockReasonModal()
+    } catch {
+      applyPermanentBlock()
+    }
     return
   }
-  if (kind === 'mute' || kind === 'search' || kind === 'media') {
-    return
+  if (kind === 'mute') {
+    try { funnelType('Notificações silenciadas neste aparelho.', 600) } catch {}
   }
 }
+
+const showFunnelSearch = ref(false)
+const funnelSearchQuery = ref('')
+const funnelSearchInput = ref<HTMLInputElement | null>(null)
+const funnelSearchMatchCount = computed(() => {
+  const q = funnelSearchQuery.value.trim().toLowerCase()
+  if (!q) return 0
+  return funnelMessages.value.filter((m) => String(m.text || '').toLowerCase().includes(q)).length
+})
+
+function openFunnelSearch() {
+  showFunnelSearch.value = true
+  nextTick(() => {
+    try { funnelSearchInput.value?.focus() } catch {}
+  })
+}
+function closeFunnelSearch() {
+  showFunnelSearch.value = false
+  funnelSearchQuery.value = ''
+}
+function messageMatchesSearch(m: { text?: string }): boolean {
+  const q = funnelSearchQuery.value.trim().toLowerCase()
+  if (!q) return true
+  return String(m.text || '').toLowerCase().includes(q)
+}
+
+const previewAudioPlaying = ref(false)
+const previewAudioLabel = ref('0:00')
+const funnelPreviewAudioEl = ref<HTMLAudioElement | null>(null)
+
+function togglePreviewAudioPlay() {
+  const el = funnelPreviewAudioEl.value
+  if (!el) return
+  if (el.paused) {
+    el.play().catch(() => {})
+    previewAudioPlaying.value = true
+  } else {
+    el.pause()
+    previewAudioPlaying.value = false
+  }
+}
+function onPreviewAudioTime() {
+  const el = funnelPreviewAudioEl.value
+  if (!el) return
+  const t = Math.floor(el.currentTime || 0)
+  previewAudioLabel.value = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`
+}
+
 
 function applyPermanentBlock() {
   funnelPermBlocked.value = true
@@ -1289,7 +1363,7 @@ async function buySegundaChanceMimo() {
   }
 }
 
-function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc') {
+function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc' | 'gallery') {
   const input = ev.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
@@ -1298,17 +1372,33 @@ function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc
     onFunnelComposerInteract()
     return
   }
+  const mime = String(file.type || '').toLowerCase()
+  const name = String(file.name || '').toLowerCase()
+  let resolved: 'photo' | 'video' | 'audio' | 'doc' = 'photo'
+  if (kind === 'doc') resolved = 'doc'
+  else if (mime.startsWith('video/') || /\.(mp4|mov|webm|mkv|m4v|avi)$/i.test(name)) resolved = 'video'
+  else if (mime.startsWith('audio/') || (/\.(mp3|wav|ogg|m4a|aac)$/i.test(name))) resolved = 'audio'
+  else if (mime.startsWith('image/') || /\.(jpe?g|png|gif|webp|heic|bmp)$/i.test(name)) resolved = 'photo'
+  else if (kind === 'video') resolved = 'video'
+  else if (kind === 'audio') resolved = 'audio'
+  else if (kind === 'photo' || kind === 'gallery') resolved = 'photo'
+
   const url = URL.createObjectURL(file)
-  if (kind === 'photo') {
-    pushFunnel('me', 'Foto', `<img class="wa-media-img" src="${url}" alt="foto" />`, { mediaKind: 'photo' })
-  } else if (kind === 'video') {
-    pushFunnel('me', 'Video', `<video class="wa-media-video" src="${url}" controls playsinline preload="metadata"></video>`, { mediaKind: 'video' })
-  } else if (kind === 'doc') {
+  if (resolved === 'photo') {
+    pushFunnel('me', 'Foto', `<img class="wa-media-img" src="${url}" alt="foto" />`, { mediaKind: 'photo', mediaUrl: url })
+  } else if (resolved === 'video') {
+    pushFunnel('me', 'Video', `<video class="wa-media-video" src="${url}" controls playsinline preload="metadata"></video>`, { mediaKind: 'video', mediaUrl: url })
+  } else if (resolved === 'doc') {
     pushFunnel('me', 'Documento', `<div class="wa-media-doc">📄 ${file.name || 'documento'}</div>`, { mediaKind: 'doc' })
   } else {
-    pushFunnel('me', 'Audio', `<div class="wa-media-audio"><audio src="${url}" controls preload="metadata"></audio></div>`, { mediaKind: 'audio' })
+    pushFunnel(
+      'me',
+      'Audio',
+      `<div class="wa-audio-modern wa-audio-modern--bubble" data-src="${url}"><button type="button" class="wa-audio-play">▶</button><div class="wa-audio-wave"><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span></div><span class="wa-audio-time">áudio</span><audio src="${url}" preload="metadata"></audio></div>`,
+      { mediaKind: 'audio', mediaUrl: url },
+    )
   }
-  try { track('funnel_media_sent', { kind }) } catch {}
+  try { track('funnel_media_sent', { kind: resolved }) } catch {}
   setTimeout(() => { funnelType('Recebi aqui, amor… me conta o que você quer que eu faça com isso 😏', 800) }, 400)
 }
 async function onFunnelAudio() {
@@ -1357,7 +1447,12 @@ function discardFunnelAudio() {
 function sendFunnelAudioPreview() {
   const url = funnelAudioPreviewUrl.value
   if (!url) return
-  pushFunnel('me', 'Audio', `<div class="wa-media-audio"><audio src="${url}" controls preload="metadata"></audio></div>`, { mediaKind: 'audio' })
+  pushFunnel(
+    'me',
+    'Audio',
+    `<div class="wa-audio-modern wa-audio-modern--bubble" data-src="${url}"><button type="button" class="wa-audio-play">▶</button><div class="wa-audio-wave"><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span></div><span class="wa-audio-time">áudio</span><audio src="${url}" preload="metadata"></audio></div>`,
+    { mediaKind: 'audio', mediaUrl: url },
+  )
   funnelAudioPreviewUrl.value = ''
   funnelAudioChunks = []
   funnelMediaRecorder = null
