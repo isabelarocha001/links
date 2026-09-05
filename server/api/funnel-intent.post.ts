@@ -79,11 +79,11 @@ function localIntent(message: string): IntentResult {
       suggest_step: 'webnamoro',
     }
   }
-  if (/s[oó] conversar|s[oó] papo|bater papo|conversar sem|s[oó] falar|oi$|ol[aá]$|e a[ií]$|bom dia|boa noite|tudo bem/.test(t)) {
+  if (/s[oó] conversar|s[oó] papo|bater papo|conversar sem|s[oó] falar|\boi\b|\bol[aá]\b|oie|oii+|bom dia|boa tarde|boa noite|tudo bem|td bem|e a[ií]|blz|beleza|oi amor|ola amor/.test(t)) {
     return {
       intent: 'papo',
-      confidence: 0.7,
-      reply: 'Oi amor 😘 Pode falar comigo… me conta o que te trouxe até aqui.',
+      confidence: 0.75,
+      reply: 'Oi amor 😘|||Tudo bem sim. E você?',
       show_menu: false,
       suggest_step: null,
     }
@@ -141,7 +141,7 @@ Intenções:
 
 Regras OBRIGATÓRIAS:
 1. A "reply" DEVE responder o conteúdo da mensagem do lead (pergunta, elogio, dúvida). Proibido resposta genérica tipo "me conta o que você quer" se ele já perguntou algo específico.
-2. Se for só oi/papo leve: responda na mesma vibe e puxe assunto com naturalidade (1–3 frases).
+2. Se for oi / bom dia / boa tarde / tudo bem / oi amor: responda A SAUDAÇÃO de verdade (ex: "Oi amor" + "Tudo bem sim, e você?"). Nunca ignore a saudação. Nunca pule pro menu de vendas nessa hora. Conexão primeiro.
 3. Se perguntar preço/como funciona de algo online: explique de forma direta e ofereça o caminho.
 4. Se pedir encontro presencial / programa / sair / hotel / "quanto cobra pra sair": intent=encontros, show_menu=false, suggest_step=closed_offline, reply EXATAMENTE: "Ok, não tenho interesse no que você está me oferecendo."
 5. NÃO invente que faz encontro presencial.

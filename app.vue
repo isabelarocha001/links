@@ -2133,7 +2133,7 @@ function openWaFunnel(source = 'whatsapp') {
   funnelBlocked.value = false
   nextTick(async () => {
     // Abertura natural: sem menu, sem pressionar escolha
-    await funnelType('Oi amor 😘 Que bom que você veio… pode falar comigo, estou aqui.', 1400)
+    await funnelType('Oi amor 😘 Que bom que você veio. Pode falar comigo, estou aqui.', 1400)
     saveFunnelState()
   })
 }
@@ -2299,8 +2299,9 @@ async function sendFunnelFreeText() {
 
   const lower = text.toLowerCase()
 
-  // --- Conversação natural: no início (greeting) puxa intenção com Gemini antes de mostrar menu ---
-  if (funnelStep.value === 'greeting' || funnelStep.value === 'papo') {
+  // --- Conversação natural com Gemini (greeting + papo + saudações) ---
+  const isGreetingMsg = /^(oi|ol[aá]|oie|oii+|hey|hello|bom dia|boa tarde|boa noite|e a[ií]|tudo bem|td bem|blz|beleza|oi amor|ola amor)\b/i.test(text.trim())
+  if (funnelStep.value === 'greeting' || funnelStep.value === 'papo' || (isGreetingMsg && !['pix', 'awaiting_payment', 'video_avulso', 'video_avulso_confirm', 'pix_ask', 'pix_ask_hour'].includes(String(funnelStep.value)))) {
     try { logFunnelMessage('lead', text, { event: 'free_text_greeting' }) } catch {}
     try {
       const history = funnelMessages.value.slice(-10).map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`)
@@ -2500,10 +2501,7 @@ async function sendFunnelFreeText() {
     }
     return
   }
-  if (/oi|ol[aá]|bom dia|boa tarde|boa noite|e a[ií]|hey|hello/.test(lower)) {
-    await funnelType('Oi amor 😘 Pode falar… o que te trouxe até aqui?', 1100)
-    return
-  }
+  // saudações (oi, bom dia, etc.) vão pro Gemini abaixo — leads gostam de conexão antes de comprar
   if (/encont|presencial|sair com|te encontrar|programad|programa com|quanto.*sair|cobra.*sair|me encontra|ficar comigo pessoal|vir aqui|ir a[ií] te ver|hotel|motel|jantar e/.test(lower)) {
     await blockFunnelForOfflineIntent()
     return
