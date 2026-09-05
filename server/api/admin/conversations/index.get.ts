@@ -1,9 +1,5 @@
-import { useServiceSupabase, verifyAdminToken } from '../../../utils/supabase'
+import { useServiceSupabase, verifyAdminToken } from '~~/server/utils/supabase'
 
-/**
- * Lista conversas do funil WhatsApp (somente admin autenticado).
- * Ordena por last_message_at desc. Marca is_new se última msg do lead < 24h.
- */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const token = getCookie(event, 'admin_token')
@@ -13,8 +9,7 @@ export default defineEventHandler(async (event) => {
 
   const q = getQuery(event)
   const limit = Math.min(Math.max(Number(q.limit) || 50, 1), 100)
-  const status = String(q.status || '').trim() // open | closed | ''
-
+  const status = String(q.status || '').trim()
   const supabase = useServiceSupabase()
 
   let query = supabase
@@ -28,14 +23,10 @@ export default defineEventHandler(async (event) => {
   }
 
   const { data: conversations, error } = await query
-  if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message })
-  }
+  if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
   const list = conversations || []
   const ids = list.map((c: any) => c.id).filter(Boolean)
-
-  // Última mensagem por conversa (batch)
   const lastByConv: Record<string, { direction: string; message: string; created_at: string }> = {}
   if (ids.length) {
     const { data: msgs } = await supabase
@@ -57,7 +48,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const dayAgo = Date.now() - 24 * 60 * 60 * 1000
-
   const items = list.map((c: any) => {
     const last = lastByConv[c.id] || null
     const lastAt = last?.created_at || c.last_message_at || c.updated_at
@@ -68,7 +58,7 @@ export default defineEventHandler(async (event) => {
       visitor_id: c.visitor_id,
       creator_slug: c.creator_slug,
       status: c.status,
-      title: c.title || `Lead ${(c.visitor_id || '').slice(0, 8)}`,
+      title: c.title || ('Lead ' + String(c.visitor_id || '').slice(0, 8)),
       last_message_at: c.last_message_at,
       created_at: c.created_at,
       last_message: last,
@@ -76,7 +66,5 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  const new_count = items.filter((i: any) => i.is_new).length
-
-  return { ok: true, total: items.length, new_count, conversations: items }
+  return { ok: true, total: items.length, new_count: items.filter((i: any) => i.is_new).length, conversations: items }
 })
