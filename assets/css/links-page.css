@@ -2581,3 +2581,31 @@ a.wa-media-doc:active {
   font-size: 0.72rem;
   color: #8696a0;
 }
+
+/* Trava scroll da home enquanto o chat está aberto */
+html.wa-funnel-open,
+body.wa-funnel-open {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none;
+  height: 100% !important;
+}
+.wa-funnel-overlay {
+  overscroll-behavior: none !important;
+  touch-action: manipulation;
+  overflow: hidden !important;
+}
+.wa-funnel-shell {
+  overscroll-behavior: none !important;
+  overflow: hidden !important;
+}
+.wa-funnel-chat,
+.wa-funnel-shell .wa-funnel-chat {
+  overscroll-behavior-y: contain !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+.page {
+  overscroll-behavior-y: none;
+}

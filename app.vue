@@ -2471,6 +2471,61 @@ function onFunnelInputBlur() {
   }, 100)
 }
 
+let funnelBodyScrollY = 0
+let funnelTouchMoveBlock: ((e: TouchEvent) => void) | null = null
+
+function lockBodyScrollForFunnel() {
+  try {
+    funnelBodyScrollY = window.scrollY || window.pageYOffset || 0
+    document.documentElement.classList.add('wa-funnel-open')
+    document.body.classList.add('wa-funnel-open')
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${funnelBodyScrollY}px`
+    document.body.style.left = '0'
+    document.body.style.right = '0'
+    document.body.style.width = '100%'
+    if (!funnelTouchMoveBlock) {
+      funnelTouchMoveBlock = (e: TouchEvent) => {
+        const t = e.target as HTMLElement | null
+        if (!t) {
+          e.preventDefault()
+          return
+        }
+        if (t.closest?.('.wa-funnel-chat, .wa-emoji-panel, .wa-attach-sheet, .wa-more-sheet, .attach-form-card, .wa-profile-panel-body, .chat-plans-sheet, .block-reason-card')) {
+          return
+        }
+        if (t.closest?.('.wa-funnel-shell, .wa-funnel-overlay')) {
+          e.preventDefault()
+          return
+        }
+        e.preventDefault()
+      }
+      document.addEventListener('touchmove', funnelTouchMoveBlock, { passive: false })
+    }
+  } catch {}
+}
+
+function unlockBodyScrollForFunnel() {
+  try {
+    document.documentElement.classList.remove('wa-funnel-open')
+    document.body.classList.remove('wa-funnel-open')
+    document.documentElement.style.overflow = ''
+    document.body.style.overflow = ''
+    document.body.style.position = ''
+    document.body.style.top = ''
+    document.body.style.left = ''
+    document.body.style.right = ''
+    document.body.style.width = ''
+    if (funnelTouchMoveBlock) {
+      document.removeEventListener('touchmove', funnelTouchMoveBlock as any)
+      funnelTouchMoveBlock = null
+    }
+    window.scrollTo(0, funnelBodyScrollY || 0)
+  } catch {}
+}
+
 let funnelVvClean: (() => void) | null = null
 function bindFunnelViewport() {
   unbindFunnelViewport()
@@ -3450,6 +3505,7 @@ function openWaFunnel(source = 'whatsapp') {
   try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open', source }) } catch {}
   showWaFunnel.value = true
   funnelKeyboardOpen.value = false
+  lockBodyScrollForFunnel()
   startPresencePoll()
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
@@ -3491,6 +3547,7 @@ function closeWaFunnel() {
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
   funnelShellStyle.value = {}
+  unlockBodyScrollForFunnel()
   try { saveFunnelState() } catch {}
   // Se entrou pela rota /chat/*, ao fechar mostra a home (senão fica tela roxa vazia)
   if (isChatLanding.value) {
