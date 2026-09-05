@@ -179,8 +179,8 @@
               <span class="wa-avatar-wrap wa-avatar-wrap--lg">
                 <img class="wa-avatar" src="/model.jpg" alt="Wanessa" draggable="false" />
                 <span
+                  v-if="adminPresenceOnline"
                   class="wa-online-dot"
-                  :class="{ 'is-off': !adminPresenceOnline }"
                   aria-hidden="true"
                 ></span>
               </span>
@@ -2201,23 +2201,30 @@ function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Rec
 }
 
 const adminPresenceOnline = ref(false)
-const adminPresenceLabel = ref('offline')
+const adminPresenceLabel = ref('visto por último recentemente')
 let presencePollTimer: ReturnType<typeof setInterval> | null = null
 
 async function pullAdminPresence() {
   try {
     const res = await $fetch<{ online?: boolean; label?: string }>('/api/presence')
     adminPresenceOnline.value = !!res?.online
-    adminPresenceLabel.value = String(res?.label || (res?.online ? 'online' : 'offline'))
+    const lbl = String(res?.label || '').trim()
+    if (res?.online) {
+      adminPresenceLabel.value = 'online'
+    } else if (lbl && lbl !== 'offline' && lbl !== 'online') {
+      adminPresenceLabel.value = lbl
+    } else {
+      adminPresenceLabel.value = 'visto por último recentemente'
+    }
   } catch {
     adminPresenceOnline.value = false
-    adminPresenceLabel.value = 'offline'
+    adminPresenceLabel.value = 'visto por último recentemente'
   }
 }
 function startPresencePoll() {
   stopPresencePoll()
   pullAdminPresence()
-  presencePollTimer = setInterval(pullAdminPresence, 20000)
+  presencePollTimer = setInterval(pullAdminPresence, 8000)
 }
 function stopPresencePoll() {
   if (presencePollTimer) {
