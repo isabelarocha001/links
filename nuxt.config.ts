@@ -29,7 +29,7 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'pt-BR' },
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+        { name: 'viewport', content: 'width=device-width, initial-scale: 1, viewport-fit=cover' },
         { name: 'description', content: 'Todos os meus links em um só lugar' },
         { name: 'theme-color', content: '#0a0a0c' }
       ],
@@ -56,11 +56,4 @@ export default defineNuxtConfig({
     '/canalpublico': { ssr: true },
     '/admin/chat': { ssr: true },
   },
-    '/CanalPublico': { ssr: true },
-    '/canalpublico': { ssr: true },
-    '/admin/**': { ssr: false },
-    '/admin-chat': { ssr: false },
-    '/AdminChat': { ssr: false },
-  },
 })
-
