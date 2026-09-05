@@ -1971,3 +1971,42 @@ button.direct-btn {
   accent-color: #c084fc;
   cursor: pointer;
 }
+
+/* Avatar nítido (retina / downscale) */
+.wa-avatar-wrap,
+.wa-avatar-wrap--lg {
+  overflow: hidden;
+  border-radius: 50%;
+  background: #2a3942;
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  transform: translateZ(0);
+}
+.wa-avatar-wrap .wa-avatar,
+.wa-avatar-wrap--lg .wa-avatar,
+.wa-funnel-header .wa-avatar,
+img.wa-avatar {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: var(--avatar-focus-x, 50%) var(--avatar-focus-y, 20%) !important;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: high-quality;
+  -ms-interpolation-mode: bicubic;
+  transform: translateZ(0) scale(1.001);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.wa-funnel-header .wa-avatar-wrap--lg {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+}
+/* Renderiza em 2x no container e escala (mais nítido em telas retina) */
+.wa-funnel-header .wa-avatar-wrap--lg .wa-avatar {
+  width: 104px !important;
+  height: 104px !important;
+  max-width: none !important;
+  transform: translateZ(0) scale(0.5);
+  transform-origin: top left;
+}
