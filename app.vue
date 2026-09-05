@@ -177,7 +177,16 @@
           <header class="wa-header wa-funnel-header">
             <button type="button" class="wa-avatar-btn" aria-label="Ver foto de perfil" @click.stop="openFunnelPhoto">
               <span class="wa-avatar-wrap wa-avatar-wrap--lg">
-                <img class="wa-avatar" src="/model.jpg" alt="Wanessa" draggable="false" />
+                <img
+                  class="wa-avatar"
+                  src="/model.jpg"
+                  alt="Wanessa"
+                  width="104"
+                  height="104"
+                  decoding="sync"
+                  fetchpriority="high"
+                  draggable="false"
+                />
                 <span
                   v-if="adminPresenceOnline"
                   class="wa-online-dot"
