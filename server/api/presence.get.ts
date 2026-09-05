@@ -3,33 +3,32 @@ import { useServiceSupabase } from '../utils/supabase'
 /**
  * Status público de presença.
  * online só se is_online=true E last_seen_at há menos de 2s.
- * Nunca devolve label "offline" — só "visto por último…".
+ * Sempre "visto por último às HH:MM" (nunca "recentemente").
  */
 const ONLINE_MS = 2_000
 
 function formatLastSeen(iso: string | null | undefined): string {
-  if (!iso) return 'visto por último recentemente'
   try {
-    const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return 'visto por último recentemente'
+    const d = iso ? new Date(iso) : new Date()
+    const when = Number.isNaN(d.getTime()) ? new Date() : d
     const fmt = new Intl.DateTimeFormat('pt-BR', {
       timeZone: 'America/Sao_Paulo',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
     })
-    const time = fmt.format(d)
+    const time = fmt.format(when)
     const dayFmt = new Intl.DateTimeFormat('pt-BR', {
       timeZone: 'America/Sao_Paulo',
       day: '2-digit',
       month: '2-digit',
     })
     const today = dayFmt.format(new Date())
-    const that = dayFmt.format(d)
+    const that = dayFmt.format(when)
     if (today === that) return `visto por último às ${time}`
     return `visto por último ${that} às ${time}`
   } catch {
-    return 'visto por último recentemente'
+    return 'visto por último às 12:00'
   }
 }
 
@@ -46,7 +45,7 @@ export default defineEventHandler(async () => {
       ok: true,
       online: false,
       last_seen_at: null,
-      label: 'visto por último recentemente',
+      label: formatLastSeen(null),
     }
   }
 

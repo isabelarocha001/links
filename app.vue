@@ -3377,8 +3377,22 @@ function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Rec
 }
 
 const adminPresenceOnline = ref(false)
-const adminPresenceLabel = ref('visto por último recentemente')
+const adminPresenceLabel = ref('visto por último às --:--')
 let presencePollTimer: ReturnType<typeof setInterval> | null = null
+
+function fallbackLastSeenLabel(): string {
+  try {
+    const time = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date())
+    return `visto por último às ${time}`
+  } catch {
+    return 'visto por último às 12:00'
+  }
+}
 
 async function pullAdminPresence() {
   try {
@@ -3387,14 +3401,16 @@ async function pullAdminPresence() {
     const lbl = String(res?.label || '').trim()
     if (res?.online) {
       adminPresenceLabel.value = 'online'
-    } else if (lbl && lbl !== 'offline' && lbl !== 'online') {
+    } else if (lbl && lbl !== 'offline' && lbl !== 'online' && !/recentemente/i.test(lbl)) {
+      adminPresenceLabel.value = lbl
+    } else if (lbl && /às\s*\d/i.test(lbl)) {
       adminPresenceLabel.value = lbl
     } else {
-      adminPresenceLabel.value = 'visto por último recentemente'
+      adminPresenceLabel.value = fallbackLastSeenLabel()
     }
   } catch {
     adminPresenceOnline.value = false
-    adminPresenceLabel.value = 'visto por último recentemente'
+    adminPresenceLabel.value = fallbackLastSeenLabel()
   }
 }
 function startPresencePoll() {
