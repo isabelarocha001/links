@@ -586,6 +586,46 @@
 
 
       <!-- Unlock após bloqueio (programa/presencial) -->
+      <!-- Mimo / presente (fluxo separado do bloqueio) -->
+      <div v-if="showMimoGiftModal" class="chat-plans-overlay mimo-gift-overlay" style="z-index:40060" @click.self="closeMimoGiftModal">
+        <div class="mimo-gift-card" @click.stop>
+          <button type="button" class="chat-plans-x mimo-gift-x" aria-label="Fechar" @click="closeMimoGiftModal">✕</button>
+          <img class="mimo-gift-avatar" src="/model.jpg" alt="Wanessa" draggable="false" />
+          <p class="mimo-gift-name">Wanessa</p>
+          <label class="mimo-gift-label" for="mimo-gift-amount">Digite o valor do mimo pra Wanessa</label>
+          <div class="mimo-gift-amount-wrap">
+            <span class="mimo-gift-currency">R$</span>
+            <input
+              id="mimo-gift-amount"
+              v-model="mimoGiftAmount"
+              class="mimo-gift-amount"
+              type="text"
+              inputmode="decimal"
+              placeholder="0,00"
+              autocomplete="off"
+            />
+          </div>
+          <label class="mimo-gift-label mimo-gift-label--msg" for="mimo-gift-msg">Mensagem (opcional)</label>
+          <textarea
+            id="mimo-gift-msg"
+            v-model="mimoGiftMessage"
+            class="mimo-gift-msg"
+            rows="3"
+            maxlength="300"
+            placeholder="Escreva algo… ou deixe em branco"
+          ></textarea>
+          <p v-if="mimoGiftError" class="mimo-gift-error">{{ mimoGiftError }}</p>
+          <button
+            type="button"
+            class="mimo-gift-send"
+            :disabled="mimoGiftLoading"
+            @click="sendMimoGift"
+          >
+            {{ mimoGiftLoading ? 'Gerando PIX…' : 'Enviar mimo' }}
+          </button>
+        </div>
+      </div>
+
       <div v-if="funnelPermBlocked && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
         <div class="wa-perm-block-card">
           <p class="wa-perm-block-title">Wanessa te bloqueou permanentemente</p>
@@ -847,6 +887,11 @@ const funnelPermBlocked = ref(false) // bloqueio permanente (menu → Bloquear)
 const showBlockedUnlock = ref(false)
 const PERM_BLOCK_KEY = 'wanessa_perm_block_v1'
 const SEGUNDA_CHANCE_PLAN = { key: 'chat_unlock_segunda_chance', title: 'Segunda chance', desc: 'mimo para desbloquear o chat', price: 29.9, priceLabel: '29,90' }
+const showMimoGiftModal = ref(false)
+const mimoGiftAmount = ref('')
+const mimoGiftMessage = ref('')
+const mimoGiftError = ref('')
+const mimoGiftLoading = ref(false)
 const funnelMsgMenuIdx = ref<number | null>(null)
 const funnelEditingIdx = ref<number | null>(null)
 const funnelEditDraft = ref('')
@@ -1037,14 +1082,122 @@ function loadPermanentBlock() {
 }
 
 function onFunnelGiftMimo() {
-  if (blockedUnlockLoading.value) return
-  if (funnelPermBlocked.value) {
-    startSegundaChanceMimo()
+  if (funnelPermBlocked.value) return
+  mimoGiftError.value = ''
+  mimoGiftAmount.value = ''
+  mimoGiftMessage.value = ''
+  showMimoGiftModal.value = true
+  try { track('funnel_gift_mimo_open', { offer_slug: 'mimo_gift' }) } catch {}
+}
+
+function closeMimoGiftModal() {
+  if (mimoGiftLoading.value) return
+  showMimoGiftModal.value = false
+  mimoGiftError.value = ''
+}
+
+function parseMimoAmount(raw: string): number {
+  const s = String(raw || '').trim().replace(/R\$\s?/gi, '').replace(/\s/g, '')
+  if (!s) return 0
+  // 10,50 or 10.50 or 10
+  if (s.includes(',') && s.includes('.')) {
+    // 1.234,56
+    const n = Number(s.replace(/\./g, '').replace(',', '.'))
+    return Number.isFinite(n) ? n : 0
+  }
+  if (s.includes(',')) {
+    const n = Number(s.replace(',', '.'))
+    return Number.isFinite(n) ? n : 0
+  }
+  const n = Number(s)
+  return Number.isFinite(n) ? n : 0
+}
+
+async function sendMimoGift() {
+  if (mimoGiftLoading.value) return
+  mimoGiftError.value = ''
+  const amount = parseMimoAmount(mimoGiftAmount.value)
+  if (amount < 1) {
+    mimoGiftError.value = 'Digite um valor de pelo menos R$ 1,00'
     return
   }
-  // Mimo livre (presente) — mesmo valor da segunda chance
-  try { track('funnel_gift_mimo_open', { offer_slug: SEGUNDA_CHANCE_PLAN.key }) } catch {}
-  buySegundaChanceMimo()
+  if (amount > 5000) {
+    mimoGiftError.value = 'Valor máximo R$ 5.000,00'
+    return
+  }
+  const msg = String(mimoGiftMessage.value || '').trim().slice(0, 300)
+  const priceLabel = amount.toFixed(2).replace('.', ',')
+  mimoGiftLoading.value = true
+  selectedChatPlan.value = {
+    key: 'mimo_gift',
+    title: 'Mimo pra Wanessa',
+    desc: msg || 'presente',
+    price: amount,
+    priceLabel,
+  }
+  selectedPack.value = {
+    key: 'mimo_gift',
+    label: 'Mimo pra Wanessa',
+    price: priceLabel,
+  }
+  try {
+    let visitor_id: string | null = null
+    try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
+    const res = await $fetch<{
+      ok: boolean
+      pix_code?: string
+      qr_image?: string
+      payment_id?: string
+      external_id?: string
+      error?: string
+    }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: 'mimo_gift',
+        amount,
+        title: msg ? `Mimo: ${msg.slice(0, 80)}` : 'Mimo pra Wanessa',
+        visitor_id,
+        source: 'links_mimo_gift',
+        metadata: { message: msg || null },
+      },
+    })
+    if (!res?.ok || !res.pix_code) throw new Error(res?.error || 'Falha ao gerar PIX')
+    pixPaid.value = false
+    pixCopyCode.value = res.pix_code
+    funnelPixCode.value = res.pix_code
+    const isEmv = /^000201/.test(res.pix_code)
+    pixQrImage.value = isEmv
+      ? (res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`)
+      : ''
+    pixPaymentId.value = res.payment_id || ''
+    pixExternalId.value = res.external_id || res.payment_id || ''
+    funnelPaymentId.value = pixPaymentId.value
+    funnelExternalId.value = pixExternalId.value
+    showMimoGiftModal.value = false
+    showPixModal.value = true
+    funnelStep.value = 'awaiting_payment'
+    if (msg) {
+      try { pushFunnel('me', msg) } catch {}
+    }
+    try { pushFunnel('me', `🎁 Mimo de R$ ${priceLabel}`) } catch {}
+    try { track('mimo_gift_checkout', { offer_slug: 'mimo_gift', amount }) } catch {}
+    if (pixExternalId.value || pixPaymentId.value) {
+      if (pixPollTimer) clearInterval(pixPollTimer)
+      let tries = 0
+      pixPollTimer = setInterval(() => {
+        checkPixStatus(true)
+        tries++
+        if (tries > 45 && pixPollTimer) {
+          clearInterval(pixPollTimer)
+          pixPollTimer = null
+        }
+      }, 5000)
+    }
+  } catch (e: any) {
+    mimoGiftError.value = e?.data?.statusMessage || e?.message || 'Não deu pra gerar o PIX agora'
+  } finally {
+    mimoGiftLoading.value = false
+  }
 }
 
 function startSegundaChanceMimo() {
@@ -2017,6 +2170,13 @@ async function onFunnelPaid() {
   const isWeb = planKey.startsWith('web_')
 
   await funnelType('Recebi o PIX aqui, meu amor ✅', 1200)
+
+  if (planKey === 'mimo_gift') {
+    showPixModal.value = false
+    await funnelType('Recebi seu mimo, obrigada 🎁💚 Fiquei feliz de verdade…', 1600)
+    funnelStep.value = 'other'
+    return
+  }
 
   if (isSegunda) {
     clearPermanentBlock()
