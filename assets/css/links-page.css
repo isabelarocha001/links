@@ -2609,3 +2609,174 @@ body.wa-funnel-open {
 .page {
   overscroll-behavior-y: none;
 }
+
+/* Mimo modal — responsivo mobile / teclado */
+.mimo-gift-overlay {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  padding: max(10px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box !important;
+}
+.mimo-gift-card {
+  width: min(92vw, 400px) !important;
+  max-height: min(78dvh, 560px) !important;
+  overflow-y: auto !important;
+  margin: 0 auto !important;
+  padding: 16px 16px 14px !important;
+  border-radius: 18px 18px 14px 14px !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0;
+}
+.mimo-gift-avatar {
+  width: 72px !important;
+  height: 72px !important;
+  margin: 4px auto 8px !important;
+}
+.mimo-gift-name {
+  margin: 0 0 10px !important;
+  font-size: 1.05rem !important;
+}
+.mimo-gift-label {
+  margin: 8px 0 6px !important;
+  font-size: 0.82rem !important;
+}
+.mimo-gift-msg {
+  min-height: 64px !important;
+  max-height: 90px !important;
+}
+.mimo-gift-send {
+  margin-top: 12px !important;
+  padding: 12px 16px !important;
+}
+@media (max-height: 700px) {
+  .mimo-gift-card {
+    max-height: min(72dvh, 480px) !important;
+    padding: 12px 14px 12px !important;
+  }
+  .mimo-gift-avatar {
+    width: 56px !important;
+    height: 56px !important;
+    margin-bottom: 4px !important;
+  }
+  .mimo-gift-name { font-size: 0.95rem !important; margin-bottom: 6px !important; }
+  .mimo-gift-msg { min-height: 48px !important; max-height: 72px !important; }
+}
+@media (max-height: 560px) {
+  .mimo-gift-overlay {
+    align-items: flex-end !important;
+  }
+  .mimo-gift-card {
+    max-height: 88dvh !important;
+  }
+  .mimo-gift-avatar { display: none !important; }
+}
+
+/* Player de vídeo moderno no chat (sem autoplay) */
+.wa-video-modern {
+  position: relative;
+  max-width: min(72vw, 280px);
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0b0f14;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  aspect-ratio: 9 / 14;
+  max-height: 340px;
+}
+.wa-video-modern .wa-media-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  background: #000;
+  object-fit: cover;
+}
+.wa-video-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.15) 0%, transparent 35%, transparent 55%, rgba(0,0,0,.55) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+.wa-video-play-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.35);
+  background: rgba(11, 20, 26, 0.55);
+  color: #fff;
+  font-size: 0;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.4);
+}
+.wa-video-play-ico {
+  font-size: 1.25rem;
+  line-height: 1;
+  margin-left: 2px;
+}
+.wa-video-play-btn:active {
+  transform: translate(-50%, -50%) scale(0.94);
+}
+.wa-video-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  pointer-events: none;
+}
+.wa-video-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(0,0,0,.4);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  padding: 3px 8px;
+  backdrop-filter: blur(4px);
+}
+.wa-video-fs-btn {
+  pointer-events: auto;
+  position: static !important;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.wa-video-modern.is-playing .wa-video-play-btn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.wa-video-modern:not(.is-playing) .wa-video-play-btn {
+  opacity: 1;
+}

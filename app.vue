@@ -296,8 +296,8 @@
                 class="wa-chat-media-fs-video"
                 :src="chatMediaFullscreenUrl"
                 controls
-                autoplay
                 playsinline
+                preload="metadata"
                 @click.stop
               ></video>
               <img
@@ -1539,23 +1539,34 @@ function onFunnelMediaHtmlClick(e: Event) {
     audio.onended = () => { playBtn.textContent = '▶' }
     return
   }
-  // Vídeo play/pause (área do player)
+  // Vídeo play/pause (área do player) — sem autoplay; só no toque
   const vWrap = t.closest?.('.wa-video-modern') as HTMLElement | null
   if (vWrap) {
+    // clique no botão de fullscreen já tratado acima
+    if (t.closest?.('.wa-video-fs-btn')) return
     const video = vWrap.querySelector('video') as HTMLVideoElement | null
     const btn = vWrap.querySelector('.wa-video-play-btn') as HTMLElement | null
+    const ico = btn?.querySelector('.wa-video-play-ico') as HTMLElement | null
     if (!video) return
     if (video.paused) {
       document.querySelectorAll('.wa-video-modern video').forEach((v) => {
         try { (v as HTMLVideoElement).pause() } catch {}
       })
-      document.querySelectorAll('.wa-video-play-btn').forEach((b) => { (b as HTMLElement).style.opacity = '1'; (b as HTMLElement).textContent = '▶' })
+      document.querySelectorAll('.wa-video-modern').forEach((w) => w.classList.remove('is-playing'))
+      if (ico) ico.textContent = '▶'
+      else if (btn) btn.textContent = '▶'
       video.play().catch(() => {})
-      if (btn) { btn.textContent = '⏸'; btn.style.opacity = '0' }
-      video.onended = () => { if (btn) { btn.textContent = '▶'; btn.style.opacity = '1' } }
+      vWrap.classList.add('is-playing')
+      video.onended = () => {
+        vWrap.classList.remove('is-playing')
+        if (ico) ico.textContent = '▶'
+        else if (btn) btn.textContent = '▶'
+      }
     } else {
       video.pause()
-      if (btn) { btn.textContent = '▶'; btn.style.opacity = '1' }
+      vWrap.classList.remove('is-playing')
+      if (ico) ico.textContent = '▶'
+      else if (btn) btn.textContent = '▶'
     }
   }
 }
@@ -1946,10 +1957,13 @@ function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc
       'me',
       'Video',
       `<div class="wa-video-modern" data-src="${url}">
-        <video class="wa-media-video" src="${url}" playsinline preload="metadata"></video>
-        <button type="button" class="wa-video-play-btn" aria-label="Play">▶</button>
-        <button type="button" class="wa-video-fs-btn" aria-label="Tela cheia" title="Tela cheia">⛶</button>
-        <div class="wa-video-gradient"></div>
+        <video class="wa-media-video" src="${url}" playsinline preload="metadata" controlslist="nodownload" disablepictureinpicture></video>
+        <div class="wa-video-shade"></div>
+        <button type="button" class="wa-video-play-btn" aria-label="Play"><span class="wa-video-play-ico">▶</span></button>
+        <div class="wa-video-footer">
+          <span class="wa-video-badge">Vídeo</span>
+          <button type="button" class="wa-video-fs-btn" aria-label="Tela cheia" title="Tela cheia">⛶</button>
+        </div>
       </div>`,
       { mediaKind: 'video', mediaUrl: url },
     )
