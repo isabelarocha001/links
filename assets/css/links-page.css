@@ -2530,3 +2530,54 @@ button {
   color: #e9edef;
   word-break: break-all;
 }
+
+/* Documento clicável no chat */
+a.wa-media-doc,
+.wa-media-doc {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.22);
+  text-decoration: none !important;
+  color: inherit;
+  cursor: pointer;
+  min-width: 180px;
+  max-width: 260px;
+  box-sizing: border-box;
+}
+a.wa-media-doc:active {
+  transform: scale(0.98);
+  background: rgba(0, 0, 0, 0.32);
+}
+.wa-media-doc-ico {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(37, 211, 102, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+.wa-media-doc-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wa-media-doc-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #e9edef;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wa-media-doc-meta {
+  font-size: 0.72rem;
+  color: #8696a0;
+}

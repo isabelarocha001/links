@@ -1470,6 +1470,40 @@ function closeChatMediaFullscreen() {
 function onFunnelMediaHtmlClick(e: Event) {
   const t = e.target as HTMLElement | null
   if (!t) return
+  // Documento → abrir / baixar
+  const doc = t.closest?.('.wa-media-doc') as HTMLAnchorElement | null
+  if (doc) {
+    e.preventDefault()
+    e.stopPropagation()
+    const url = doc.getAttribute('data-doc-url') || doc.getAttribute('href') || ''
+    const name = doc.getAttribute('data-doc-name') || 'documento'
+    if (!url) return
+    try {
+      // tenta abrir em nova aba (PDF etc.)
+      const w = window.open(url, '_blank')
+      if (!w) {
+        // popup bloqueado → força download
+        const a = document.createElement('a')
+        a.href = url
+        a.download = name
+        a.target = '_blank'
+        a.rel = 'noopener'
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      }
+    } catch {
+      try {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = name
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      } catch {}
+    }
+    return
+  }
   // Foto → tela cheia
   const img = t.closest?.('img') as HTMLImageElement | null
   if (img?.src && !img.closest?.('.wa-video-modern')) {
@@ -1920,7 +1954,24 @@ function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc
       { mediaKind: 'video', mediaUrl: url },
     )
   } else if (resolved === 'doc') {
-    pushFunnel('me', 'Documento', `<div class="wa-media-doc">📄 ${file.name || 'documento'}</div>`, { mediaKind: 'doc' })
+    const rawName = String(file.name || 'documento')
+    const safeName = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    const sizeKb = file.size ? (file.size < 1024 * 1024
+      ? `${Math.max(1, Math.round(file.size / 1024))} KB`
+      : `${(file.size / (1024 * 1024)).toFixed(1)} MB`) : ''
+    const mimeSafe = String(file.type || 'application/octet-stream').replace(/"/g, '')
+    pushFunnel(
+      'me',
+      `Documento: ${rawName}`,
+      `<a class="wa-media-doc" href="${url}" data-doc-url="${url}" data-doc-name="${safeName}" data-doc-mime="${mimeSafe}" download="${safeName}" target="_blank" rel="noopener">
+        <span class="wa-media-doc-ico">📄</span>
+        <span class="wa-media-doc-info">
+          <span class="wa-media-doc-name">${safeName}</span>
+          <span class="wa-media-doc-meta">${sizeKb ? sizeKb + ' · ' : ''}Toque para abrir</span>
+        </span>
+      </a>`,
+      { mediaKind: 'doc', mediaUrl: url },
+    )
   } else {
     pushFunnel(
       'me',
