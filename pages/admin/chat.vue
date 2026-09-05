@@ -3,8 +3,6 @@
  * Inbox admin — só com sessão autenticada (cookie admin_token).
  * Heartbeat de presença a cada 15s → lead vê "online" / "visto por último às HH:MM".
  */
-definePageMeta({ ssr: false })
-
 type ConvItem = {
   id: string
   visitor_id?: string
