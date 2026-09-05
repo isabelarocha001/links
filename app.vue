@@ -2613,10 +2613,11 @@ function onFunnelInputBlur() {
 }
 
 let funnelBodyScrollY = 0
-let funnelTouchMoveBlock: ((e: TouchEvent) => void) | null = null
 
 function lockBodyScrollForFunnel() {
   try {
+    // evita lock duplo
+    if (document.body.classList.contains('wa-funnel-open')) return
     funnelBodyScrollY = window.scrollY || window.pageYOffset || 0
     document.documentElement.classList.add('wa-funnel-open')
     document.body.classList.add('wa-funnel-open')
@@ -2627,24 +2628,6 @@ function lockBodyScrollForFunnel() {
     document.body.style.left = '0'
     document.body.style.right = '0'
     document.body.style.width = '100%'
-    if (!funnelTouchMoveBlock) {
-      funnelTouchMoveBlock = (e: TouchEvent) => {
-        const t = e.target as HTMLElement | null
-        if (!t) {
-          e.preventDefault()
-          return
-        }
-        if (t.closest?.('.wa-funnel-chat, .wa-emoji-panel, .wa-attach-sheet, .wa-more-sheet, .attach-form-card, .wa-profile-panel-body, .chat-plans-sheet, .block-reason-card')) {
-          return
-        }
-        if (t.closest?.('.wa-funnel-shell, .wa-funnel-overlay')) {
-          e.preventDefault()
-          return
-        }
-        e.preventDefault()
-      }
-      document.addEventListener('touchmove', funnelTouchMoveBlock, { passive: false })
-    }
   } catch {}
 }
 
@@ -2659,11 +2642,15 @@ function unlockBodyScrollForFunnel() {
     document.body.style.left = ''
     document.body.style.right = ''
     document.body.style.width = ''
-    if (funnelTouchMoveBlock) {
-      document.removeEventListener('touchmove', funnelTouchMoveBlock as any)
-      funnelTouchMoveBlock = null
-    }
-    window.scrollTo(0, funnelBodyScrollY || 0)
+    document.documentElement.style.touchAction = ''
+    document.body.style.touchAction = ''
+    const y = funnelBodyScrollY || 0
+    // restaura scroll da home
+    window.scrollTo(0, y)
+    // fallback iOS
+    requestAnimationFrame(() => {
+      try { window.scrollTo(0, y) } catch {}
+    })
   } catch {}
 }
 
@@ -4844,6 +4831,8 @@ async function warmSyncPay() {
   try { await $fetch('/api/checkout/warm') } catch {}
 }
 onMounted(async () => {
+  // garante que a home sempre começa scrollável (lock residual do chat)
+  try { unlockBodyScrollForFunnel() } catch {}
   loadAvatarFocus()
   // restaura sessão admin se o cookie ainda for válido (não bloqueia o chat)
   restoreAdminSession()
