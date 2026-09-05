@@ -769,7 +769,7 @@ import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i1
 const route = useRoute()
 const isAdminRoute = computed(() => {
   const p = String(route.path || '').toLowerCase()
-  return p === '/admin' || p.startsWith('/admin/')
+  return p === '/admin' || p.startsWith('/admin/') || p === '/admin-chat' || p === '/adminchat'
 })
 const hidePublicChannel = computed(() => {
   const raw = (route.path || '') + ' ' + (route.fullPath || '')
