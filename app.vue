@@ -172,7 +172,11 @@
   <ClientOnly>
     <Teleport to="body">
 
-      <div v-if="showWaFunnel" class="wa-funnel-overlay" @click.self="closeWaFunnel">
+      <div
+        v-if="showWaFunnel"
+        class="wa-funnel-overlay"
+        @click.self="onFunnelOverlayClick"
+      >
         <div
           class="wa-funnel-shell"
           :class="{ 'wa-funnel-shell--kbd': funnelKeyboardOpen }"
@@ -2146,26 +2150,28 @@ function applyFunnelShellBox(h: number, top: number) {
   } catch {}
 }
 
-function syncFunnelViewport() {
+function syncFunnelViewport(opts?: { forceKbd?: boolean }) {
   try {
     const vv = window.visualViewport
     const layoutH = window.innerHeight || document.documentElement.clientHeight || 700
     let h = vv ? Math.round(vv.height) : layoutH
     let top = vv ? Math.round(vv.offsetTop || 0) : 0
+    const forceKbd = !!(opts && opts.forceKbd)
 
-    // Instagram / alguns WebViews NÃO encolhem o visualViewport com o teclado.
-    // Se o teclado está "aberto" e a altura quase não mudou, força espaço pro teclado.
     if (funnelKeyboardOpen.value) {
       const base = funnelKbdBaseH || layoutH
       const shrunk = h < base * 0.88
-      if (!shrunk) {
-        // ~42% da tela pro teclado (valores típicos Android/iOS)
+      // Só força encolher DEPOIS do toque (forceKbd), senão o click cai no overlay e fecha o chat
+      if (!shrunk && forceKbd) {
         const kbd = Math.round(base * 0.42)
         h = Math.max(220, base - kbd)
         top = 0
+      } else if (!shrunk && !forceKbd) {
+        // teclado "aberto" mas ainda sem evidência → mantém tela cheia
+        h = layoutH
+        top = 0
       }
     } else {
-      // teclado fechado → ocupa a tela inteira
       h = layoutH
       top = 0
     }
@@ -2183,41 +2189,47 @@ function stopFunnelKbdPoll() {
   }
 }
 
+function onFunnelOverlayClick() {
+  // Não fecha o chat ao tocar no fundo enquanto digita (evita fechar no focus do input)
+  if (funnelKeyboardOpen.value) return
+  closeWaFunnel()
+}
+
 function onFunnelInputFocus() {
   try { closeFunnelEmojiPicker() } catch {}
   try { showFunnelAttachMenu.value = false } catch {}
   funnelKbdBaseH = window.innerHeight || 700
   funnelKeyboardOpen.value = true
-  syncFunnelViewport()
-  // poll enquanto teclado abre (WebView do Instagram demora / não dispara resize)
+  // NÃO encolher na hora do focus — o mesmo toque ainda está ativo e fecharia o chat
+  syncFunnelViewport({ forceKbd: false })
   stopFunnelKbdPoll()
   let ticks = 0
   funnelKbdPoll = setInterval(() => {
-    syncFunnelViewport()
     ticks++
-    if (ticks >= 20) stopFunnelKbdPoll() // ~2s
+    // a partir de 300ms permite fallback Instagram
+    syncFunnelViewport({ forceKbd: ticks >= 3 })
+    if (ticks >= 20) stopFunnelKbdPoll()
   }, 100)
-  setTimeout(syncFunnelViewport, 50)
-  setTimeout(syncFunnelViewport, 200)
-  setTimeout(syncFunnelViewport, 400)
-  setTimeout(syncFunnelViewport, 700)
+  setTimeout(() => syncFunnelViewport({ forceKbd: false }), 50)
+  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 350)
+  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 600)
+  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 900)
 }
 
 function onFunnelInputBlur() {
-  // delay: se o foco foi pro botão enviar, não fecha ainda
   setTimeout(() => {
     try {
       const a = document.activeElement as HTMLElement | null
-      if (a && a.classList && (a.classList.contains('wa-input') || a.closest?.('.wa-funnel-composer'))) {
+      if (a && (a.classList?.contains('wa-input') || a.closest?.('.wa-funnel-composer'))) {
         return
       }
     } catch {}
     funnelKeyboardOpen.value = false
     stopFunnelKbdPoll()
-    syncFunnelViewport()
-    setTimeout(syncFunnelViewport, 150)
-    setTimeout(syncFunnelViewport, 350)
-  }, 80)
+    syncFunnelViewport({ forceKbd: false })
+    setTimeout(() => syncFunnelViewport({ forceKbd: false }), 150)
+    setTimeout(() => syncFunnelViewport({ forceKbd: false }), 350)
+  }, 120)
 }
 
 let funnelVvClean: (() => void) | null = null
