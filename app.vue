@@ -247,8 +247,24 @@
             >
               <div class="wa-bubble" :class="m.from === 'me' ? 'wa-bubble--me' : 'wa-bubble--her'">
                 <p class="wa-text" v-html="m.html || escapeHtml(m.text)"></p>
-                <span class="wa-time">{{ m.time }}</span>
+                <span class="wa-meta">
+                  <span class="wa-time">{{ m.time }}</span>
+                  <span
+                    v-if="m.from === 'me'"
+                    class="wa-ticks"
+                    :class="{
+                      'wa-ticks--sent': !m.status || m.status === 'sent',
+                      'wa-ticks--delivered': m.status === 'delivered',
+                      'wa-ticks--read': m.status === 'read',
+                    }"
+                    aria-hidden="true"
+                  >
+                    <svg class="wa-tick" viewBox="0 0 16 11" width="16" height="11"><path d="M5.6 10.2L0.8 5.4l1.3-1.3 3.5 3.5L13.5.7 14.8 2z" fill="currentColor"/></svg>
+                    <svg class="wa-tick wa-tick--second" viewBox="0 0 16 11" width="16" height="11"><path d="M5.6 10.2L0.8 5.4l1.3-1.3 3.5 3.5L13.5.7 14.8 2z" fill="currentColor"/></svg>
+                  </span>
+                </span>
               </div>
+              <div v-if="m.from === 'me' && m.status === 'read'" class="wa-read-label">Visualizado</div>
             </div>
             <div v-if="funnelTyping" class="wa-row wa-row--her">
               <div class="wa-bubble wa-bubble--her wa-bubble--typing">
@@ -1282,7 +1298,7 @@ function unbindFunnelViewport() {
 
 const showFunnelProfile = ref(false)
 const funnelStep = ref<'greeting' | 'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'awaiting_payment' | 'paid' | 'redirect' | 'other' | 'video_consult' | 'video_avulso' | string>('greeting')
-const funnelMessages = ref<{ from: 'her' | 'me'; text: string; html?: string; time: string }[]>([])
+const funnelMessages = ref<{ from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read' }[]>([])
 const funnelTyping = ref(false)
 const funnelChatBox = ref<HTMLElement | null>(null)
 const selectedPack = ref<{ key: string; label: string; price: string } | null>(null)
@@ -1771,8 +1787,38 @@ function scrollFunnel() {
   })
 }
 
+function markLastLeadMessage(status: 'delivered' | 'read') {
+  const order = { sent: 0, delivered: 1, read: 2 }
+  // marca da mais recente para trás até achar um já no status alvo (todas as do lead ficam visualizadas)
+  for (let i = funnelMessages.value.length - 1; i >= 0; i--) {
+    const msg = funnelMessages.value[i]
+    if (msg.from !== 'me') continue
+    const cur = order[msg.status || 'sent'] || 0
+    if (order[status] >= cur) msg.status = status
+    if (status === 'delivered') break // entregue só a última enviada
+  }
+}
+
 function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean }) {
-  funnelMessages.value.push({ from, text, html, time: nowTime() })
+  const row: { from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read' } = {
+    from,
+    text,
+    html,
+    time: nowTime(),
+  }
+  if (from === 'me') row.status = 'sent'
+  funnelMessages.value.push(row)
+  if (from === 'me') {
+    // entregue
+    setTimeout(() => {
+      markLastLeadMessage('delivered')
+      try { saveFunnelState() } catch {}
+    }, 400 + Math.random() * 500)
+  }
+  if (from === 'her') {
+    // quando ela responde, mensagens do lead ficam visualizadas
+    markLastLeadMessage('read')
+  }
   scrollFunnel()
   // grava no Supabase (lead = me, bot = her)
   if (!opts?.skipLog) {
@@ -1791,6 +1837,7 @@ function humanDelay(text: string, base = 0): number {
 }
 
 function funnelType(text: string, delay = 0, html?: string) {
+  markLastLeadMessage('read')
   return new Promise<void>((resolve) => {
     funnelTyping.value = true
     scrollFunnel()

@@ -1302,3 +1302,50 @@ button.direct-btn {
 .wa-funnel-shell .wa-composer--blocked .wa-input {
   pointer-events: none !important;
 }
+
+
+/* Status estilo WhatsApp: ✓✓ azuis + Visualizado */
+.wa-funnel-shell .wa-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  float: right;
+  margin: 2px 0 0 8px;
+}
+.wa-funnel-shell .wa-ticks {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  width: 16px;
+  height: 11px;
+  color: #8696a0; /* enviado / entregue cinza */
+}
+.wa-funnel-shell .wa-ticks .wa-tick {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.wa-funnel-shell .wa-ticks .wa-tick--second {
+  left: 4px;
+}
+.wa-funnel-shell .wa-ticks--delivered {
+  color: #8696a0;
+}
+.wa-funnel-shell .wa-ticks--read {
+  color: #53bdeb; /* azul WhatsApp */
+}
+.wa-funnel-shell .wa-row--me {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.wa-funnel-shell .wa-read-label {
+  font-size: 0.68rem;
+  color: #8696a0;
+  margin: 2px 6px 6px 0;
+  line-height: 1;
+  user-select: none;
+}
+.wa-funnel-shell .wa-bubble--me .wa-time {
+  color: rgba(255,255,255,0.55);
+}
