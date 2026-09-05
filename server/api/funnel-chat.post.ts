@@ -338,6 +338,38 @@ export default defineEventHandler(async (event) => {
       console.error('[funnel-chat]', error.message)
       return { ok: false, error: error.message, conversation_id, access_token }
     }
+
+    // Lead bloqueou Wanessa → marca conversa pro admin ver o status/motivo
+    if (direction === 'lead' && conversation_id && (metadata as any)?.event === 'lead_blocked') {
+      try {
+        const reason = String((metadata as any)?.block_reason || message || '').slice(0, 400)
+        const { data: conv } = await supabase
+          .from('wa_funnel_conversations')
+          .select('metadata')
+          .eq('id', conversation_id)
+          .maybeSingle()
+        const prev = (conv?.metadata && typeof conv.metadata === 'object') ? conv.metadata : {}
+        await supabase
+          .from('wa_funnel_conversations')
+          .update({
+            status: 'blocked',
+            title: reason ? `Bloqueou: ${reason.slice(0, 60)}` : 'Lead te bloqueou',
+            metadata: {
+              ...prev,
+              lead_blocked: true,
+              block_reason: reason,
+              blocked_by: 'lead',
+              blocked_at: new Date().toISOString(),
+            },
+            updated_at: new Date().toISOString(),
+            last_message_at: new Date().toISOString(),
+          })
+          .eq('id', conversation_id)
+      } catch (e: any) {
+        console.warn('[funnel-chat] lead_blocked update', e?.message || e)
+      }
+    }
+
     // Se o chat está desbloqueado, avisa o admin no Telegram pra responder
     const unlocked = body?.chat_unlocked === true || body?.unlocked === true || step === 'other' || step === 'live_admin'
     if (direction === 'lead' && conversation_id) {
