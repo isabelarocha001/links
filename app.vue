@@ -185,7 +185,7 @@
           :style="funnelShellStyle"
           @click.stop
         >
-          <header class="wa-header wa-funnel-header">
+          <header v-show="!showFunnelProfile" class="wa-header wa-funnel-header">
             <button
               v-if="!leadBlockedWanessa"
               type="button"
@@ -363,7 +363,11 @@
 
           <!-- Perfil / bio (estilo WhatsApp) -->
           <div v-if="showFunnelProfile" class="wa-profile-panel">
-            <button type="button" class="wa-profile-back" aria-label="Voltar" @click="showFunnelProfile = false">‹</button>
+            <div class="wa-profile-topbar">
+              <button type="button" class="wa-profile-back" aria-label="Voltar" @click="showFunnelProfile = false">‹</button>
+              <span class="wa-profile-topbar-spacer"></span>
+              <button type="button" class="wa-profile-x" aria-label="Fechar" @click="showFunnelProfile = false">✕</button>
+            </div>
             <div class="wa-profile-panel-body">
               <button type="button" class="wa-profile-big-avatar" @click.stop="openFunnelPhoto">
                 <img src="/model.jpg" alt="Wanessa" draggable="false" />
