@@ -1,17 +1,17 @@
 import { useServiceSupabase } from '../utils/supabase'
 
 /**
- * Status público de presença da criadora (para o chat do lead).
- * online só se is_online=true E last_seen_at < 30s.
- * Logout seta is_online=false → some online na hora (não espera expirar).
+ * Status público de presença.
+ * online só se is_online=true E last_seen recente.
+ * Nunca devolve label "offline" — só "visto por último…".
  */
 const ONLINE_MS = 30_000
 
 function formatLastSeen(iso: string | null | undefined): string {
-  if (!iso) return 'offline'
+  if (!iso) return 'visto por último recentemente'
   try {
     const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return 'offline'
+    if (Number.isNaN(d.getTime())) return 'visto por último recentemente'
     const fmt = new Intl.DateTimeFormat('pt-BR', {
       timeZone: 'America/Sao_Paulo',
       hour: '2-digit',
@@ -29,7 +29,7 @@ function formatLastSeen(iso: string | null | undefined): string {
     if (today === that) return `visto por último às ${time}`
     return `visto por último ${that} às ${time}`
   } catch {
-    return 'offline'
+    return 'visto por último recentemente'
   }
 }
 
@@ -42,10 +42,14 @@ export default defineEventHandler(async () => {
     .maybeSingle()
 
   if (error || !data) {
-    return { ok: true, online: false, last_seen_at: null, label: 'offline' }
+    return {
+      ok: true,
+      online: false,
+      last_seen_at: null,
+      label: 'visto por último recentemente',
+    }
   }
 
-  // Flag offline do logout tem prioridade absoluta
   if (data.is_online !== true) {
     return {
       ok: true,
