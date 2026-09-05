@@ -755,7 +755,7 @@ button.direct-btn {
   line-height: 1.4;
 }
 .wa-funnel-shell {
-  position: relative;
+  /* position controlado via JS (fixed) — NÃO usar relative (quebra teclado mobile) */
 }
 
 .wa-funnel-composer .wa-input {
@@ -2312,4 +2312,48 @@ button {
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Shell SEMPRE fixed — teclado mobile / Instagram WebView */
+.wa-funnel-shell {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+.wa-funnel-shell--kbd {
+  /* quando teclado aberto: sem padding extra de safe-area no composer */
+}
+.wa-funnel-shell--kbd .wa-funnel-composer {
+  padding-bottom: 6px !important;
+}
+.wa-funnel-shell--kbd .wa-funnel-quick {
+  padding-bottom: 4px !important;
+  min-height: 0 !important;
+}
+.wa-funnel-shell .wa-funnel-composer {
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  position: relative !important;
+  z-index: 30 !important;
+  background: #1f2c34 !important;
+  padding-bottom: 6px !important;
+}
+.wa-funnel-shell .wa-funnel-chat {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+.wa-funnel-shell .wa-funnel-quick {
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+}
+.wa-funnel-shell .wa-funnel-header {
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
 }

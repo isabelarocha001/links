@@ -173,7 +173,14 @@
     <Teleport to="body">
 
       <div v-if="showWaFunnel" class="wa-funnel-overlay" @click.self="closeWaFunnel">
-        <div class="wa-funnel-shell" role="dialog" aria-modal="true" :style="funnelShellStyle" style="position:relative" @click.stop>
+        <div
+          class="wa-funnel-shell"
+          :class="{ 'wa-funnel-shell--kbd': funnelKeyboardOpen }"
+          role="dialog"
+          aria-modal="true"
+          :style="funnelShellStyle"
+          @click.stop
+        >
           <header class="wa-header wa-funnel-header">
             <button
               v-if="!leadBlockedWanessa"
@@ -1054,6 +1061,9 @@ function closeFunnelPhoto() {
 
 const funnelInput = ref('')
 const funnelShellStyle = ref<Record<string, string>>({})
+const funnelKeyboardOpen = ref(false)
+let funnelKbdPoll: ReturnType<typeof setInterval> | null = null
+let funnelKbdBaseH = 0
 const funnelChatUnlocked = ref(false)
 const funnelBlocked = ref(false) // lead insistiu em programa/encontro presencial
 const funnelPermBlocked = ref(false) // Wanessa/sistema bloqueou o lead → segunda chance com mimo
@@ -2109,69 +2119,105 @@ async function checkPixStatus(silent = false) {
 }
 
 
+function applyFunnelShellBox(h: number, top: number) {
+  const hh = Math.max(220, Math.round(h))
+  const tt = Math.max(0, Math.round(top))
+  const next: Record<string, string> = {
+    position: 'fixed',
+    left: '0px',
+    right: '0px',
+    width: '100%',
+    top: tt + 'px',
+    height: hh + 'px',
+    maxHeight: hh + 'px',
+    bottom: 'auto',
+  }
+  const cur = funnelShellStyle.value || {}
+  if (cur.height === next.height && cur.top === next.top && cur.maxHeight === next.maxHeight) {
+    return
+  }
+  funnelShellStyle.value = next
+  try {
+    nextTick(() => {
+      scrollFunnel()
+      const el = document.querySelector('.wa-funnel-composer') as HTMLElement | null
+      el?.scrollIntoView({ block: 'end', behavior: 'auto' })
+    })
+  } catch {}
+}
+
 function syncFunnelViewport() {
   try {
     const vv = window.visualViewport
-    let next: Record<string, string>
-    if (!vv) {
-      next = {
-        height: '100dvh',
-        top: '0px',
-        bottom: 'auto',
-        maxHeight: '100dvh',
+    const layoutH = window.innerHeight || document.documentElement.clientHeight || 700
+    let h = vv ? Math.round(vv.height) : layoutH
+    let top = vv ? Math.round(vv.offsetTop || 0) : 0
+
+    // Instagram / alguns WebViews NÃO encolhem o visualViewport com o teclado.
+    // Se o teclado está "aberto" e a altura quase não mudou, força espaço pro teclado.
+    if (funnelKeyboardOpen.value) {
+      const base = funnelKbdBaseH || layoutH
+      const shrunk = h < base * 0.88
+      if (!shrunk) {
+        // ~42% da tela pro teclado (valores típicos Android/iOS)
+        const kbd = Math.round(base * 0.42)
+        h = Math.max(220, base - kbd)
+        top = 0
       }
     } else {
-      const h = Math.max(200, Math.round(vv.height))
-      const top = Math.max(0, Math.round(vv.offsetTop))
-      // Shell ocupa exatamente a área visível (acima do teclado)
-      next = {
-        position: 'fixed',
-        left: '0',
-        right: '0',
-        width: '100%',
-        height: h + 'px',
-        top: top + 'px',
-        bottom: 'auto',
-        maxHeight: h + 'px',
-      }
+      // teclado fechado → ocupa a tela inteira
+      h = layoutH
+      top = 0
     }
-    const cur = funnelShellStyle.value || {}
-    if (
-      cur.height === next.height &&
-      cur.top === (next.top || '0px') &&
-      cur.maxHeight === next.maxHeight
-    ) {
-      return
-    }
-    funnelShellStyle.value = next
-    // mantém o fim do chat visível junto do composer
-    try { nextTick(() => scrollFunnel()) } catch {}
+
+    applyFunnelShellBox(h, top)
   } catch {
-    // não limpa estilo a toa (evita flash)
+    // ignore
+  }
+}
+
+function stopFunnelKbdPoll() {
+  if (funnelKbdPoll) {
+    clearInterval(funnelKbdPoll)
+    funnelKbdPoll = null
   }
 }
 
 function onFunnelInputFocus() {
   try { closeFunnelEmojiPicker() } catch {}
   try { showFunnelAttachMenu.value = false } catch {}
+  funnelKbdBaseH = window.innerHeight || 700
+  funnelKeyboardOpen.value = true
   syncFunnelViewport()
-  // iOS / Instagram WebView atrasam o resize do teclado
+  // poll enquanto teclado abre (WebView do Instagram demora / não dispara resize)
+  stopFunnelKbdPoll()
+  let ticks = 0
+  funnelKbdPoll = setInterval(() => {
+    syncFunnelViewport()
+    ticks++
+    if (ticks >= 20) stopFunnelKbdPoll() // ~2s
+  }, 100)
   setTimeout(syncFunnelViewport, 50)
-  setTimeout(syncFunnelViewport, 150)
-  setTimeout(syncFunnelViewport, 350)
-  setTimeout(syncFunnelViewport, 600)
-  nextTick(() => {
-    scrollFunnel()
-    try {
-      const el = document.querySelector('.wa-funnel-composer') as HTMLElement | null
-      el?.scrollIntoView({ block: 'end', behavior: 'smooth' })
-    } catch {}
-  })
+  setTimeout(syncFunnelViewport, 200)
+  setTimeout(syncFunnelViewport, 400)
+  setTimeout(syncFunnelViewport, 700)
 }
 
 function onFunnelInputBlur() {
-  setTimeout(syncFunnelViewport, 100)
-  setTimeout(syncFunnelViewport, 300)
+  // delay: se o foco foi pro botão enviar, não fecha ainda
+  setTimeout(() => {
+    try {
+      const a = document.activeElement as HTMLElement | null
+      if (a && a.classList && (a.classList.contains('wa-input') || a.closest?.('.wa-funnel-composer'))) {
+        return
+      }
+    } catch {}
+    funnelKeyboardOpen.value = false
+    stopFunnelKbdPoll()
+    syncFunnelViewport()
+    setTimeout(syncFunnelViewport, 150)
+    setTimeout(syncFunnelViewport, 350)
+  }, 80)
 }
 
 let funnelVvClean: (() => void) | null = null
@@ -3147,11 +3193,15 @@ function openWaFunnel(source = 'whatsapp') {
   try { onCardClick('WhatsApp Funnel', whatsappUrl.value) } catch {}
   try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open', source }) } catch {}
   showWaFunnel.value = true
+  funnelKeyboardOpen.value = false
   startPresencePoll()
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
   funnelTyping.value = false
-  nextTick(() => bindFunnelViewport())
+  nextTick(() => {
+    bindFunnelViewport()
+    syncFunnelViewport()
+  })
   if (funnelTimer) clearTimeout(funnelTimer)
 
   const restored = loadFunnelState()
@@ -3177,6 +3227,8 @@ function closeWaFunnel() {
   if (funnelTimer) clearTimeout(funnelTimer)
   funnelTyping.value = false
   unbindFunnelViewport()
+  stopFunnelKbdPoll()
+  funnelKeyboardOpen.value = false
   // salva progresso antes de fechar
   if (funnelMessages.value.length) saveFunnelState()
   showWaFunnel.value = false
