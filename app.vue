@@ -2432,7 +2432,7 @@ async function sendFunnelFreeText() {
           step: funnelStep.value,
         },
       })
-      const reply = (res?.reply || 'Me conta mais, amor 😘').slice(0, 600)
+      const reply = (res?.reply || 'Me fala o que você quer, amor.').slice(0, 600)
       const intent = String(res?.intent || 'unknown')
       const step = res?.suggest_step ? String(res.suggest_step) : null
       const showMenu = !!res?.show_menu
@@ -2655,7 +2655,7 @@ async function sendFunnelFreeText() {
       return
     }
 
-    await funnelTypeParts(reply || 'Me conta mais um pouco, amor 😘', 1100)
+    await funnelTypeParts(reply || 'Me fala de novo o que você quer, amor.', 1100)
 
     if (step === 'video_consult') funnelStep.value = 'video_consult'
     else if (step === 'video_avulso') funnelStep.value = 'video_avulso'
@@ -2668,7 +2668,7 @@ async function sendFunnelFreeText() {
     try { saveFunnelState() } catch {}
   } catch (e) {
     console.warn('[funnel gemini fallback]', e)
-    await funnelType('Me conta um pouco mais, amor… quero te entender direito 😘', 1000)
+    await funnelType('Pode escrever de novo o que você quer? Assim eu te respondo certinho.', 1000)
   }
 }
 

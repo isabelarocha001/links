@@ -127,7 +127,7 @@ function localIntent(message: string): IntentResult {
     return {
       intent: 'unknown',
       confidence: 0.6,
-      reply: 'Depende do que você quer, amor 💚 Videochamada, pack, chat ou webnamoro… me fala o que te interessa que eu te passo o valor certinho.',
+      reply: 'Depende do que você quer, amor 💚 Videochamada, pack, chat ou webnamoro. Me fala o que te interessa que eu te passo o valor certinho.',
       show_menu: true,
       suggest_step: 'menu',
     }
@@ -136,7 +136,7 @@ function localIntent(message: string): IntentResult {
   return {
     intent: 'unknown',
     confidence: 0.4,
-    reply: 'Hmm entendi. me fala um pouco mais sobre isso? Quero te responder direito 😘',
+    reply: 'Pode repetir com outras palavras? Quero te entender certinho.',
     show_menu: false,
     suggest_step: null,
   }
@@ -154,6 +154,16 @@ SUA TAREFA:
 1) Responder de verdade o que o lead perguntou ou comentou (use o histórico).
 2) Classificar a intenção.
 3) Só empurrar oferta quando fizer sentido na conversa.
+
+
+Preços fixos (use SEMPRE estes, não invente):
+- Videochamada 10 min: R$ 99,90
+- Videochamada 20 min: R$ 149,90
+- Videochamada 30 min: R$ 229,90
+- Videochamada 1 hora: R$ 399,90
+- Pack gostinho: R$ 29,90 | Pack Gold: R$ 79,90 | Combo: R$ 109,90
+- Chat 30-40 min: R$ 49,90 | Chat + mídia: R$ 79,90
+- Webnamoro 7d R$ 179,90 | 15d R$ 299,90 | 30d R$ 499,90
 
 O que você oferece ONLINE (nunca presencial):
 - Videochamada ao vivo
@@ -200,7 +210,7 @@ ${message.slice(0, 800)}
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.55,
-          maxOutputTokens: 400,
+          maxOutputTokens: 2048,
           responseMimeType: 'application/json',
         },
       }),
@@ -210,10 +220,15 @@ ${message.slice(0, 800)}
       return null
     }
     const data = await res.json()
-    const text =
-      data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') ||
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      ''
+    const parts = data?.candidates?.[0]?.content?.parts || []
+    const text = parts
+      .map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
+      .filter(Boolean)
+      .join('')
+    if (!text) {
+      console.warn('[funnel-intent] empty gemini text', data?.candidates?.[0]?.finishReason)
+      return null
+    }
     let cleaned = String(text).replace(/```json|```/g, '').trim()
     const start = cleaned.indexOf('{')
     const end = cleaned.lastIndexOf('}')
