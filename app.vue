@@ -871,6 +871,30 @@ function closeChatPlans() {
   if (chatPayLoading.value) return
   showChatPlans.value = false
 }
+function openPreparedPixForUser() {
+  const code = funnelPixCode.value || pixCopyCode.value
+  if (!code || !/^000201/.test(code)) {
+    funnelType('Ainda não tenho o PIX gerado… escolhe de novo o que você quer que eu gero 💚', 1000)
+    return
+  }
+  ;(window as any).__pixAskedOnce = true
+  ;(window as any).__pixCodeShown = true
+  showPixModal.value = true
+  funnelStep.value = 'awaiting_payment'
+  const price = selectedPack.value?.price || selectedChatPlan.value?.priceLabel || ''
+  funnelType(`Pronto, amor 💚 Aqui está o PIX de R$ ${price}.\n\nPaga e toca em consultar status quando concluir.`, 1200)
+  // também manda no chat
+  showPixCodeInChat(code, price)
+  // poll de pagamento
+  stopFunnelPayPoll()
+  let tries = 0
+  funnelPayPoll = setInterval(() => {
+    tries++
+    if (tries > 90) { stopFunnelPayPoll(); return }
+    checkFunnelPayment(true).catch(() => {})
+  }, 4000)
+}
+
 function pushPixIntoFunnelChat() {
   // NUNCA joga o código sem o lead pedir. Só pergunta e espera resposta.
   const code = funnelPixCode.value || pixCopyCode.value
@@ -909,10 +933,10 @@ function showPixCodeInChat(code: string, price: string) {
 
 function closePixModal() {
   showPixModal.value = false
-  // NÃO para o poll do funil: continua verificando pagamento
-  if (funnelStep.value === 'awaiting_payment' && (funnelPixCode.value || pixCopyCode.value)) {
-    pushPixIntoFunnelChat()
-    // só um botão natural depois do PIX na conversa
+  // Se fechou sem autorizar antes, só lembra que pode pedir — não joga código
+  if (!(window as any).__pixCodeShown && (funnelPixCode.value || pixCopyCode.value)) {
+    funnelStep.value = 'pix_ask'
+    funnelType('Quando quiser, toca em "Sim, pode mandar o PIX" que eu te envio a chave 💚', 1000)
   }
 }
 async function copyPixCode() {
@@ -1471,7 +1495,7 @@ async function startFunnelCheckout() {
     return
   }
 
-  // abre o mesmo popup de PIX (QR + copia e cola + status)
+  // Prepara o PIX internamente — NÃO abre modal nem joga código na cara
   selectedChatPlan.value = {
     key: pack.key,
     title: pack.label,
@@ -1488,10 +1512,14 @@ async function startFunnelCheckout() {
   pixPaymentId.value = funnelPaymentId.value
   pixExternalId.value = funnelExternalId.value
   pixStatusText.value = 'Aguardando pagamento… use o QR ou o copia e cola'
-  showPixModal.value = true
-  funnelStep.value = 'awaiting_payment'
-
-  await funnelType('Abri o PIX na tela pra você, amor 💚 Paga e toca em consultar status.', 1200)
+  // guarda pronto, mas só mostra quando o lead autorizar
+  ;(window as any).__pixAskedOnce = false
+  ;(window as any).__pixCodeShown = false
+  funnelStep.value = 'pix_ask'
+  await funnelType(
+    `Fechado: ${pack.label} por R$ ${pack.price} 💕\n\nPosso te mandar a chave PIX agora pra você pagar?\n\nToque no botão abaixo 👇`,
+    1600,
+  )
 
   stopFunnelPayPoll()
   let tries = 0
@@ -1657,7 +1685,14 @@ const funnelOptions = computed(() => {
       { key: 'vid_10', label: '10 min  R$ 99,90', variant: 'wa-quick--yes' },
       { key: 'vid_20', label: '20 min  R$ 149,90', variant: 'wa-quick--yes' },
       { key: 'vid_30', label: '30 min  R$ 229,90', variant: 'wa-quick--yes' },
+      { key: 'vid_60', label: '1 hora  R$ 399,90', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'pix_ask' || funnelStep.value === 'pix_ask_hour') {
+    return [
+      { key: 'pix_yes', label: 'Sim, pode mandar o PIX 💚', variant: 'wa-quick--yes' },
+      { key: 'pix_no', label: 'Ainda não', variant: 'wa-quick--no' },
     ]
   }
   if (funnelStep.value === 'webnamoro') {
@@ -2057,9 +2092,27 @@ async function sendFunnelFreeText() {
   if (funnelStep.value === 'video_consult') {
     funnelStep.value = 'video'
     await funnelType(
-      'Entendi o clima que você quer 😈\n\nPra gente fazer isso ao vivo, escolhe o tempo:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n\nMe fala qual encaixa melhor pra você agora — ou se prefere outro tempo.',
+      'Entendi o clima que você quer 😈\n\nPra gente fazer isso ao vivo, escolhe o tempo:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n• 1 hora  R$ 399,90\n\nMe fala qual encaixa melhor pra você agora — ou se prefere outro tempo.',
       1800,
     )
+    return
+  }
+
+  // Pediu 1 hora / 60 min explicitamente
+  if (
+    (funnelStep.value === 'video' || funnelStep.value === 'video_consult' || funnelStep.value === 'menu') &&
+    (/\b(1|uma)\s*hora\b/.test(lower) || /\b60\s*min/.test(lower) || lower.includes('uma hr') || lower.includes('1hr') || lower.includes('1 hr'))
+  ) {
+    selectedPack.value = { key: 'vid_60', label: 'Videochamada 1 hora', price: '399,90' }
+    videoCallPurchasedMin.value = 60
+    funnelStep.value = 'video'
+    track('whatsapp_funnel_select', { offer_slug: 'vid_60' })
+    await funnelType(
+      'Uma hora inteira comigo 🔥\n\nVideochamada 1h — R$ 399,90.\n\nÉ tempo de sobra pra fazer do jeito que você quiser, sem pressa.\n\nQuer que eu prepare o PIX dessa de 1 hora?',
+      1800,
+    )
+    // botões: confirmar checkout
+    funnelStep.value = 'pix_ask_hour'
     return
   }
 
