@@ -2378,21 +2378,9 @@ function isFunnelInputFocused(): boolean {
   }
 }
 
-function resetFunnelKeyboardLayout() {
-  stopFunnelKbdPoll()
-  funnelKeyboardOpen.value = false
-  try {
-    const innerH = window.innerHeight || document.documentElement.clientHeight || 700
-    applyFunnelShellBox(innerH, 0, 0)
-  } catch {
-    applyFunnelShellBox(700, 0, 0)
-  }
-}
-
-function applyFunnelShellBox(h: number, top: number, kbdInset: number) {
+function applyFunnelShellBox(h: number, top: number) {
   const hh = Math.max(220, Math.round(h))
   const tt = Math.max(0, Math.round(top))
-  const kbd = Math.max(0, Math.round(kbdInset))
   const next: Record<string, string> = {
     position: 'fixed',
     left: '0px',
@@ -2402,74 +2390,42 @@ function applyFunnelShellBox(h: number, top: number, kbdInset: number) {
     height: hh + 'px',
     maxHeight: hh + 'px',
     bottom: 'auto',
-    paddingBottom: kbd > 0 ? kbd + 'px' : '0px',
+    paddingBottom: '0px',
     boxSizing: 'border-box',
   }
   const cur = funnelShellStyle.value || {}
-  if (
-    cur.height === next.height &&
-    cur.top === next.top &&
-    cur.paddingBottom === next.paddingBottom
-  ) {
-    return
-  }
+  if (cur.height === next.height && cur.top === next.top && cur.paddingBottom === '0px') return
   funnelShellStyle.value = next
-  if (funnelKeyboardOpen.value) {
-    try { nextTick(() => scrollFunnel()) } catch {}
-  }
 }
 
-function syncFunnelViewport(opts?: { forceKbd?: boolean }) {
+/** Só acompanha visualViewport real. Nunca inventa padding (evita vão preto). */
+function syncFunnelViewport() {
   try {
     const vv = window.visualViewport
     const innerH = window.innerHeight || document.documentElement.clientHeight || 700
-    const base = funnelKbdBaseH || innerH
-    const forceKbd = !!(opts && opts.forceKbd)
-    const focused = isFunnelInputFocused()
 
-    // Botão VOLTAR do Android: teclado some e o input perde foco (ou não),
-    // mas o layout ficava com padding/vão preto. Se não está focado → tela cheia.
-    if (funnelKeyboardOpen.value && !focused) {
+    if (!funnelKeyboardOpen.value || !isFunnelInputFocused()) {
       funnelKeyboardOpen.value = false
-      stopFunnelKbdPoll()
-      applyFunnelShellBox(innerH, 0, 0)
+      applyFunnelShellBox(innerH, 0)
       return
     }
 
-    // teclado fechado → tela cheia
-    if (!funnelKeyboardOpen.value) {
-      applyFunnelShellBox(innerH, 0, 0)
-      return
-    }
-
-    // 1) Browser já encolheu a janela (Chrome Android etc.) → só preencher innerH, SEM padding extra
-    if (innerH < base * 0.88) {
-      applyFunnelShellBox(innerH, 0, 0)
-      return
-    }
-
-    // 2) visualViewport encolheu → encaixar a shell exatamente na área visível
     if (vv) {
       const vvH = Math.round(vv.height)
       const vvTop = Math.round(vv.offsetTop || 0)
-      if (vvH < base * 0.88) {
-        applyFunnelShellBox(vvH, vvTop, 0)
+      if (vvH < innerH * 0.92) {
+        applyFunnelShellBox(vvH, vvTop)
         return
       }
     }
 
-    // 3) Instagram / WebView: só força padding se o input AINDA está focado
-    if (forceKbd && focused) {
-      const kbd = Math.round(base * 0.36)
-      applyFunnelShellBox(base, 0, kbd)
+    if (funnelKbdBaseH && innerH < funnelKbdBaseH * 0.92) {
+      applyFunnelShellBox(innerH, 0)
       return
     }
 
-    // ainda esperando o teclado aparecer (ou voltar fechou sem blur detectado)
-    applyFunnelShellBox(innerH, 0, 0)
-  } catch {
-    // ignore
-  }
+    applyFunnelShellBox(innerH, 0)
+  } catch {}
 }
 
 function stopFunnelKbdPoll() {
@@ -2480,70 +2436,53 @@ function stopFunnelKbdPoll() {
 }
 
 function onFunnelOverlayClick() {
-  if (funnelKeyboardOpen.value) return
+  if (funnelKeyboardOpen.value && isFunnelInputFocused()) return
   closeWaFunnel()
 }
 
 function onFunnelInputFocus() {
   try { closeFunnelEmojiPicker() } catch {}
   try { showFunnelAttachMenu.value = false } catch {}
-  // altura ANTES do teclado
   funnelKbdBaseH = window.innerHeight || 700
   funnelKeyboardOpen.value = true
-  syncFunnelViewport({ forceKbd: false })
+  syncFunnelViewport()
   stopFunnelKbdPoll()
   let ticks = 0
   funnelKbdPoll = setInterval(() => {
     ticks++
-    // se o usuário já fechou o teclado (voltar), para de forçar layout
     if (!isFunnelInputFocused()) {
-      resetFunnelKeyboardLayout()
+      funnelKeyboardOpen.value = false
+      stopFunnelKbdPoll()
+      syncFunnelViewport()
       return
     }
-    syncFunnelViewport({ forceKbd: ticks >= 4 })
-    if (ticks >= 18) stopFunnelKbdPoll()
+    syncFunnelViewport()
+    if (ticks >= 25) stopFunnelKbdPoll()
   }, 100)
-  setTimeout(() => syncFunnelViewport({ forceKbd: false }), 100)
-  setTimeout(() => {
-    if (isFunnelInputFocused()) syncFunnelViewport({ forceKbd: true })
-  }, 450)
 }
 
 function onFunnelInputBlur() {
   setTimeout(() => {
     if (isFunnelInputFocused()) return
-    resetFunnelKeyboardLayout()
-    setTimeout(() => syncFunnelViewport({ forceKbd: false }), 220)
-  }, 120)
+    funnelKeyboardOpen.value = false
+    stopFunnelKbdPoll()
+    syncFunnelViewport()
+    setTimeout(syncFunnelViewport, 200)
+  }, 100)
 }
 
 let funnelVvClean: (() => void) | null = null
 function bindFunnelViewport() {
   unbindFunnelViewport()
+  funnelKeyboardOpen.value = false
   syncFunnelViewport()
   const vv = window.visualViewport
-  const handler = () => {
-    // Android back fecha teclado → resize sem blur às vezes
-    if (funnelKeyboardOpen.value && !isFunnelInputFocused()) {
-      resetFunnelKeyboardLayout()
-      return
-    }
-    syncFunnelViewport()
-  }
+  const handler = () => syncFunnelViewport()
   if (vv) {
     vv.addEventListener('resize', handler)
     vv.addEventListener('scroll', handler)
   }
   window.addEventListener('resize', handler)
-  // toque fora do input com teclado "fantasma" (vão preto)
-  const onTouch = () => {
-    if (!funnelKeyboardOpen.value) return
-    setTimeout(() => {
-      if (!isFunnelInputFocused()) resetFunnelKeyboardLayout()
-    }, 30)
-  }
-  document.addEventListener('touchstart', onTouch, { passive: true })
-  document.addEventListener('focusin', handler)
   document.addEventListener('focusout', handler)
   funnelVvClean = () => {
     if (vv) {
@@ -2551,12 +2490,11 @@ function bindFunnelViewport() {
       vv.removeEventListener('scroll', handler)
     }
     window.removeEventListener('resize', handler)
-    document.removeEventListener('touchstart', onTouch)
-    document.removeEventListener('focusin', handler)
     document.removeEventListener('focusout', handler)
   }
 }
 function unbindFunnelViewport() {
+  stopFunnelKbdPoll()
   if (funnelVvClean) {
     funnelVvClean()
     funnelVvClean = null
@@ -3466,6 +3404,7 @@ function saveFunnelState() {
         selectedPack: selectedPack.value,
         blocked: funnelBlocked.value,
         permBlocked: funnelPermBlocked.value,
+        open: !!showWaFunnel.value,
         savedAt: Date.now(),
       }),
     )
@@ -3522,6 +3461,7 @@ function openWaFunnel(source = 'whatsapp') {
   if (funnelTimer) clearTimeout(funnelTimer)
 
   const restored = loadFunnelState()
+  try { saveFunnelState() } catch {} // marca open:true
   if (restored) {
     nextTick(() => scrollFunnel())
     return
@@ -3546,12 +3486,12 @@ function closeWaFunnel() {
   unbindFunnelViewport()
   stopFunnelKbdPoll()
   funnelKeyboardOpen.value = false
-  // salva progresso antes de fechar
-  if (funnelMessages.value.length) saveFunnelState()
+  // fecha e salva open:false (mantém histórico das msgs)
   showWaFunnel.value = false
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
   funnelShellStyle.value = {}
+  try { saveFunnelState() } catch {}
   // Se entrou pela rota /chat/*, ao fechar mostra a home (senão fica tela roxa vazia)
   if (isChatLanding.value) {
     isChatLanding.value = false
@@ -4728,6 +4668,20 @@ onMounted(async () => {
     setTimeout(() => {
       if (!showWaFunnel.value) openWaFunnel('chat_' + chatSlug)
     }, 1000)
+  } else {
+    // Reload na home: se o chat estava aberto, reabre com o histórico
+    try {
+      const raw = localStorage.getItem(FUNNEL_STORAGE_KEY)
+      if (raw) {
+        const data = JSON.parse(raw)
+        if (data?.open && Array.isArray(data.messages) && data.messages.length > 0) {
+          gate.value = 'pass'
+          gateReady.value = true
+          try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
+          nextTick(() => openWaFunnel('reload_restore'))
+        }
+      }
+    } catch {}
   }
 
   warmSyncPay()
