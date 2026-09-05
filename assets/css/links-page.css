@@ -2358,3 +2358,175 @@ button {
   flex: 0 0 auto !important;
   flex-shrink: 0 !important;
 }
+
+/* Modais anexar: enquete / chave PIX */
+.attach-form-card {
+  width: min(92vw, 400px);
+  max-height: min(88vh, 640px);
+  overflow-y: auto;
+  background: #1f2c34;
+  border-radius: 16px;
+  padding: 20px 16px 16px;
+  position: relative;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 20px 50px rgba(0,0,0,.45);
+}
+.attach-form-title {
+  margin: 0 28px 14px 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e9edef;
+}
+.attach-form-label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 0.78rem;
+  color: #8696a0;
+  font-weight: 600;
+}
+.attach-form-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.35);
+  color: #fff;
+  padding: 11px 12px;
+  font-size: 14px;
+  outline: none;
+}
+.attach-form-input:focus {
+  border-color: rgba(37, 211, 102, .45);
+}
+.attach-form-opt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.attach-form-opt-num {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #053b1c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.attach-form-opt-del {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(248,113,113,.15);
+  color: #f87171;
+  cursor: pointer;
+}
+.attach-form-add {
+  margin-top: 4px;
+  border: 1px dashed rgba(37,211,102,.45);
+  background: transparent;
+  color: #25d366;
+  border-radius: 10px;
+  padding: 10px 12px;
+  width: 100%;
+  font-weight: 600;
+  cursor: pointer;
+}
+.attach-form-hint {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  color: #8696a0;
+}
+.attach-form-error {
+  margin: 8px 0 0;
+  color: #f87171;
+  font-size: 0.82rem;
+}
+.attach-form-submit {
+  margin-top: 14px;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: #25d366;
+  color: #053b1c;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.attach-pix-types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.attach-pix-type {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.25);
+  color: #e9edef;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.attach-pix-type.is-on {
+  border-color: rgba(37,211,102,.55);
+  background: rgba(37,211,102,.15);
+  color: #25d366;
+}
+.wa-poll-card, .wa-pixkey-card, .wa-contact-card {
+  background: rgba(0,0,0,.18);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 180px;
+}
+.wa-poll-q, .wa-pixkey-title, .wa-contact-name {
+  margin: 0 0 8px;
+  font-weight: 700;
+  color: #e9edef;
+  font-size: 0.9rem;
+}
+.wa-poll-opts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wa-poll-opts li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  color: #d1d7db;
+  font-size: 0.86rem;
+}
+.wa-poll-opts li span {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(37,211,102,.25);
+  color: #25d366;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wa-pixkey-type {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  color: #8696a0;
+}
+.wa-pixkey-val, .wa-contact-line {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #e9edef;
+  word-break: break-all;
+}

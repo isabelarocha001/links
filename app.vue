@@ -570,14 +570,9 @@
                 <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('camera')"><span class="wa-attach-ico wa-attach-ico--cam">📷</span><span>Câmera</span></button>
                 <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('gallery')"><span class="wa-attach-ico wa-attach-ico--gal">🖼️</span><span>Galeria</span></button>
                 <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('audio')"><span class="wa-attach-ico wa-attach-ico--aud">🎧</span><span>Áudio</span></button>
-                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('location')"><span class="wa-attach-ico wa-attach-ico--loc">📍</span><span>Localização</span></button>
                 <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('contact')"><span class="wa-attach-ico wa-attach-ico--ct">👤</span><span>Contato</span></button>
                 <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('poll')"><span class="wa-attach-ico wa-attach-ico--poll">📊</span><span>Enquete</span></button>
-                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('event')"><span class="wa-attach-ico wa-attach-ico--ev">📅</span><span>Evento</span></button>
-                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('sticker')"><span class="wa-attach-ico wa-attach-ico--stk">✨</span><span>Figurinha</span></button>
                 <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('pix')"><span class="wa-attach-ico wa-attach-ico--pix">💚</span><span>Chave PIX</span></button>
-                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('form')"><span class="wa-attach-ico wa-attach-ico--form">📋</span><span>Formulário</span></button>
-                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('quick')"><span class="wa-attach-ico wa-attach-ico--quick">⚡</span><span>Respostas rápidas</span></button>
               </div>
               <button type="button" class="wa-attach-item wa-attach-item--cancel" @click="showFunnelAttachMenu = false">Cancelar</button>
             </div>
@@ -759,6 +754,67 @@
           <button type="button" class="block-reason-confirm" @click="confirmLeadBlock">
             Confirmar bloqueio
           </button>
+        </div>
+      </div>
+
+
+      <!-- Modal criar enquete -->
+      <div v-if="showPollModal" class="chat-plans-overlay" style="z-index:40080" @click.self="closePollModal">
+        <div class="attach-form-card" @click.stop>
+          <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePollModal">✕</button>
+          <p class="attach-form-title">Criar enquete</p>
+          <label class="attach-form-label">Pergunta da enquete</label>
+          <input v-model="pollQuestion" class="attach-form-input" type="text" maxlength="120" placeholder="Ex: Qual horário prefere?" />
+          <label class="attach-form-label">Opções de resposta</label>
+          <div v-for="(opt, i) in pollOptions" :key="i" class="attach-form-opt-row">
+            <span class="attach-form-opt-num">{{ i + 1 }}</span>
+            <input v-model="pollOptions[i]" class="attach-form-input" type="text" maxlength="80" :placeholder="'Opção ' + (i + 1)" />
+            <button
+              v-if="pollOptions.length > 2"
+              type="button"
+              class="attach-form-opt-del"
+              aria-label="Remover opção"
+              @click="removePollOption(i)"
+            >✕</button>
+          </div>
+          <button
+            v-if="pollOptions.length < 5"
+            type="button"
+            class="attach-form-add"
+            @click="addPollOption"
+          >+ Adicionar mais</button>
+          <p class="attach-form-hint">Máximo 5 respostas</p>
+          <p v-if="pollError" class="attach-form-error">{{ pollError }}</p>
+          <button type="button" class="attach-form-submit" @click="submitPoll">Enviar enquete</button>
+        </div>
+      </div>
+
+      <!-- Modal cadastrar chave PIX -->
+      <div v-if="showPixKeyModal" class="chat-plans-overlay" style="z-index:40080" @click.self="closePixKeyModal">
+        <div class="attach-form-card" @click.stop>
+          <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePixKeyModal">✕</button>
+          <p class="attach-form-title">Cadastrar chave PIX</p>
+          <label class="attach-form-label">Tipo da chave</label>
+          <div class="attach-pix-types">
+            <button
+              v-for="t in pixKeyTypes"
+              :key="t.id"
+              type="button"
+              class="attach-pix-type"
+              :class="{ 'is-on': pixKeyType === t.id }"
+              @click="pixKeyType = t.id"
+            >{{ t.label }}</button>
+          </div>
+          <label class="attach-form-label">Chave</label>
+          <input
+            v-model="pixKeyValue"
+            class="attach-form-input"
+            type="text"
+            maxlength="120"
+            :placeholder="pixKeyPlaceholder"
+          />
+          <p v-if="pixKeyError" class="attach-form-error">{{ pixKeyError }}</p>
+          <button type="button" class="attach-form-submit" @click="submitPixKey">Enviar chave PIX</button>
         </div>
       </div>
 
@@ -1179,31 +1235,167 @@ function onFunnelAttachAction(kind: string) {
   showFunnelAttachMenu.value = false
   if (!requireFunnelChatOrPay()) return
   if (kind === 'camera') { onFunnelCamera(); return }
-  if (kind === 'gallery') { pickFunnelMedia('photo'); return }
-  if (kind === 'audio') { pickFunnelMedia('audio'); return }
-  if (kind === 'doc') { pickFunnelMedia('doc'); return }
-  if (kind === 'pix') {
-    pushFunnel('me', 'Chave PIX')
-    setTimeout(() => {
-      funnelType('Quer pagar por PIX? Me diz o que você quer (pack, chat, videochamada…) que eu gero o código aqui 💚', 900)
-      funnelStep.value = 'menu'
-    }, 300)
+  if (kind === 'gallery') {
+    // Galeria nativa do celular (fotos e vídeos)
+    pickFunnelMedia('photo')
     return
   }
-  const labels: Record<string, string> = {
-    location: 'Localização',
-    contact: 'Contato',
-    poll: 'Enquete',
-    event: 'Evento',
-    sticker: 'Figurinha',
-    form: 'Formulário',
-    quick: 'Respostas rápidas',
+  if (kind === 'audio') { pickFunnelMedia('audio'); return }
+  if (kind === 'doc') { pickFunnelMedia('doc'); return }
+  if (kind === 'poll') {
+    openPollModal()
+    return
   }
-  const label = labels[kind] || kind
-  pushFunnel('me', label)
+  if (kind === 'pix') {
+    openPixKeyModal()
+    return
+  }
+  if (kind === 'contact') {
+    openNativeContactPicker()
+    return
+  }
+}
+
+const showPollModal = ref(false)
+const pollQuestion = ref('')
+const pollOptions = ref<string[]>(['', ''])
+const pollError = ref('')
+
+function openPollModal() {
+  pollQuestion.value = ''
+  pollOptions.value = ['', '']
+  pollError.value = ''
+  showPollModal.value = true
+}
+function closePollModal() {
+  showPollModal.value = false
+  pollError.value = ''
+}
+function addPollOption() {
+  if (pollOptions.value.length >= 5) return
+  pollOptions.value.push('')
+}
+function removePollOption(i: number) {
+  if (pollOptions.value.length <= 2) return
+  pollOptions.value.splice(i, 1)
+}
+function submitPoll() {
+  const q = String(pollQuestion.value || '').trim()
+  if (q.length < 2) {
+    pollError.value = 'Escreva a pergunta da enquete'
+    return
+  }
+  const opts = pollOptions.value.map((o) => String(o || '').trim()).filter(Boolean)
+  if (opts.length < 2) {
+    pollError.value = 'Coloque pelo menos 2 opções'
+    return
+  }
+  if (opts.length > 5) {
+    pollError.value = 'Máximo 5 respostas'
+    return
+  }
+  const lines = opts.map((o, i) => `${i + 1}. ${o}`).join('\n')
+  const text = `📊 Enquete: ${q}\n${lines}`
+  const html = `<div class="wa-poll-card"><p class="wa-poll-q">📊 ${escapeHtml(q)}</p><ul class="wa-poll-opts">${opts.map((o, i) => `<li><span>${i + 1}</span>${escapeHtml(o)}</li>`).join('')}</ul></div>`
+  pushFunnel('me', text, html)
+  showPollModal.value = false
+  try { saveFunnelState() } catch {}
+  try { track('funnel_poll_sent', { offer_slug: 'poll', options: opts.length }) } catch {}
   setTimeout(() => {
-    funnelType(`Vi que você mandou ${label.toLowerCase()}… me conta melhor o que você quer, amor 😏`, 900)
-  }, 300)
+    funnelType('Recebi sua enquete 👀 Já anotei aqui… me conta o que mais você quer, amor', 900)
+  }, 400)
+}
+
+const showPixKeyModal = ref(false)
+const pixKeyType = ref<'phone' | 'email' | 'cpf' | 'random'>('phone')
+const pixKeyValue = ref('')
+const pixKeyError = ref('')
+const pixKeyTypes = [
+  { id: 'phone' as const, label: 'Telefone' },
+  { id: 'email' as const, label: 'E-mail' },
+  { id: 'cpf' as const, label: 'CPF' },
+  { id: 'random' as const, label: 'Aleatória' },
+]
+const pixKeyPlaceholder = computed(() => {
+  if (pixKeyType.value === 'phone') return 'Ex: 47999999999'
+  if (pixKeyType.value === 'email') return 'Ex: seu@email.com'
+  if (pixKeyType.value === 'cpf') return 'Ex: 000.000.000-00'
+  return 'Cole a chave aleatória'
+})
+
+function openPixKeyModal() {
+  pixKeyType.value = 'phone'
+  pixKeyValue.value = ''
+  pixKeyError.value = ''
+  showPixKeyModal.value = true
+}
+function closePixKeyModal() {
+  showPixKeyModal.value = false
+  pixKeyError.value = ''
+}
+function submitPixKey() {
+  const val = String(pixKeyValue.value || '').trim()
+  if (val.length < 5) {
+    pixKeyError.value = 'Informe a chave PIX'
+    return
+  }
+  const typeLabel =
+    pixKeyType.value === 'phone' ? 'Telefone' :
+    pixKeyType.value === 'email' ? 'E-mail' :
+    pixKeyType.value === 'cpf' ? 'CPF' : 'Aleatória'
+  const text = `Chave PIX (${typeLabel}): ${val}`
+  const html = `<div class="wa-pixkey-card"><p class="wa-pixkey-title">💚 Chave PIX</p><p class="wa-pixkey-type">${escapeHtml(typeLabel)}</p><p class="wa-pixkey-val">${escapeHtml(val)}</p></div>`
+  pushFunnel('me', text, html)
+  showPixKeyModal.value = false
+  try { saveFunnelState() } catch {}
+  try { track('funnel_pix_key_sent', { offer_slug: 'pix_key', type: pixKeyType.value }) } catch {}
+  setTimeout(() => {
+    funnelType('Recebi sua chave PIX 💚 Qualquer coisa eu uso essa pra te enviar, combinado?', 900)
+  }, 400)
+}
+
+async function openNativeContactPicker() {
+  // Contact Picker API (Chrome Android) — abre seletor nativo de contatos
+  try {
+    const navAny = navigator as any
+    if (navAny?.contacts?.select) {
+      const contacts = await navAny.contacts.select(['name', 'tel', 'email'], { multiple: false })
+      const c = contacts && contacts[0]
+      if (c) {
+        const name = Array.isArray(c.name) ? c.name[0] : (c.name || 'Contato')
+        const tel = Array.isArray(c.tel) ? c.tel[0] : (c.tel || '')
+        const email = Array.isArray(c.email) ? c.email[0] : (c.email || '')
+        const parts = [name, tel, email].filter(Boolean)
+        const text = `Contato: ${parts.join(' · ')}`
+        const html = `<div class="wa-contact-card"><p class="wa-contact-name">👤 ${escapeHtml(String(name))}</p>${tel ? `<p class="wa-contact-line">${escapeHtml(String(tel))}</p>` : ''}${email ? `<p class="wa-contact-line">${escapeHtml(String(email))}</p>` : ''}</div>`
+        pushFunnel('me', text, html)
+        try { saveFunnelState() } catch {}
+        setTimeout(() => {
+          funnelType('Recebi o contato 👍 Valeu, amor', 700)
+        }, 300)
+        return
+      }
+    }
+  } catch (e) {
+    // usuário cancelou ou API indisponível
+  }
+  // Fallback: pede nome e telefone (web sem Contact Picker)
+  try {
+    const name = window.prompt('Nome do contato:')
+    if (name == null) return
+    const tel = window.prompt('Telefone do contato:')
+    if (tel == null) return
+    const n = String(name).trim()
+    const t = String(tel).trim()
+    if (!n && !t) return
+    const text = `Contato: ${[n, t].filter(Boolean).join(' · ')}`
+    const html = `<div class="wa-contact-card"><p class="wa-contact-name">👤 ${escapeHtml(n || 'Contato')}</p>${t ? `<p class="wa-contact-line">${escapeHtml(t)}</p>` : ''}</div>`
+    pushFunnel('me', text, html)
+    try { saveFunnelState() } catch {}
+    setTimeout(() => {
+      funnelType('Recebi o contato 👍 Valeu, amor', 700)
+    }, 300)
+  } catch {}
 }
 function onFunnelMoreAction(kind: string) {
   showFunnelMoreMenu.value = false
