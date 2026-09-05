@@ -2366,6 +2366,29 @@ async function checkPixStatus(silent = false) {
 }
 
 
+function isFunnelInputFocused(): boolean {
+  try {
+    const a = document.activeElement as HTMLElement | null
+    if (!a) return false
+    if (a.classList?.contains('wa-input')) return true
+    if (a.closest?.('.wa-funnel-composer')) return true
+    return false
+  } catch {
+    return false
+  }
+}
+
+function resetFunnelKeyboardLayout() {
+  stopFunnelKbdPoll()
+  funnelKeyboardOpen.value = false
+  try {
+    const innerH = window.innerHeight || document.documentElement.clientHeight || 700
+    applyFunnelShellBox(innerH, 0, 0)
+  } catch {
+    applyFunnelShellBox(700, 0, 0)
+  }
+}
+
 function applyFunnelShellBox(h: number, top: number, kbdInset: number) {
   const hh = Math.max(220, Math.round(h))
   const tt = Math.max(0, Math.round(top))
@@ -2402,6 +2425,16 @@ function syncFunnelViewport(opts?: { forceKbd?: boolean }) {
     const innerH = window.innerHeight || document.documentElement.clientHeight || 700
     const base = funnelKbdBaseH || innerH
     const forceKbd = !!(opts && opts.forceKbd)
+    const focused = isFunnelInputFocused()
+
+    // Botão VOLTAR do Android: teclado some e o input perde foco (ou não),
+    // mas o layout ficava com padding/vão preto. Se não está focado → tela cheia.
+    if (funnelKeyboardOpen.value && !focused) {
+      funnelKeyboardOpen.value = false
+      stopFunnelKbdPoll()
+      applyFunnelShellBox(innerH, 0, 0)
+      return
+    }
 
     // teclado fechado → tela cheia
     if (!funnelKeyboardOpen.value) {
@@ -2425,15 +2458,14 @@ function syncFunnelViewport(opts?: { forceKbd?: boolean }) {
       }
     }
 
-    // 3) Instagram / WebView teimoso: nada encolheu → sobe o composer com padding
-    //    (só depois do toque, forceKbd=true)
-    if (forceKbd) {
+    // 3) Instagram / WebView: só força padding se o input AINDA está focado
+    if (forceKbd && focused) {
       const kbd = Math.round(base * 0.36)
       applyFunnelShellBox(base, 0, kbd)
       return
     }
 
-    // ainda esperando o teclado aparecer
+    // ainda esperando o teclado aparecer (ou voltar fechou sem blur detectado)
     applyFunnelShellBox(innerH, 0, 0)
   } catch {
     // ignore
@@ -2463,27 +2495,26 @@ function onFunnelInputFocus() {
   let ticks = 0
   funnelKbdPoll = setInterval(() => {
     ticks++
-    // fallback Instagram só a partir de ~400ms
+    // se o usuário já fechou o teclado (voltar), para de forçar layout
+    if (!isFunnelInputFocused()) {
+      resetFunnelKeyboardLayout()
+      return
+    }
     syncFunnelViewport({ forceKbd: ticks >= 4 })
     if (ticks >= 18) stopFunnelKbdPoll()
   }, 100)
   setTimeout(() => syncFunnelViewport({ forceKbd: false }), 100)
-  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 450)
+  setTimeout(() => {
+    if (isFunnelInputFocused()) syncFunnelViewport({ forceKbd: true })
+  }, 450)
 }
 
 function onFunnelInputBlur() {
   setTimeout(() => {
-    try {
-      const a = document.activeElement as HTMLElement | null
-      if (a && (a.classList?.contains('wa-input') || a.closest?.('.wa-funnel-composer'))) {
-        return
-      }
-    } catch {}
-    stopFunnelKbdPoll()
-    funnelKeyboardOpen.value = false
-    syncFunnelViewport({ forceKbd: false })
+    if (isFunnelInputFocused()) return
+    resetFunnelKeyboardLayout()
     setTimeout(() => syncFunnelViewport({ forceKbd: false }), 220)
-  }, 150)
+  }, 120)
 }
 
 let funnelVvClean: (() => void) | null = null
@@ -2491,18 +2522,38 @@ function bindFunnelViewport() {
   unbindFunnelViewport()
   syncFunnelViewport()
   const vv = window.visualViewport
-  const handler = () => syncFunnelViewport()
+  const handler = () => {
+    // Android back fecha teclado → resize sem blur às vezes
+    if (funnelKeyboardOpen.value && !isFunnelInputFocused()) {
+      resetFunnelKeyboardLayout()
+      return
+    }
+    syncFunnelViewport()
+  }
   if (vv) {
     vv.addEventListener('resize', handler)
     vv.addEventListener('scroll', handler)
   }
   window.addEventListener('resize', handler)
+  // toque fora do input com teclado "fantasma" (vão preto)
+  const onTouch = () => {
+    if (!funnelKeyboardOpen.value) return
+    setTimeout(() => {
+      if (!isFunnelInputFocused()) resetFunnelKeyboardLayout()
+    }, 30)
+  }
+  document.addEventListener('touchstart', onTouch, { passive: true })
+  document.addEventListener('focusin', handler)
+  document.addEventListener('focusout', handler)
   funnelVvClean = () => {
     if (vv) {
       vv.removeEventListener('resize', handler)
       vv.removeEventListener('scroll', handler)
     }
     window.removeEventListener('resize', handler)
+    document.removeEventListener('touchstart', onTouch)
+    document.removeEventListener('focusin', handler)
+    document.removeEventListener('focusout', handler)
   }
 }
 function unbindFunnelViewport() {
