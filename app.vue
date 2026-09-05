@@ -299,24 +299,26 @@
             </button>
           </div>
 
-          <div class="wa-composer wa-funnel-composer">
-            <button type="button" class="wa-composer-icon" aria-label="Emoji" @click="onFunnelEmoji">
+          <div class="wa-composer wa-funnel-composer" :class="{ 'wa-composer--blocked': funnelBlocked }">
+            <button type="button" class="wa-composer-icon" aria-label="Emoji" :disabled="funnelBlocked" @click="onFunnelEmoji">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             </button>
             <input
               v-model="funnelInput"
               class="wa-input"
               type="text"
-              placeholder="Mensagem"
+              :placeholder="funnelBlocked ? 'Conversa encerrada' : 'Mensagem'"
+              :disabled="funnelBlocked || funnelTyping"
+              :readonly="funnelBlocked"
               @focus="onFunnelComposerInteract"
               @click="onFunnelComposerInteract"
               @keydown="onFunnelComposerKey"
               @keydown.enter.prevent="sendFunnelFreeText"
             />
-            <button type="button" class="wa-composer-icon" aria-label="Anexar" @click="onFunnelAttach">
+            <button type="button" class="wa-composer-icon" aria-label="Anexar" :disabled="funnelBlocked" @click="onFunnelAttach">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
             </button>
-            <button type="button" class="wa-composer-icon" aria-label="Camera" @click="onFunnelCamera">
+            <button type="button" class="wa-composer-icon" aria-label="Camera" :disabled="funnelBlocked" @click="onFunnelCamera">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </button>
             <button
@@ -324,13 +326,14 @@
               class="wa-composer-icon wa-composer-mic"
               :class="{ 'is-rec': funnelRecording }"
               aria-label="Audio"
+              :disabled="funnelBlocked"
               @click="onFunnelAudio"
             >
               <svg v-if="!funnelRecording" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
               <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
             </button>
             <button
-              v-if="funnelInput.trim()"
+              v-if="funnelInput.trim() && !funnelBlocked"
               type="button"
               class="wa-send"
               aria-label="Enviar"
@@ -675,6 +678,7 @@ const showFunnelPhoto = ref(false)
 const funnelInput = ref('')
 const funnelShellStyle = ref<Record<string, string>>({})
 const funnelChatUnlocked = ref(false)
+const funnelBlocked = ref(false) // lead insistiu em programa/encontro presencial
 const funnelRecording = ref(false)
 const showFunnelAttachMenu = ref(false)
 const showFunnelMoreMenu = ref(false)
@@ -1662,8 +1666,8 @@ function funnelType(text: string, delay = 0, html?: string) {
 }
 
 const funnelOptions = computed(() => {
-  // greeting: sem botões — espera o lead digitar e puxar intenção
-  if (funnelStep.value === 'greeting') {
+  // greeting / bloqueado: sem botões
+  if (funnelBlocked.value || funnelStep.value === 'greeting' || funnelStep.value === 'closed_offline') {
     return []
   }
   // NÃO zera opções ao digitar — evita o chat "encolher"
@@ -1938,6 +1942,7 @@ function saveFunnelState() {
         step: funnelStep.value,
         messages: funnelMessages.value,
         selectedPack: selectedPack.value,
+        blocked: funnelBlocked.value,
         savedAt: Date.now(),
       }),
     )
@@ -1958,6 +1963,7 @@ function loadFunnelState(): boolean {
     funnelStep.value = data.step || 'menu'
     funnelMessages.value = data.messages
     selectedPack.value = data.selectedPack || null
+    funnelBlocked.value = !!data.blocked || data.step === 'closed_offline'
     return true
   } catch {
     return false
@@ -1994,6 +2000,7 @@ function openWaFunnel(source = 'whatsapp') {
   funnelStep.value = 'greeting'
   funnelMessages.value = []
   selectedPack.value = null
+  funnelBlocked.value = false
   nextTick(async () => {
     // Abertura natural: sem menu, sem pressionar escolha
     await funnelType('Oi amor 😘 Que bom que você veio… pode falar comigo, estou aqui.', 1400)
@@ -2067,8 +2074,21 @@ function suggestVideoAvulsoPrice(complexity: number): number {
 }
 
 
+
+async function blockFunnelForOfflineIntent() {
+  funnelBlocked.value = true
+  funnelStep.value = 'closed_offline'
+  funnelInput.value = ''
+  const msg = 'Ok, não tenho interesse no que você está me oferecendo.'
+  await funnelType(msg, 900)
+  try { logFunnelMessage('bot', msg, { event: 'blocked_offline_intent' }) } catch {}
+  try { track('whatsapp_funnel_blocked', { offer_slug: 'offline_intent' }) } catch {}
+  try { saveFunnelState() } catch {}
+}
+
 async function sendFunnelFreeText() {
   // Digitar mensagens é sempre livre. Cobra só por packs / vídeo / mídia / etc.
+  if (funnelBlocked.value) return
   const text = (funnelInput.value || '').trim()
   if (!text || funnelTyping.value) return
   funnelInput.value = ''
@@ -2105,9 +2125,16 @@ async function sendFunnelFreeText() {
 
       await funnelType(reply, 1200)
 
-      if (intent === 'encontros') {
-        // redireciona pro online, oferece menu
-        funnelStep.value = 'menu'
+      if (intent === 'encontros' || step === 'closed_offline') {
+        // Lead quer programa / presencial → encerra e bloqueia digitação
+        funnelBlocked.value = true
+        funnelStep.value = 'closed_offline'
+        funnelInput.value = ''
+        // reply já veio do Gemini/local com a mensagem de recusa
+        try { logFunnelMessage('bot', reply, { event: 'blocked_offline_intent', intent }) } catch {}
+        try { track('whatsapp_funnel_blocked', { offer_slug: 'offline_intent' }) } catch {}
+        try { saveFunnelState() } catch {}
+        return
       } else if (step === 'video_consult') {
         funnelStep.value = 'video_consult'
       } else if (step === 'video_avulso') {
@@ -2278,11 +2305,8 @@ async function sendFunnelFreeText() {
     await funnelType('Oi amor 😘 Pode falar… o que te trouxe até aqui?', 1100)
     return
   }
-  if (/encont|presencial|sair|te encontrar|programad/.test(lower)) {
-    await funnelType(
-      'Amor, eu só faço conteúdo e experiências online — sem encontro presencial, ok? Posso te oferecer pack, call ou webnamoro 💕',
-      1200,
-    )
+  if (/encont|presencial|sair com|te encontrar|programad|programa com|quanto.*sair|cobra.*sair|me encontra|ficar comigo pessoal|vir aqui|ir a[ií] te ver|hotel|motel|jantar e/.test(lower)) {
+    await blockFunnelForOfflineIntent()
     return
   }
 

@@ -34,13 +34,13 @@ async function getGeminiKey(): Promise<{ key: string; model: string }> {
 function localIntent(message: string): IntentResult {
   const t = message.toLowerCase()
 
-  if (/encont[rro]|sair junto|te encontrar|encontrar pessoal|presencial|na vida real|marcar algo/.test(t)) {
+  if (/encont[rro]|sair junto|te encontrar|encontrar pessoal|presencial|na vida real|marcar algo|programa com|fazer programa|quanto.*sair|cobra.*sair|sair comigo|me encontra|vir aqui|ir a[ií] te ver|hotel|motel|jantar e trep|transar pessoal|sexo presencial|te pagar pra sair/.test(t)) {
     return {
       intent: 'encontros',
-      confidence: 0.85,
-      reply: 'Amor, eu não faço encontros presenciais 😘 Meu negócio é online — conteúdo, chat e videochamada. O que te anima mais por aqui?',
-      show_menu: true,
-      suggest_step: 'menu',
+      confidence: 0.95,
+      reply: 'Ok, não tenho interesse no que você está me oferecendo.',
+      show_menu: false,
+      suggest_step: 'closed_offline',
     }
   }
   if (/v[ií]deo\s*chamad|videochamad|chamada de v[ií]deo|call ao vivo|ao vivo/.test(t)) {
@@ -132,13 +132,14 @@ Intenções possíveis:
 - webnamoro = quer webnamoro
 - chat = quer chat pago / sexting
 - papo = só quer conversar, oi, enrolar, sem intenção clara de comprar
-- encontros = quer encontro presencial (você NÃO faz — redirecione pro online com carinho)
+- encontros = quer encontro presencial, programa, sair, hotel, cobrar pra sair, qualquer coisa offline/acompanhante (NÃO é oferta do site)
 - unknown = ainda não deu pra saber
 
 Regras:
 1. Se ainda for vago (oi, e aí, só conversar), NÃO mostre menu. Continue a conversa pra puxar intenção.
-2. Se já deixou claro o desejo (ex: videochamada, pack), aí sim sugira o caminho e show_menu true se fizer sentido.
-3. reply deve parecer mensagem de WhatsApp curta (1-3 frases), sem bullets de preço ainda.
+2. Se já deixou claro o desejo online (ex: videochamada, pack), aí sim sugira o caminho e show_menu true se fizer sentido.
+3. Se for encontros/programa/presencial: intent=encontros, suggest_step=closed_offline, show_menu=false, reply EXATAMENTE: "Ok, não tenho interesse no que você está me oferecendo."
+4. reply deve parecer mensagem de WhatsApp curta (1-3 frases), sem bullets de preço ainda (exceto no caso encontros acima).
 
 Responda APENAS JSON:
 {"intent":"...","confidence":0.0-1.0,"reply":"...","show_menu":true|false,"suggest_step":"menu|video_consult|video_avulso|packs|webnamoro|chat|null"}
