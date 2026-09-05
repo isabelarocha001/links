@@ -358,6 +358,24 @@
             </button>
           </div>
 
+          <!-- Painel de emojis -->
+          <div v-if="showFunnelEmojiPicker && !funnelBlocked" class="wa-emoji-panel" @click.stop>
+            <button
+              v-for="em in FUNNEL_EMOJIS"
+              :key="em"
+              type="button"
+              class="wa-emoji-item"
+              @click="insertFunnelEmoji(em)"
+            >{{ em }}</button>
+          </div>
+
+          <!-- Preview áudio: após parar gravação → descartar ou enviar -->
+          <div v-if="funnelAudioPreviewUrl" class="wa-audio-preview">
+            <audio :src="funnelAudioPreviewUrl" controls preload="metadata"></audio>
+            <button type="button" class="wa-audio-preview-btn wa-audio-preview-btn--discard" @click="discardFunnelAudio">Descartar</button>
+            <button type="button" class="wa-audio-preview-btn wa-audio-preview-btn--send" @click="sendFunnelAudioPreview">Enviar</button>
+          </div>
+
           <div
             class="wa-composer wa-funnel-composer"
             :class="{ 'wa-composer--blocked': funnelBlocked }"
@@ -793,6 +811,9 @@ const blockedUnlockLoading = ref(false)
 const blockedUnlockError = ref('')
 const BLOCKED_UNLOCK_PLAN = { key: 'chat_unlock_blocked', title: 'Desbloquear chat', desc: 'libera a conversa de novo', price: 49.9, priceLabel: '49,90' }
 const funnelRecording = ref(false)
+const funnelAudioPreviewUrl = ref('')
+const showFunnelEmojiPicker = ref(false)
+const FUNNEL_EMOJIS = ['😀','😂','😍','😘','😏','🔥','❤️','💕','😈','🫣','😋','🤤','💦','🍑','🍆','💋','😊','😉','🥰','😮','😢','🙏','👍','👏','🎉','✨','💯','🔞','🫣','😳','🥵','🛏️']
 const showFunnelAttachMenu = ref(false)
 const showFunnelMoreMenu = ref(false)
 const funnelCameraInput = ref<HTMLInputElement | null>(null)
@@ -828,11 +849,22 @@ function onFunnelCamera() {
 }
 function onFunnelAttach() {
   if (!requireFunnelChatOrPay()) return
+  showFunnelEmojiPicker.value = false
   showFunnelAttachMenu.value = true
 }
 function onFunnelEmoji() {
   if (!requireFunnelChatOrPay()) return
-  funnelInput.value = (funnelInput.value || '') + '😊'
+  if (funnelBlocked.value) {
+    onFunnelComposerInteract()
+    return
+  }
+  showFunnelEmojiPicker.value = !showFunnelEmojiPicker.value
+}
+function insertFunnelEmoji(em: string) {
+  funnelInput.value = (funnelInput.value || '') + em
+}
+function closeFunnelEmojiPicker() {
+  showFunnelEmojiPicker.value = false
 }
 function onFunnelVideoCall() {
   showFunnelMoreMenu.value = false
@@ -921,7 +953,11 @@ function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc
   const input = ev.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
-  if (!file || !funnelChatUnlocked.value) return
+  if (!file) return
+  if (funnelBlocked.value) {
+    onFunnelComposerInteract()
+    return
+  }
   const url = URL.createObjectURL(file)
   if (kind === 'photo') {
     pushFunnel('me', 'Foto', `<img class="wa-media-img" src="${url}" alt="foto" />`, { mediaKind: 'photo' })
@@ -937,10 +973,17 @@ function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc
 }
 async function onFunnelAudio() {
   if (!requireFunnelChatOrPay()) return
+  if (funnelBlocked.value) {
+    onFunnelComposerInteract()
+    return
+  }
+  // Já gravando → parar (NÃO envia; abre preview para descartar ou enviar)
   if (funnelRecording.value) {
     try { funnelMediaRecorder?.stop() } catch {}
     return
   }
+  // Se já tem preview, não inicia outra gravação
+  if (funnelAudioPreviewUrl.value) return
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     funnelAudioChunks = []
@@ -951,16 +994,35 @@ async function onFunnelAudio() {
       stream.getTracks().forEach((t) => t.stop())
       funnelRecording.value = false
       const blob = new Blob(funnelAudioChunks, { type: 'audio/webm' })
-      const url = URL.createObjectURL(blob)
-      pushFunnel('me', 'Audio', `<div class="wa-media-audio"><audio src="${url}" controls preload="metadata"></audio></div>`, { mediaKind: 'audio' })
-      try { track('funnel_media_sent', { kind: 'audio_record' }) } catch {}
-      setTimeout(() => { funnelType('Recebi seu áudio. Ainda não consigo ouvir o conteúdo por aqui. Pode escrever o que você quer?', 900) }, 400)
+      if (!blob.size) return
+      try {
+        if (funnelAudioPreviewUrl.value) URL.revokeObjectURL(funnelAudioPreviewUrl.value)
+      } catch {}
+      funnelAudioPreviewUrl.value = URL.createObjectURL(blob)
     }
     rec.start()
     funnelRecording.value = true
   } catch {
     funnelAudioInput.value?.click()
   }
+}
+function discardFunnelAudio() {
+  try {
+    if (funnelAudioPreviewUrl.value) URL.revokeObjectURL(funnelAudioPreviewUrl.value)
+  } catch {}
+  funnelAudioPreviewUrl.value = ''
+  funnelAudioChunks = []
+  funnelMediaRecorder = null
+}
+function sendFunnelAudioPreview() {
+  const url = funnelAudioPreviewUrl.value
+  if (!url) return
+  pushFunnel('me', 'Audio', `<div class="wa-media-audio"><audio src="${url}" controls preload="metadata"></audio></div>`, { mediaKind: 'audio' })
+  funnelAudioPreviewUrl.value = ''
+  funnelAudioChunks = []
+  funnelMediaRecorder = null
+  try { track('funnel_media_sent', { kind: 'audio_record' }) } catch {}
+  setTimeout(() => { funnelType('Recebi seu áudio. Ainda não consigo ouvir o conteúdo por aqui. Pode escrever o que você quer?', 900) }, 400)
 }
 
 
