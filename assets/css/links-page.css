@@ -1,1 +1,2 @@
-SEE_FILE
+.page { min-height: 100dvh; display: flex; justify-content: center; align-items: center; padding: max(12px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom)); position: relative; background: #12081a; box-sizing: border-box; -webkit-user-select: none; user-select: none; overflow-x: hidden; }
+.page--locked { pointer-events: none; filter: brightness(0.35); }
