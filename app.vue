@@ -2209,6 +2209,36 @@ async function blockFunnelForOfflineIntent() {
   try { saveFunnelState() } catch {}
 }
 
+
+async function funnelTypeParts(raw: string, baseDelay = 900) {
+  const cleaned = String(raw || '')
+    .replace(/\.{2,}/g, '.') // tira reticências
+    .replace(/\s[-–—]\s/g, ' ') // evita travessão de lista
+    .trim()
+  if (!cleaned) return
+  const parts = cleaned
+    .split(/\|\|\||\n{2,}/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 4)
+  // se ainda for textão num único bloco, quebra por frase
+  const finalParts: string[] = []
+  for (const part of parts) {
+    if (part.length > 160) {
+      const sentences = part.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
+      if (sentences.length > 1) {
+        finalParts.push(...sentences.slice(0, 4))
+        continue
+      }
+    }
+    finalParts.push(part)
+  }
+  const use = finalParts.slice(0, 4)
+  for (let i = 0; i < use.length; i++) {
+    await funnelType(use[i], i === 0 ? baseDelay : 700 + i * 200)
+  }
+}
+
 async function sendFunnelFreeText() {
   // Digitar mensagens é sempre livre. Cobra só por packs / vídeo / mídia / etc.
   if (funnelBlocked.value) return
@@ -2246,7 +2276,7 @@ async function sendFunnelFreeText() {
       const step = res?.suggest_step ? String(res.suggest_step) : null
       const showMenu = !!res?.show_menu
 
-      await funnelType(reply, 1200)
+      await funnelTypeParts(reply, 1100)
 
       if (intent === 'encontros' || step === 'closed_offline') {
         // Lead quer programa / presencial → encerra e bloqueia digitação
@@ -2464,7 +2494,7 @@ async function sendFunnelFreeText() {
       return
     }
 
-    await funnelType(reply || 'Me conta mais um pouco, amor 😘', 1200)
+    await funnelTypeParts(reply || 'Me conta mais um pouco, amor 😘', 1100)
 
     if (step === 'video_consult') funnelStep.value = 'video_consult'
     else if (step === 'video_avulso') funnelStep.value = 'video_avulso'
