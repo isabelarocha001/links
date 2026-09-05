@@ -160,7 +160,7 @@ async function loadMessages() {
     const res = await $fetch<{
       messages?: ChatMsg[]
       conversation?: { title?: string }
-    }>(`/api/admin/conversations/${selectedId.value}`)
+    }>(`/api/admin/conversation-messages?id=${selectedId.value}`)
     messages.value = res?.messages || []
     await nextTick()
     scrollMsgs()
@@ -203,9 +203,9 @@ async function sendReply() {
   if (!text || !selectedId.value || replySending.value) return
   replySending.value = true
   try {
-    await $fetch(`/api/admin/conversations/${selectedId.value}/reply`, {
+    await $fetch(`/api/admin/conversation-reply`, {
       method: 'POST',
-      body: { message: text },
+      body: { id: selectedId.value, message: text },
     })
     replyText.value = ''
     await loadMessages()
