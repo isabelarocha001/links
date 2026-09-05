@@ -44,6 +44,8 @@ Já conectado na Vercel: **https://wanessa-links.vercel.app**
 
 Para atualizar: só faça push na branch `main`.
 
+<!-- force redeploy 2026-09-05 -->
+
 ## ✏️ Editar links
 
 Abra `app.vue` e altere o array `links`:
