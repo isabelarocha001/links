@@ -891,7 +891,7 @@ async function onFunnelAudio() {
       const url = URL.createObjectURL(blob)
       pushFunnel('me', 'Audio', `<audio src="${url}" controls style="width:100%;min-width:180px"></audio>`)
       try { track('funnel_media_sent', { kind: 'audio_record' }) } catch {}
-      setTimeout(() => { funnelType('Ouvi seu audio 🔥 Me fala mais…', 800) }, 400)
+      setTimeout(() => { funnelType('Recebi seu áudio. Ainda não consigo ouvir o conteúdo por aqui. Pode escrever o que você quer?', 900) }, 400)
     }
     rec.start()
     funnelRecording.value = true
@@ -2297,6 +2297,51 @@ function parseVideoCallChoice(lower: string): { key: string; label: string; pric
   return null
 }
 
+
+function recentFunnelText(n = 8): string {
+  return funnelMessages.value
+    .slice(-n)
+    .map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`)
+    .join('\n')
+    .toLowerCase()
+}
+
+function conversationAboutVideoCall(): boolean {
+  const ctx = recentFunnelText(10)
+  return /videochamad|chamada|call|10 min|20 min|30 min|99,?90|149,?90|229,?90|399,?90/.test(ctx)
+}
+
+/** Confirma escolha de tempo mesmo sem repetir "min" (ex: "quero só o de 10 mesmo") */
+function resolveVideoChoiceFromContext(lower: string): { key: string; label: string; price: string; min: number } | null {
+  const direct = parseVideoCallChoice(lower)
+  if (direct) return direct
+  if (!conversationAboutVideoCall()) return null
+  // confirmação vaga apontando para opção já citada
+  const conf = /(quero|vou|fecha|fechado|pega|bora|pode ser|esse|dessa|só|so|mesmo|isso|vamos|manda|pix)/.test(lower)
+  if (!conf && !/\b(10|20|30|60)\b/.test(lower)) return null
+  if (/\b10\b/.test(lower) || /de dez|s[oó] (o )?10|o de 10/.test(lower)) {
+    return { key: 'vid_10', label: 'Videochamada 10 min', price: '99,90', min: 10 }
+  }
+  if (/\b20\b/.test(lower) || /de vinte|s[oó] (o )?20|o de 20/.test(lower)) {
+    return { key: 'vid_20', label: 'Videochamada 20 min', price: '149,90', min: 20 }
+  }
+  if (/\b30\b/.test(lower) || /de trinta|s[oó] (o )?30|o de 30/.test(lower)) {
+    return { key: 'vid_30', label: 'Videochamada 30 min', price: '229,90', min: 30 }
+  }
+  if (/\b(1|uma)\s*hora\b|\b60\b/.test(lower)) {
+    return { key: 'vid_60', label: 'Videochamada 1 hora', price: '399,90', min: 60 }
+  }
+  // "quero só esse" / "pode ser" depois de ela ter falado só de 10 min no último texto dela
+  const lastHer = [...funnelMessages.value].reverse().find((m) => m.from === 'her')
+  if (lastHer && conf) {
+    const ht = String(lastHer.text || '').toLowerCase()
+    if (/10 min|99,?90/.test(ht) && !/20 min|30 min|1 hora/.test(ht)) {
+      return { key: 'vid_10', label: 'Videochamada 10 min', price: '99,90', min: 10 }
+    }
+  }
+  return null
+}
+
 async function sendFunnelFreeText() {
   // Digitar mensagens é sempre livre. Cobra só por packs / vídeo / mídia / etc.
   if (funnelBlocked.value) return
@@ -2320,7 +2365,10 @@ async function sendFunnelFreeText() {
   if (funnelStep.value === 'greeting' || funnelStep.value === 'papo' || (isGreetingMsg && !['pix', 'awaiting_payment', 'video_avulso', 'video_avulso_confirm', 'pix_ask', 'pix_ask_hour'].includes(String(funnelStep.value)))) {
     try { logFunnelMessage('lead', text, { event: 'free_text_greeting' }) } catch {}
     try {
-      const history = funnelMessages.value.slice(-10).map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`)
+      const history = [
+        `[step=${funnelStep.value}]`,
+        ...funnelMessages.value.slice(-14).map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`),
+      ]
       const res = await $fetch<{
         ok?: boolean
         intent?: string
@@ -2334,6 +2382,7 @@ async function sendFunnelFreeText() {
           message: text,
           history,
           visitor_id: getOrCreateVisitorId(),
+          step: funnelStep.value,
         },
       })
       const reply = (res?.reply || 'Me conta mais, amor 😘').slice(0, 600)
@@ -2408,9 +2457,10 @@ async function sendFunnelFreeText() {
   }
 
   // Lead digitou o tempo da videochamada (10/20/30/60) em vez de clicar no botão
-  if (funnelStep.value === 'video' || funnelStep.value === 'video_consult' || funnelStep.value === 'video_upsell') {
-    const choice = parseVideoCallChoice(lower)
-    if (choice) {
+  // Também quando a conversa já é sobre chamada (mesmo em greeting/menu)
+  {
+    const choice = resolveVideoChoiceFromContext(lower)
+    if (choice && (funnelStep.value === 'video' || funnelStep.value === 'video_consult' || funnelStep.value === 'video_upsell' || funnelStep.value === 'menu' || funnelStep.value === 'greeting' || conversationAboutVideoCall())) {
       selectedPack.value = { key: choice.key, label: choice.label, price: choice.price }
       videoCallPurchasedMin.value = choice.min
       track('whatsapp_funnel_select', { offer_slug: choice.key, source: 'typed_time' })
@@ -2525,7 +2575,10 @@ async function sendFunnelFreeText() {
 
   // Resposta real via Gemini (não genérica)
   try {
-    const history = funnelMessages.value.slice(-12).map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`)
+    const history = [
+      `[step=${funnelStep.value}]`,
+      ...funnelMessages.value.slice(-14).map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`),
+    ]
     const res = await $fetch<{
       ok?: boolean
       intent?: string
@@ -2538,6 +2591,7 @@ async function sendFunnelFreeText() {
         message: text,
         history,
         visitor_id: getOrCreateVisitorId(),
+        step: funnelStep.value,
       },
     })
     const reply = (res?.reply || '').trim()

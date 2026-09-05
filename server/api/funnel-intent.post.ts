@@ -46,6 +46,17 @@ function localIntent(message: string): IntentResult {
       suggest_step: 'closed_offline',
     }
   }
+
+  // confirmação de tempo já discutido
+  if (/(quero|vou|fecha|s[oó]|mesmo|pode ser|esse|manda).{0,40}\b10\b|\b10\b.{0,20}(min|mesmo|s[oó])/.test(t)) {
+    return {
+      intent: 'video',
+      confidence: 0.92,
+      reply: 'Fechado: videochamada de 10 min por R$ 99,90.|||Quer que eu gere o PIX agora?',
+      show_menu: false,
+      suggest_step: 'video',
+    }
+  }
   // "quanto cobra chamada de 10 min" etc. = oferta online
   if (/quanto (voc[eê] )?(cobra|custa|é)|pre[cç]o|valor/.test(t) && /(chamada|call|video|v[ií]deo|pack|chat|webnamoro|\bmin\b|minuto|hora)/.test(t)) {
     if (/chamada|call|videochamad|v[ií]deo/.test(t)) {
@@ -155,7 +166,8 @@ Intenções:
 - video | video_avulso | pack | webnamoro | chat | papo | encontros | unknown
 
 Regras OBRIGATÓRIAS:
-1. A "reply" DEVE responder o conteúdo da mensagem do lead (pergunta, elogio, dúvida). Proibido resposta genérica tipo "me conta o que você quer" se ele já perguntou algo específico.
+1. A "reply" DEVE responder o conteúdo da mensagem do lead E o histórico. Se vocês já falaram de videochamada de 10 min e o lead diz "quero só o de 10", confirme o fechamento (R$ 99,90) e pergunte se gera o PIX. Proibido "me conta mais" quando a intenção já está clara no histórico.
+1b. Nunca diga que ouviu áudio se não há transcrição no histórico.
 2. Se for oi / bom dia / boa tarde / tudo bem / oi amor: responda A SAUDAÇÃO de verdade (ex: "Oi amor" + "Tudo bem sim, e você?"). Nunca ignore a saudação. Nunca pule pro menu de vendas nessa hora. Conexão primeiro.
 3. Se perguntar preço/como funciona de algo online: explique de forma direta e ofereça o caminho.
 4. Se pedir encontro PRESENCIAL / programa / sair / hotel / "quanto cobra pra SAIR": intent=encontros, closed_offline. NÃO confundir com preço de videochamada, pack, chat ou "quanto cobra uma chamada de 10 min" — isso é oferta ONLINE (intent video/pack/chat).
