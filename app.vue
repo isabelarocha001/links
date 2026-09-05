@@ -175,13 +175,7 @@
       <div v-if="showWaFunnel" class="wa-funnel-overlay" @click.self="closeWaFunnel">
         <div class="wa-funnel-shell" role="dialog" aria-modal="true" :style="funnelShellStyle" style="position:relative" @click.stop>
           <header class="wa-header wa-funnel-header">
-            <button
-              v-if="!leadBlockedWanessa"
-              type="button"
-              class="wa-avatar-btn"
-              aria-label="Ver foto de perfil"
-              @click="showFunnelPhoto = true"
-            >
+            <button type="button" class="wa-avatar-btn" aria-label="Ver foto de perfil" @click.stop="openFunnelPhoto">
               <span class="wa-avatar-wrap wa-avatar-wrap--lg">
                 <img class="wa-avatar" src="/model.jpg" alt="Wanessa" draggable="false" />
                 <span
@@ -191,19 +185,10 @@
                 ></span>
               </span>
             </button>
-            <div v-else class="wa-avatar-wrap wa-avatar-wrap--lg wa-avatar-wrap--blocked" aria-hidden="true">
-              <span class="wa-avatar-blocked-ph">?</span>
-            </div>
-            <button
-              type="button"
-              class="wa-header-info wa-header-info-btn"
-              :disabled="leadBlockedWanessa"
-              @click="!leadBlockedWanessa && (showFunnelProfile = true)"
-            >
-              <p class="wa-name">{{ leadBlockedWanessa ? 'Contato bloqueado' : 'Wanessa' }}</p>
+            <button type="button" class="wa-header-info wa-header-info-btn" @click="showFunnelProfile = true">
+              <p class="wa-name">Wanessa</p>
               <p class="wa-status">
-                <span v-if="leadBlockedWanessa" class="wa-status-last">você bloqueou este contato</span>
-                <span v-else-if="funnelTyping" class="wa-status-typing">digitando…</span>
+                <span v-if="funnelTyping" class="wa-status-typing">digitando…</span>
                 <span v-else-if="adminPresenceOnline" class="wa-status-online">online</span>
                 <span v-else class="wa-status-last">{{ adminPresenceLabel }}</span>
               </p>
@@ -239,14 +224,20 @@
             <input ref="funnelDocInput" type="file" accept=".pdf,.doc,.docx,.txt,image/*,application/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'doc')" />
           </header>
 
-          <!-- Foto de perfil em círculo (estilo WhatsApp) -->
-          <div v-if="showFunnelPhoto" class="wa-profile-photo-overlay" @click.self="showFunnelPhoto = false">
-            <button type="button" class="wa-profile-photo-close" aria-label="Fechar" @click="showFunnelPhoto = false">✕</button>
-            <div class="wa-profile-photo-circle">
-              <img src="/model.jpg" alt="Wanessa" draggable="false" />
+          <!-- Foto de perfil tela cheia (fixed acima de tudo do chat) -->
+          <Teleport to="body">
+            <div
+              v-if="showFunnelPhoto && showWaFunnel"
+              class="wa-profile-photo-overlay"
+              @click.self="closeFunnelPhoto"
+            >
+              <button type="button" class="wa-profile-photo-close" aria-label="Fechar" @click="closeFunnelPhoto">✕</button>
+              <div class="wa-profile-photo-circle" @click.stop>
+                <img src="/model.jpg" alt="Wanessa" draggable="false" />
+              </div>
+              <p class="wa-profile-photo-name">Wanessa</p>
             </div>
-            <p class="wa-profile-photo-name">Wanessa</p>
-          </div>
+          </Teleport>
 
           <!-- Perfil / bio (estilo WhatsApp) -->
           <div v-if="showFunnelProfile" class="wa-profile-panel">
@@ -256,7 +247,7 @@
               <span class="wa-profile-panel-spacer"></span>
             </header>
             <div class="wa-profile-panel-body">
-              <button type="button" class="wa-profile-big-avatar" @click="showFunnelPhoto = true">
+              <button type="button" class="wa-profile-big-avatar" @click.stop="openFunnelPhoto">
                 <img src="/model.jpg" alt="Wanessa" draggable="false" />
               </button>
               <h2 class="wa-profile-name">Wanessa</h2>
@@ -641,37 +632,7 @@
         </div>
       </div>
 
-      <!-- Lead bloqueou Wanessa: justificativa obrigatória -->
-      <div v-if="showBlockReasonModal" class="chat-plans-overlay" style="z-index:40070" @click.self="closeBlockReasonModal">
-        <div class="block-reason-card" @click.stop>
-          <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeBlockReasonModal">✕</button>
-          <p class="block-reason-title">Por que você quer bloquear essa pessoa?</p>
-          <p class="block-reason-sub">A justificativa é obrigatória para o sistema registrar o bloqueio.</p>
-          <textarea
-            v-model="blockReasonDraft"
-            class="block-reason-input"
-            rows="4"
-            maxlength="400"
-            placeholder="Explique o motivo…"
-          ></textarea>
-          <p v-if="blockReasonError" class="block-reason-error">{{ blockReasonError }}</p>
-          <button type="button" class="block-reason-confirm" @click="confirmLeadBlock">
-            Confirmar bloqueio
-          </button>
-        </div>
-      </div>
-
-      <!-- Lead bloqueou Wanessa (tela dele) -->
-      <div v-if="leadBlockedWanessa && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
-        <div class="wa-perm-block-card">
-          <p class="wa-perm-block-title">Você bloqueou Wanessa</p>
-          <p class="wa-perm-block-sub">Você não poderá mais mandar mensagem pra ela nem ela pra você.</p>
-          <p v-if="leadBlockReason" class="wa-perm-block-sub" style="opacity:.75">Motivo: {{ leadBlockReason }}</p>
-        </div>
-      </div>
-
-      <!-- Admin/sistema bloqueou o lead (Wanessa te bloqueou) + segunda chance -->
-      <div v-if="funnelPermBlocked && !leadBlockedWanessa && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
+      <div v-if="funnelPermBlocked && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
         <div class="wa-perm-block-card">
           <p class="wa-perm-block-title">Wanessa te bloqueou permanentemente</p>
           <p class="wa-perm-block-sub">Você não pode digitar, enviar áudio, emoji, mídia nem fazer chamadas.</p>
@@ -923,20 +884,21 @@ const PIX_KEY = '47992750967'
 const showWaFunnel = ref(false)
 const isChatLanding = ref(false)
 const showFunnelPhoto = ref(false)
+function openFunnelPhoto() {
+  if (leadBlockedWanessa?.value) return
+  showFunnelPhoto.value = true
+}
+function closeFunnelPhoto() {
+  showFunnelPhoto.value = false
+}
 
 const funnelInput = ref('')
 const funnelShellStyle = ref<Record<string, string>>({})
 const funnelChatUnlocked = ref(false)
 const funnelBlocked = ref(false) // lead insistiu em programa/encontro presencial
-const funnelPermBlocked = ref(false) // Wanessa bloqueou o lead (sistema/admin)
-const leadBlockedWanessa = ref(false) // lead bloqueou Wanessa (com justificativa)
-const leadBlockReason = ref('')
-const showBlockReasonModal = ref(false)
-const blockReasonDraft = ref('')
-const blockReasonError = ref('')
+const funnelPermBlocked = ref(false) // bloqueio permanente (menu → Bloquear)
 const showBlockedUnlock = ref(false)
 const PERM_BLOCK_KEY = 'wanessa_perm_block_v1'
-const LEAD_BLOCK_KEY = 'wanessa_lead_block_v1'
 const SEGUNDA_CHANCE_PLAN = { key: 'chat_unlock_segunda_chance', title: 'Segunda chance', desc: 'mimo para desbloquear o chat', price: 29.9, priceLabel: '29,90' }
 const showMimoGiftModal = ref(false)
 const mimoGiftAmount = ref('')
@@ -969,7 +931,7 @@ function requireFunnelChatOrPay(): boolean {
   return true
 }
 function onFunnelComposerInteract(e?: Event) {
-  if (leadBlockedWanessa.value || funnelPermBlocked.value) {
+  if (funnelPermBlocked.value) {
     try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
     return
   }
@@ -1012,7 +974,7 @@ function closeFunnelEmojiPicker() {
 }
 function onFunnelVideoCall() {
   showFunnelMoreMenu.value = false
-  if (funnelPermBlocked.value || leadBlockedWanessa.value) return
+  if (funnelPermBlocked.value) return
   if (videoCallUnlocked.value || isAdmin.value) {
     openVideoCallPlayer()
     return
@@ -1090,7 +1052,7 @@ function onFunnelMoreAction(kind: string) {
     return
   }
   if (kind === 'block') {
-    openBlockReasonModal()
+    applyPermanentBlock()
     return
   }
   if (kind === 'mute' || kind === 'search' || kind === 'media') {
@@ -1098,59 +1060,7 @@ function onFunnelMoreAction(kind: string) {
   }
 }
 
-function openBlockReasonModal() {
-  showFunnelMoreMenu.value = false
-  if (leadBlockedWanessa.value) return
-  blockReasonDraft.value = ''
-  blockReasonError.value = ''
-  showBlockReasonModal.value = true
-}
-
-function closeBlockReasonModal() {
-  showBlockReasonModal.value = false
-  blockReasonError.value = ''
-}
-
-function confirmLeadBlock() {
-  const reason = String(blockReasonDraft.value || '').trim()
-  if (reason.length < 5) {
-    blockReasonError.value = 'Escreva o motivo (mín. 5 caracteres) para confirmar o bloqueio.'
-    return
-  }
-  leadBlockedWanessa.value = true
-  leadBlockReason.value = reason.slice(0, 400)
-  funnelBlocked.value = true
-  showBlockReasonModal.value = false
-  showFunnelEmojiPicker.value = false
-  showFunnelAttachMenu.value = false
-  showFunnelMoreMenu.value = false
-  showFunnelPhoto.value = false
-  showFunnelProfile.value = false
-  try {
-    const vid = getOrCreateVisitorId()
-    localStorage.setItem(
-      LEAD_BLOCK_KEY,
-      JSON.stringify({ visitor_id: vid, reason: leadBlockReason.value, at: Date.now() }),
-    )
-  } catch {}
-  try { saveFunnelState() } catch {}
-  try { track('funnel_lead_block', { offer_slug: 'lead_block' }) } catch {}
-  // Mensagem que o admin vê no inbox
-  try {
-    logFunnelMessage(
-      'lead',
-      `Lead te bloqueou: ${leadBlockReason.value}`,
-      {
-        event: 'lead_blocked',
-        block_reason: leadBlockReason.value,
-        blocked_by: 'lead',
-      },
-    )
-  } catch {}
-}
-
 function applyPermanentBlock() {
-  // Bloqueio do lado Wanessa → lead (sistema)
   funnelPermBlocked.value = true
   funnelBlocked.value = true
   showFunnelEmojiPicker.value = false
@@ -1182,21 +1092,10 @@ function loadPermanentBlock() {
       funnelBlocked.value = true
     }
   } catch {}
-  try {
-    const raw = localStorage.getItem(LEAD_BLOCK_KEY)
-    if (!raw) return
-    const data = JSON.parse(raw)
-    const vid = getOrCreateVisitorId()
-    if (data?.visitor_id && data.visitor_id === vid) {
-      leadBlockedWanessa.value = true
-      leadBlockReason.value = String(data.reason || '')
-      funnelBlocked.value = true
-    }
-  } catch {}
 }
 
 function onFunnelGiftMimo() {
-  if (funnelPermBlocked.value || leadBlockedWanessa.value) return
+  if (funnelPermBlocked.value) return
   mimoGiftError.value = ''
   mimoGiftAmount.value = ''
   mimoGiftMessage.value = ''
