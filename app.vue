@@ -1925,6 +1925,13 @@ const funnelOptions = computed(() => {
     ]
   }
   if (funnelStep.value === 'video') {
+    // Tempo já combinado: não reoferece a lista — só PIX ou mudar tempo
+    if ((selectedPack.value?.key || '').startsWith('vid_')) {
+      return [
+        { key: 'pix_yes', label: 'Sim, pode mandar o PIX', variant: 'wa-quick--yes' },
+        { key: 'change_time', label: 'Mudar tempo', variant: 'wa-quick--no' },
+      ]
+    }
     return [
       { key: 'vid_10', label: '10 min  R$ 99,90', variant: 'wa-quick--yes' },
       { key: 'vid_20', label: '20 min  R$ 149,90', variant: 'wa-quick--yes' },
@@ -2613,6 +2620,16 @@ async function sendFunnelFreeText() {
         try { saveFunnelState() } catch {}
         return
       } else if (step === 'video_consult') {
+        const agreed = parseVideoCallChoice(lower)
+        if (agreed || (selectedPack.value?.key || '').startsWith('vid_')) {
+          if (agreed) {
+            selectedPack.value = { key: agreed.key, label: agreed.label, price: agreed.price }
+            videoCallPurchasedMin.value = agreed.min
+          }
+          try { saveFunnelState() } catch {}
+          await startFunnelCheckout()
+          return
+        }
         funnelStep.value = 'video_consult'
       } else if (step === 'video_avulso') {
         funnelStep.value = 'video_avulso'
@@ -2830,7 +2847,19 @@ async function sendFunnelFreeText() {
 
     await funnelTypeParts(reply || 'Me fala de novo o que você quer, amor.', 1100)
 
-    if (step === 'video_consult') funnelStep.value = 'video_consult'
+    if (step === 'video_consult') {
+      const agreed = parseVideoCallChoice(lower)
+      if (agreed || (selectedPack.value?.key || '').startsWith('vid_')) {
+        if (agreed) {
+          selectedPack.value = { key: agreed.key, label: agreed.label, price: agreed.price }
+          videoCallPurchasedMin.value = agreed.min
+        }
+        try { saveFunnelState() } catch {}
+        await startFunnelCheckout()
+        return
+      }
+      funnelStep.value = 'video_consult'
+    }
     else if (step === 'video_avulso') funnelStep.value = 'video_avulso'
     else if (step === 'packs') funnelStep.value = 'packs'
     else if (step === 'webnamoro') funnelStep.value = 'webnamoro'
@@ -2925,6 +2954,17 @@ async function answerFunnel(opt: { key: string; label: string }) {
 
   if (opt.key === 'admin_pay') {
     await adminPayWithBalance()
+    return
+  }
+
+  if (opt.key === 'change_time') {
+    selectedPack.value = null
+    videoCallPurchasedMin.value = 0
+    funnelStep.value = 'video'
+    await funnelType(
+      'Beleza, escolhe o tempo de novo:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n• 1 hora  R$ 399,90\n• 90 min  R$ 549,90\n• 2 horas  R$ 699,90\n• 3 horas  R$ 999,90',
+      1000,
+    )
     return
   }
 
