@@ -859,30 +859,23 @@ function closeChatPlans() {
   showChatPlans.value = false
 }
 function pushPixIntoFunnelChat() {
-  // Não joga o código na cara. Primeiro pergunta e dá tempo de ler.
+  // NUNCA joga o código sem o lead pedir. Só pergunta e espera resposta.
   const code = funnelPixCode.value || pixCopyCode.value
   const price = selectedPack.value?.price || selectedChatPlan.value?.priceLabel || ''
   if (!code || !/^000201/.test(code)) return
 
-  // Evita perguntar de novo se já perguntou nesta sessão de pagamento
-  if ((window as any).__pixAskedOnce) {
-    showPixCodeInChat(code, price)
-    return
-  }
-  ;(window as any).__pixAskedOnce = true
+  // Já mostrou o código → não insiste
+  if ((window as any).__pixCodeShown) return
 
-  // Mensagem educada + tempo de leitura
-  pushFunnel('her', 'Posso te passar a chave PIX agora? 💚\n\nMe responde "pode" ou "manda" que eu te envio o código na hora.')
-  
-  // Depois de ~6s (tempo pra ler), se o cara não respondeu ainda, oferece de novo e libera o código
-  setTimeout(() => {
-    if (funnelStep.value === 'awaiting_payment' || funnelStep.value === 'paid') {
-      // se ainda não mostrou o código, mostra
-      if (!(window as any).__pixCodeShown) {
-        showPixCodeInChat(code, price)
-      }
-    }
-  }, 6500)
+  // Já perguntou e ainda espera resposta → não repete spam
+  if ((window as any).__pixAskedOnce) return
+
+  ;(window as any).__pixAskedOnce = true
+  pushFunnel(
+    'her',
+    'Posso te passar a chave PIX agora? 💚\n\nMe responde "pode", "manda" ou "sim" que eu te envio o código na hora.\n\nSe não quiser agora, sem problema — a gente continua conversando.'
+  )
+  // Sem setTimeout. Só mostra quando o lead confirmar em sendFunnelFreeText.
 }
 
 function showPixCodeInChat(code: string, price: string) {
@@ -1204,10 +1197,11 @@ function startIncomingVideoCall() {
 
 function acceptIncomingCall() {
   showIncomingCall.value = false
-  funnelStep.value = 'video'
+  funnelStep.value = 'video_consult'
+  // Não joga preço. Primeiro cria desejo e pergunta como o lead quer a chamada.
   funnelType(
-    'Que bom que atendeu, amor 🔥\n\nEscolhe quanto tempo você quer comigo na videochamada:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n\nAssim que pagar, a gente entra ao vivo aqui.',
-    1400,
+    'Que bom que atendeu, amor 🔥\n\nImagina a gente ao vivo: eu do outro lado da tela, olhando pra você, falando baixo, fazendo o que você pedir no momento… sem pressa, sem roteiro engessado.\n\nDepois que pagar, a chamada libera aqui mesmo no chat e a gente entra na hora.\n\nMe conta como você quer essa chamada: mais safada, mais carinhosa, só te olhar, te mandar fazer algo… o que te deixa mais louco?',
+    2200,
   )
 }
 
@@ -1968,6 +1962,16 @@ async function sendFunnelFreeText() {
       showPixCodeInChat(code, price)
       return
     }
+  }
+
+  // Depois da consultoria da videochamada: lead descreveu o que quer → aí sim oferece tempo/preço
+  if (funnelStep.value === 'video_consult') {
+    funnelStep.value = 'video'
+    await funnelType(
+      'Entendi o clima que você quer 😈\n\nPra gente fazer isso ao vivo, escolhe o tempo:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n\nMe fala qual encaixa melhor pra você agora — ou se prefere outro tempo.',
+      1800,
+    )
+    return
   }
 
 
