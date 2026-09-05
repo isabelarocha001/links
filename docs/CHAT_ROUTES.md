@@ -4,13 +4,15 @@
 
 | URL | O que faz |
 |-----|-----------|
+| `/chat` | Abre o funil WhatsApp direto (slug padrão wanessabsx) |
 | `/chat/wanessabsx` | Abre o funil WhatsApp direto (pula quiz se slug ok) |
 | `/chat/wanessa` | Idem |
+| `/chamada` | Canal de prévias: abre funil + popup de videochamada entrando |
 | `/?chat=1` ou `/?open=whatsapp` | Abre funil na home |
 | `/#chat` | Fallback hash |
 
-Páginas shell: `pages/chat/[slug].vue`, `pages/chat/index.vue`  
-Lógica: `app.vue` → `onMounted` → `openWaFunnel('chat_' + slug)`
+Páginas shell: `pages/chat/index.vue`, `pages/chat/[slug].vue`, `pages/chamada.vue`  
+Lógica: `app.vue` → `onMounted` → `openWaFunnel(...)` (+ `startIncomingVideoCall` em `/chamada`)
 
 ## Admin (protegido)
 

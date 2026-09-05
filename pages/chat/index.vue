@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * /chat — lead pode usar ?chat=wanessabsx ou ir para /chat/wanessabsx
- * app.vue trata path /chat/* e query ?chat=
+ * /chat — mesma landing de /chat/wanessabsx (abre funil WhatsApp direto)
+ * Também: ?chat=wanessabsx | /chat/wanessabsx
+ * app.vue trata path /chat e /chat/*
  */
 </script>
 
