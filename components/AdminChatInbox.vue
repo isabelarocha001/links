@@ -136,7 +136,7 @@ async function sendPresence(offline = false) {
 function startPresence() {
   stopPresence()
   sendPresence(false)
-  presenceTimer = setInterval(() => sendPresence(false), 15000)
+  presenceTimer = setInterval(() => sendPresence(false), 1000)
 }
 
 function stopPresence() {
