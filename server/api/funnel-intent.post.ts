@@ -34,7 +34,10 @@ async function getGeminiKey(): Promise<{ key: string; model: string }> {
 function localIntent(message: string): IntentResult {
   const t = message.toLowerCase()
 
-  if (/encont[rro]|encontrar|te encontrar|sair junto|sair com|sa[ií]r comigo|presencial|na vida real|marcar (algo|um|uma)|fazer programa|(^|[^a-z])programa([^a-z]|$)|(^|[^a-z])gp([^a-z]|$)|acompanhante|quanto (voc[eê] )?cobra|cobra pra (sair|transar|fazer)|te pagar pra|pagar pra (sair|te ver|transar)|me encontra|vir (aqui|a[ií])|ir (a[ií]|ai) te ver|hotel|motel|airbnb|jantar e|transar pessoal|sexo presencial|quero te ver pessoal|te ver pessoalmente|ficar comigo (pessoal|de verdade)|vem pra c[aá]|vem aqui/.test(t)) {
+  // NUNCA tratar preço de oferta online como "programa"
+  const isOnlineOfferAsk = /chamada|videochamad|v[ií]deo\s*call|\bcall\b|\bpack\b|webnamoro|\bchat\b|\bmin\b|minuto|\bhora\b|pix|assinatura|conte[uú]do|ao vivo|online/.test(t)
+
+  if (!isOnlineOfferAsk && /encont[rro] presencial|te encontrar pessoal|sair junto|sair comigo|sa[ií]r com (voc[eê]|vc)|presencial|na vida real|fazer programa|(^|[^a-z])programa([^a-z]|$)|(^|[^a-z])gp([^a-z]|$)|acompanhante|cobra pra (sair|transar|fazer)|quanto (voc[eê] )?cobra pra (sair|transar)|te pagar pra (sair|te ver|transar)|pagar pra (sair|te ver)|me encontra|vir (aqui|a[ií]) te|ir (a[ií]|ai) te ver|hotel|motel|airbnb|transar pessoal|sexo presencial|te ver pessoalmente|ficar comigo (pessoal|de verdade)|vem pra c[aá]/.test(t)) {
     return {
       intent: 'encontros',
       confidence: 0.95,
@@ -43,7 +46,19 @@ function localIntent(message: string): IntentResult {
       suggest_step: 'closed_offline',
     }
   }
-  if (/v[ií]deo\s*chamad|videochamad|chamada de v[ií]deo|call ao vivo|ao vivo/.test(t)) {
+  // "quanto cobra chamada de 10 min" etc. = oferta online
+  if (/quanto (voc[eê] )?(cobra|custa|é)|pre[cç]o|valor/.test(t) && /(chamada|call|video|v[ií]deo|pack|chat|webnamoro|\bmin\b|minuto|hora)/.test(t)) {
+    if (/chamada|call|videochamad|v[ií]deo/.test(t)) {
+      return {
+        intent: 'video',
+        confidence: 0.9,
+        reply: 'A videochamada de 10 min fica R$ 99,90.|||Tem também 20 min, 30 min e 1 hora.|||Qual tempo você prefere?',
+        show_menu: false,
+        suggest_step: 'video',
+      }
+    }
+  }
+    if (/v[ií]deo\s*chamad|videochamad|chamada de v[ií]deo|call ao vivo|ao vivo/.test(t)) {
     return {
       intent: 'video',
       confidence: 0.9,
@@ -143,7 +158,7 @@ Regras OBRIGATÓRIAS:
 1. A "reply" DEVE responder o conteúdo da mensagem do lead (pergunta, elogio, dúvida). Proibido resposta genérica tipo "me conta o que você quer" se ele já perguntou algo específico.
 2. Se for oi / bom dia / boa tarde / tudo bem / oi amor: responda A SAUDAÇÃO de verdade (ex: "Oi amor" + "Tudo bem sim, e você?"). Nunca ignore a saudação. Nunca pule pro menu de vendas nessa hora. Conexão primeiro.
 3. Se perguntar preço/como funciona de algo online: explique de forma direta e ofereça o caminho.
-4. Se pedir encontro presencial / programa / sair / hotel / "quanto cobra pra sair": intent=encontros, show_menu=false, suggest_step=closed_offline, reply EXATAMENTE: "Ok, não tenho interesse no que você está me oferecendo."
+4. Se pedir encontro PRESENCIAL / programa / sair / hotel / "quanto cobra pra SAIR": intent=encontros, closed_offline. NÃO confundir com preço de videochamada, pack, chat ou "quanto cobra uma chamada de 10 min" — isso é oferta ONLINE (intent video/pack/chat).
 5. NÃO invente que faz encontro presencial.
 6. NÃO jogue lista enorme de preços sem o lead pedir.
 7. ESTILO DE MENSAGEM (obrigatório):

@@ -2208,7 +2208,12 @@ function suggestVideoAvulsoPrice(complexity: number): number {
 
 function isOfflineOrProgramaIntent(raw: string): boolean {
   const t = String(raw || '').toLowerCase()
-  return /encont[rro]|encontrar|te encontrar|sair junto|sair com|sa[ií]r comigo|presencial|na vida real|marcar (algo|um|uma)|\bprograma\b|fazer programa|\bgp\b|acompanhante|quanto (voc[eê] )?cobra|cobra pra (sair|transar|fazer)|te pagar pra|pagar pra (sair|te ver|transar)|me encontra|vir (aqui|a[ií])|ir (a[ií]|ai) te ver|hotel|motel|airbnb|jantar e|transar pessoal|sexo presencial|quero te ver pessoal|te ver pessoalmente|ficar comigo (pessoal|de verdade)|vem pra c[aá]|vem aqui|valor pra sair|pre[cç]o pra sair/.test(t)
+  // Oferta ONLINE: nunca bloquear (preço de call, pack, chat, etc.)
+  if (/chamada|videochamad|v[ií]deo\s*call|\bcall\b|\bpack\b|webnamoro|\bchat\b|\bmin\b|minuto|\bhora\b|pix|assinatura|conte[uú]do|ao vivo|online/.test(t)) {
+    return false
+  }
+  // Só bloqueia se for claramente presencial / programa / sair
+  return /encont[rro] presencial|te encontrar pessoal|sair junto|sair comigo|sa[ií]r com (voc[eê]|vc)|presencial|na vida real|fazer programa|(^|[^a-z])programa([^a-z]|$)|(^|[^a-z])gp([^a-z]|$)|acompanhante|cobra pra (sair|transar|fazer)|quanto (voc[eê] )?cobra pra (sair|transar)|te pagar pra (sair|te ver|transar)|pagar pra (sair|te ver)|me encontra|vir (aqui|a[ií]) te|ir (a[ií]|ai) te ver|hotel|motel|airbnb|transar pessoal|sexo presencial|te ver pessoalmente|ficar comigo (pessoal|de verdade)|vem pra c[aá]|valor pra sair|pre[cç]o pra sair/.test(t)
 }
 
 async function blockFunnelForOfflineIntent() {
