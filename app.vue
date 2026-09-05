@@ -991,7 +991,7 @@
             <div>
               <p class="chat-plans-kicker">PIX gerado</p>
               <h3>{{ selectedChatPlan?.title || 'Chat' }}</h3>
-              <p class="chat-plans-sub">R$ {{ selectedChatPlan?.priceLabel }} · pague e me chama</p>
+              <p class="chat-plans-sub">R$ {{ selectedChatPlan?.priceLabel }} · {{ pixModalSubHint }}</p>
             </div>
             <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePixModal">✕</button>
           </div>
@@ -2201,6 +2201,18 @@ const showPixModal = ref(false)
 const chatPayLoading = ref<string | null>(null)
 const chatPayError = ref('')
 const selectedChatPlan = ref<{ key: string; title: string; desc: string; price: number; priceLabel: string; hot?: boolean } | null>(null)
+
+const pixModalSubHint = computed(() => {
+  const key = String(selectedChatPlan.value?.key || selectedPack.value?.key || '')
+  const title = String(selectedChatPlan.value?.title || selectedPack.value?.label || '').toLowerCase()
+  if (key === 'mimo_gift' || title.includes('mimo')) return 'obrigada pelo mimo 💕'
+  if (key.includes('unlock') || key.includes('blocked') || title.includes('desbloque')) return 'pague e o chat libera'
+  if (key.includes('vid') || title.includes('videochamad') || title.includes('chamada')) return 'pague e a chamada libera'
+  if (key.includes('web') || title.includes('webnamoro')) return 'pague e o webnamoro libera'
+  if (key.includes('chat') || title.includes('chat')) return 'pague e o chat libera'
+  return 'pague para liberar'
+})
+
 const pixCopyCode = ref('')
 const pixQrImage = ref('')
 const pixPaymentId = ref('')
