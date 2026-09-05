@@ -239,6 +239,17 @@
             </div>
           </Teleport>
 
+          <Teleport to="body">
+            <div
+              v-if="chatMediaFullscreenUrl"
+              class="wa-chat-media-fs"
+              @click.self="closeChatMediaFullscreen"
+            >
+              <button type="button" class="wa-chat-media-fs-close" aria-label="Fechar" @click="closeChatMediaFullscreen">✕</button>
+              <img class="wa-chat-media-fs-img" :src="chatMediaFullscreenUrl" alt="foto" draggable="false" @click.stop />
+            </div>
+          </Teleport>
+
           <!-- Perfil / bio (estilo WhatsApp) -->
           <div v-if="showFunnelProfile" class="wa-profile-panel">
             <header class="wa-profile-panel-top">
@@ -297,7 +308,21 @@
                   </div>
                 </template>
                 <template v-else>
-                  <div v-if="m.html" class="wa-media" v-html="m.html"></div>
+                  <div v-if="m.mediaKind === 'photo' && (m.mediaUrl || m.html)" class="wa-media">
+                    <img
+                      class="wa-media-img"
+                      :src="m.mediaUrl || extractMediaSrc(m.html)"
+                      alt="foto"
+                      draggable="false"
+                      @click.stop="openChatMediaFullscreen(m.mediaUrl || extractMediaSrc(m.html))"
+                    />
+                  </div>
+                  <div
+                    v-else-if="m.html"
+                    class="wa-media"
+                    v-html="m.html"
+                    @click="onFunnelMediaHtmlClick"
+                  ></div>
                   <p v-else class="wa-text">{{ m.text }}</p>
                   <span v-if="m.edited" class="wa-edited">editada</span>
                 </template>
@@ -1300,7 +1325,7 @@ function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc
   }
   const url = URL.createObjectURL(file)
   if (kind === 'photo') {
-    pushFunnel('me', 'Foto', `<img class="wa-media-img" src="${url}" alt="foto" />`, { mediaKind: 'photo' })
+    pushFunnel('me', 'Foto', `<img class="wa-media-img" src="${url}" alt="foto" />`, { mediaKind: 'photo', mediaUrl: url })
   } else if (kind === 'video') {
     pushFunnel('me', 'Video', `<video class="wa-media-video" src="${url}" controls playsinline preload="metadata"></video>`, { mediaKind: 'video' })
   } else if (kind === 'doc') {
@@ -1747,7 +1772,31 @@ function unbindFunnelViewport() {
 
 const showFunnelProfile = ref(false)
 const funnelStep = ref<'greeting' | 'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'awaiting_payment' | 'paid' | 'redirect' | 'other' | 'video_consult' | 'video_avulso' | string>('greeting')
-const funnelMessages = ref<{ id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; edited?: boolean; deleted?: boolean }[]>([])
+const funnelMessages = ref<{ id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; mediaUrl?: string | null; edited?: boolean; deleted?: boolean }[]>([])
+const chatMediaFullscreenUrl = ref<string | null>(null)
+
+function extractMediaSrc(html?: string): string {
+  if (!html) return ''
+  const m = String(html).match(/src=["']([^"']+)["']/)
+  return m?.[1] || ''
+}
+
+function openChatMediaFullscreen(url?: string | null) {
+  const u = String(url || '').trim()
+  if (!u) return
+  chatMediaFullscreenUrl.value = u
+}
+
+function closeChatMediaFullscreen() {
+  chatMediaFullscreenUrl.value = null
+}
+
+function onFunnelMediaHtmlClick(e: Event) {
+  const t = e.target as HTMLElement | null
+  if (!t) return
+  const img = t.closest?.('img') as HTMLImageElement | null
+  if (img?.src) openChatMediaFullscreen(img.src)
+}
 const funnelTyping = ref(false)
 const funnelChatBox = ref<HTMLElement | null>(null)
 const selectedPack = ref<{ key: string; label: string; price: string } | null>(null)
@@ -2269,14 +2318,15 @@ function markLastLeadMessage(status: 'delivered' | 'read') {
   }
 }
 
-function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null }) {
-  const row: { id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; edited?: boolean; deleted?: boolean } = {
+function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; mediaUrl?: string | null }) {
+  const row: { id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; mediaUrl?: string | null; edited?: boolean; deleted?: boolean } = {
     id: `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     from,
     text,
     html,
     time: nowTime(),
     mediaKind: (opts as any)?.mediaKind || null,
+    mediaUrl: (opts as any)?.mediaUrl || null,
   }
   if (from === 'me') row.status = 'sent'
   funnelMessages.value.push(row)
