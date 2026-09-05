@@ -1945,15 +1945,7 @@ function suggestVideoAvulsoPrice(complexity: number): number {
 
 
 async function sendFunnelFreeText() {
-  // Vídeo avulso: precisa digitar a descrição sem pagar antes
-  const allowFree =
-    funnelChatUnlocked.value ||
-    funnelStep.value === 'video_avulso' ||
-    funnelStep.value === 'video_avulso_confirm'
-  if (!allowFree) {
-    openChatPlans()
-    return
-  }
+  // Digitar mensagens é sempre livre. Cobra só por packs / vídeo / mídia / etc.
   const text = (funnelInput.value || '').trim()
   if (!text || funnelTyping.value) return
   funnelInput.value = ''
@@ -1962,6 +1954,21 @@ async function sendFunnelFreeText() {
   try { track('whatsapp_funnel_free_text', { offer_slug: 'whatsapp', message: text.slice(0, 120) }) } catch {}
 
   const lower = text.toLowerCase()
+
+  // Se a gente perguntou "posso passar o PIX?" e o lead confirma → mostra o código na hora
+  if (
+    (window as any).__pixAskedOnce &&
+    !(window as any).__pixCodeShown &&
+    (funnelPixCode.value || pixCopyCode.value)
+  ) {
+    const confirmWords = ['pode', 'manda', 'sim', 'quero', 'passa', 'envia', 'ok', 'manda aí', 'pode mandar', 'pode passar']
+    if (confirmWords.some((w) => lower === w || lower.includes(w))) {
+      const code = funnelPixCode.value || pixCopyCode.value
+      const price = selectedPack.value?.price || selectedChatPlan.value?.priceLabel || ''
+      showPixCodeInChat(code, price)
+      return
+    }
+  }
 
 
   // Vídeo avulso: lead descreveu o que quer → sugere preço por complexidade
