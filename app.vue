@@ -2198,6 +2198,12 @@ function suggestVideoAvulsoPrice(complexity: number): number {
 
 
 
+
+function isOfflineOrProgramaIntent(raw: string): boolean {
+  const t = String(raw || '').toLowerCase()
+  return /encont[rro]|encontrar|te encontrar|sair junto|sair com|sa[ií]r comigo|presencial|na vida real|marcar (algo|um|uma)|\bprograma\b|fazer programa|\bgp\b|acompanhante|quanto (voc[eê] )?cobra|cobra pra (sair|transar|fazer)|te pagar pra|pagar pra (sair|te ver|transar)|me encontra|vir (aqui|a[ií])|ir (a[ií]|ai) te ver|hotel|motel|airbnb|jantar e|transar pessoal|sexo presencial|quero te ver pessoal|te ver pessoalmente|ficar comigo (pessoal|de verdade)|vem pra c[aá]|vem aqui|valor pra sair|pre[cç]o pra sair/.test(t)
+}
+
 async function blockFunnelForOfflineIntent() {
   funnelBlocked.value = true
   funnelStep.value = 'closed_offline'
@@ -2248,6 +2254,12 @@ async function sendFunnelFreeText() {
   pushFunnel('me', text)
   try { saveFunnelState() } catch {}
   try { track('whatsapp_funnel_free_text', { offer_slug: 'whatsapp', message: text.slice(0, 120) }) } catch {}
+
+  // Filtro offline/programa ANTES de qualquer resposta (Gemini ou script)
+  if (isOfflineOrProgramaIntent(text)) {
+    await blockFunnelForOfflineIntent()
+    return
+  }
 
   const lower = text.toLowerCase()
 

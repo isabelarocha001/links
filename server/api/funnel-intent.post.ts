@@ -34,7 +34,7 @@ async function getGeminiKey(): Promise<{ key: string; model: string }> {
 function localIntent(message: string): IntentResult {
   const t = message.toLowerCase()
 
-  if (/encont[rro]|sair junto|te encontrar|encontrar pessoal|presencial|na vida real|marcar algo|programa com|fazer programa|quanto.*sair|cobra.*sair|sair comigo|me encontra|vir aqui|ir a[ií] te ver|hotel|motel|jantar e trep|transar pessoal|sexo presencial|te pagar pra sair/.test(t)) {
+  if (/encont[rro]|encontrar|te encontrar|sair junto|sair com|sa[ií]r comigo|presencial|na vida real|marcar (algo|um|uma)|fazer programa|(^|[^a-z])programa([^a-z]|$)|(^|[^a-z])gp([^a-z]|$)|acompanhante|quanto (voc[eê] )?cobra|cobra pra (sair|transar|fazer)|te pagar pra|pagar pra (sair|te ver|transar)|me encontra|vir (aqui|a[ií])|ir (a[ií]|ai) te ver|hotel|motel|airbnb|jantar e|transar pessoal|sexo presencial|quero te ver pessoal|te ver pessoalmente|ficar comigo (pessoal|de verdade)|vem pra c[aá]|vem aqui/.test(t)) {
     return {
       intent: 'encontros',
       confidence: 0.95,
@@ -56,7 +56,7 @@ function localIntent(message: string): IntentResult {
     return {
       intent: 'video_avulso',
       confidence: 0.88,
-      reply: 'Vídeo só pra você… me descreve o que você quer que eu faça nele 😈',
+      reply: 'Vídeo só pra você. me descreve o que você quer que eu faça nele 😈',
       show_menu: false,
       suggest_step: 'video_avulso',
     }
@@ -83,7 +83,7 @@ function localIntent(message: string): IntentResult {
     return {
       intent: 'papo',
       confidence: 0.7,
-      reply: 'Oi amor 😘 Pode falar comigo… me conta o que te trouxe até aqui, sem pressa.',
+      reply: 'Oi amor 😘 Pode falar comigo… me conta o que te trouxe até aqui.',
       show_menu: false,
       suggest_step: null,
     }
@@ -110,7 +110,7 @@ function localIntent(message: string): IntentResult {
   return {
     intent: 'unknown',
     confidence: 0.4,
-    reply: 'Hmm entendi… me fala um pouco mais sobre isso? Quero te responder direito 😘',
+    reply: 'Hmm entendi. me fala um pouco mais sobre isso? Quero te responder direito 😘',
     show_menu: false,
     suggest_step: null,
   }
@@ -221,9 +221,28 @@ export default defineEventHandler(async (event) => {
     ? body.history.map((h: any) => String(h).slice(0, 300)).slice(-10)
     : []
 
-  // Gemini primeiro; fallback local
+  // Filtro offline/programa SEMPRE local primeiro (não confia só no Gemini)
+  const local = localIntent(message)
+  if (local.intent === 'encontros') {
+    return { ok: true, ...local }
+  }
+
+  // Gemini para o resto; se Gemini marcar encontros, respeita
   const ai = await geminiIntent(message, history)
-  const result = ai || localIntent(message)
+  let result = ai || local
+  if (ai && ai.intent === 'encontros') {
+    result = {
+      intent: 'encontros',
+      confidence: Math.max(ai.confidence, 0.9),
+      reply: 'Ok, não tenho interesse no que você está me oferecendo.',
+      show_menu: false,
+      suggest_step: 'closed_offline',
+    }
+  } else if (ai) {
+    // ainda assim: se o texto localmente grita offline e o AI errou, sobrescreve
+    const again = localIntent(message)
+    if (again.intent === 'encontros') result = again
+  }
 
   // log leve
   try {
