@@ -453,7 +453,12 @@
             </button>
           </div>
 
-          <!-- Painel de emojis -->
+          <!-- Painel de emojis: backdrop fecha ao tocar fora -->
+          <div
+            v-if="showFunnelEmojiPicker && !funnelBlocked"
+            class="wa-emoji-backdrop"
+            @click="closeFunnelEmojiPicker"
+          ></div>
           <div v-if="showFunnelEmojiPicker && !funnelBlocked" class="wa-emoji-panel" @click.stop>
             <button
               v-for="em in FUNNEL_EMOJIS"
@@ -506,17 +511,20 @@
               v-model="funnelInput"
               class="wa-input"
               type="text"
+              enterkeyhint="send"
+              autocomplete="off"
               :placeholder="funnelBlocked ? 'Toque para desbloquear' : 'Mensagem'"
               :disabled="funnelBlocked || funnelTyping"
-              @focus="!funnelBlocked && onFunnelComposerInteract()"
+              @focus="onFunnelInputFocus(); !funnelBlocked && onFunnelComposerInteract()"
+              @blur="onFunnelInputBlur()"
               @click="!funnelBlocked && onFunnelComposerInteract()"
               @keydown="onFunnelComposerKey"
               @keydown.enter.prevent="sendFunnelFreeText"
             />
-            <button type="button" class="wa-composer-icon" aria-label="Anexar" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelAttach()">
+            <button type="button" class="wa-composer-icon" aria-label="Anexar" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : (closeFunnelEmojiPicker(), onFunnelAttach())">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
             </button>
-            <button type="button" class="wa-composer-icon" aria-label="Camera" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelCamera()">
+            <button type="button" class="wa-composer-icon" aria-label="Camera" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : (closeFunnelEmojiPicker(), onFunnelCamera())">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </button>
             <button
@@ -525,7 +533,7 @@
               :class="{ 'is-rec': funnelRecording }"
               aria-label="Audio"
               tabindex="-1"
-              @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelAudio()"
+              @click="funnelBlocked ? onFunnelComposerInteract() : (closeFunnelEmojiPicker(), onFunnelAudio())"
             >
               <svg v-if="!funnelRecording" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
               <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
@@ -752,7 +760,6 @@
         <div class="wa-perm-block-card" @click.stop>
           <p class="wa-perm-block-title">Você bloqueou esta pessoa</p>
           <p class="wa-perm-block-sub">Você não poderá mais mandar mensagem pra ela nem ela pra você.</p>
-          <p v-if="leadBlockReason" class="wa-perm-block-sub" style="opacity:.75">Motivo: {{ leadBlockReason }}</p>
           <button type="button" class="wa-perm-block-btn wa-perm-block-btn--unblock" @click="unblockLeadBlock">
             Desbloquear
           </button>
@@ -2107,36 +2114,64 @@ function syncFunnelViewport() {
     const vv = window.visualViewport
     let next: Record<string, string>
     if (!vv) {
-      next = { height: '100dvh', top: '0px' }
-    } else {
-      const h = Math.round(vv.height)
-      const top = Math.round(vv.offsetTop)
       next = {
+        height: '100dvh',
+        top: '0px',
+        bottom: 'auto',
+        maxHeight: '100dvh',
+      }
+    } else {
+      const h = Math.max(200, Math.round(vv.height))
+      const top = Math.max(0, Math.round(vv.offsetTop))
+      // Shell ocupa exatamente a área visível (acima do teclado)
+      next = {
+        position: 'fixed',
+        left: '0',
+        right: '0',
+        width: '100%',
         height: h + 'px',
         top: top + 'px',
+        bottom: 'auto',
         maxHeight: h + 'px',
       }
     }
     const cur = funnelShellStyle.value || {}
-    if (cur.height === next.height && cur.top === (next.top || '0px') && cur.maxHeight === next.maxHeight) {
+    if (
+      cur.height === next.height &&
+      cur.top === (next.top || '0px') &&
+      cur.maxHeight === next.maxHeight
+    ) {
       return
     }
     funnelShellStyle.value = next
+    // mantém o fim do chat visível junto do composer
+    try { nextTick(() => scrollFunnel()) } catch {}
   } catch {
     // não limpa estilo a toa (evita flash)
   }
 }
 
 function onFunnelInputFocus() {
+  try { closeFunnelEmojiPicker() } catch {}
+  try { showFunnelAttachMenu.value = false } catch {}
   syncFunnelViewport()
-  // iOS às vezes atrasa o resize do teclado
+  // iOS / Instagram WebView atrasam o resize do teclado
+  setTimeout(syncFunnelViewport, 50)
   setTimeout(syncFunnelViewport, 150)
   setTimeout(syncFunnelViewport, 350)
-  nextTick(() => scrollFunnel())
+  setTimeout(syncFunnelViewport, 600)
+  nextTick(() => {
+    scrollFunnel()
+    try {
+      const el = document.querySelector('.wa-funnel-composer') as HTMLElement | null
+      el?.scrollIntoView({ block: 'end', behavior: 'smooth' })
+    } catch {}
+  })
 }
 
 function onFunnelInputBlur() {
   setTimeout(syncFunnelViewport, 100)
+  setTimeout(syncFunnelViewport, 300)
 }
 
 let funnelVvClean: (() => void) | null = null
