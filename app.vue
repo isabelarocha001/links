@@ -2314,7 +2314,24 @@ async function answerFunnel(opt: { key: string; label: string }) {
     return
   }
 
-  if (opt.key === 'pix_yes' || opt.key === 'pix_generate') {
+  if (opt.key === 'pix_yes') {
+    track('whatsapp_funnel_pix', { offer_slug: selectedPack.value?.key || 'pack' })
+    // Código já gerado → só libera na tela/chat. Senão gera (ex.: confirmou 1h).
+    if (funnelPixCode.value || pixCopyCode.value) {
+      openPreparedPixForUser()
+    } else {
+      await startFunnelCheckout()
+    }
+    return
+  }
+  if (opt.key === 'pix_no') {
+    await funnelType(
+      'Tranquilo 💚 Sem pressa.\n\nQuando quiser pagar, é só tocar em pedir o PIX que eu mando a chave. Pode continuar falando comigo.',
+      1400,
+    )
+    return
+  }
+  if (opt.key === 'pix_generate') {
     track('whatsapp_funnel_pix', { offer_slug: selectedPack.value?.key || 'pack' })
     await startFunnelCheckout()
     return
@@ -2368,15 +2385,16 @@ async function answerFunnel(opt: { key: string; label: string }) {
     return
   }
 
-if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30') {
-    const map: Record<string, { label: string; price: string; desc: string }> = {
-      vid_10: { label: 'Videochamada 10 min', price: '99,90', desc: 'chamada ao vivo rápida e safada' },
-      vid_20: { label: 'Videochamada 20 min', price: '149,90', desc: 'tempo pra gozar com calma' },
-      vid_30: { label: 'Videochamada 30 min', price: '229,90', desc: 'sessão completa comigo' },
+if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30' || opt.key === 'vid_60') {
+    const map: Record<string, { label: string; price: string; desc: string; min: number }> = {
+      vid_10: { label: 'Videochamada 10 min', price: '99,90', desc: 'chamada ao vivo rápida e safada', min: 10 },
+      vid_20: { label: 'Videochamada 20 min', price: '149,90', desc: 'tempo pra gozar com calma', min: 20 },
+      vid_30: { label: 'Videochamada 30 min', price: '229,90', desc: 'sessão completa comigo', min: 30 },
+      vid_60: { label: 'Videochamada 1 hora', price: '399,90', desc: 'uma hora inteira só nossa', min: 60 },
     }
-        const p = map[opt.key]
+    const p = map[opt.key]
     selectedPack.value = { key: opt.key, label: p.label, price: p.price }
-    videoCallPurchasedMin.value = opt.key === 'vid_10' ? 10 : opt.key === 'vid_20' ? 20 : 30
+    videoCallPurchasedMin.value = p.min
     track('whatsapp_funnel_select', { offer_slug: opt.key })
     await startFunnelCheckout()
     return
