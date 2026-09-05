@@ -674,27 +674,19 @@ let funnelMediaRecorder: MediaRecorder | null = null
 let funnelAudioChunks: BlobPart[] = []
 
 function requireFunnelChatOrPay(): boolean {
-  if (funnelChatUnlocked.value) return true
-  openChatPlans()
-  return false
+  // Digitar mensagens é livre. Cobra só por packs, vídeo, mídia, etc.
+  return true
 }
 function onFunnelComposerInteract() {
-  if (
-    funnelChatUnlocked.value ||
-    funnelStep.value === 'video_avulso' ||
-    funnelStep.value === 'video_avulso_confirm'
-  ) return
-  openChatPlans()
+  // Digitar é livre — sem paywall ao focar o input
+  return
 }
 function onFunnelComposerKey(e: KeyboardEvent) {
-  if (
-    funnelChatUnlocked.value ||
-    funnelStep.value === 'video_avulso' ||
-    funnelStep.value === 'video_avulso_confirm'
-  ) return
-  // qualquer tecla ao tentar digitar abre o pop up surpresa
-  e.preventDefault()
-  openChatPlans()
+  // Digitar é livre
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    // send handled elsewhere if needed
+  }
 }
 
 function onFunnelCamera() {
@@ -867,9 +859,35 @@ function closeChatPlans() {
   showChatPlans.value = false
 }
 function pushPixIntoFunnelChat() {
+  // Não joga o código na cara. Primeiro pergunta e dá tempo de ler.
   const code = funnelPixCode.value || pixCopyCode.value
   const price = selectedPack.value?.price || selectedChatPlan.value?.priceLabel || ''
   if (!code || !/^000201/.test(code)) return
+
+  // Evita perguntar de novo se já perguntou nesta sessão de pagamento
+  if ((window as any).__pixAskedOnce) {
+    showPixCodeInChat(code, price)
+    return
+  }
+  ;(window as any).__pixAskedOnce = true
+
+  // Mensagem educada + tempo de leitura
+  pushFunnel('her', 'Posso te passar a chave PIX agora? 💚\n\nMe responde "pode" ou "manda" que eu te envio o código na hora.')
+  
+  // Depois de ~6s (tempo pra ler), se o cara não respondeu ainda, oferece de novo e libera o código
+  setTimeout(() => {
+    if (funnelStep.value === 'awaiting_payment' || funnelStep.value === 'paid') {
+      // se ainda não mostrou o código, mostra
+      if (!(window as any).__pixCodeShown) {
+        showPixCodeInChat(code, price)
+      }
+    }
+  }, 6500)
+}
+
+function showPixCodeInChat(code: string, price: string) {
+  if ((window as any).__pixCodeShown) return
+  ;(window as any).__pixCodeShown = true
   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}`
   const safe = code.replace(/</g, '&lt;')
   const html =
@@ -880,7 +898,7 @@ function pushPixIntoFunnelChat() {
     `<code style="display:block;word-break:break-all;font-size:0.68em;background:rgba(0,0,0,.22);padding:8px;border-radius:8px;margin-top:4px">${safe}</code>` +
     `<br><span style="opacity:.9">Toque em <b>Copiar código PIX</b> abaixo 👇</span>` +
     `</div>`
-  pushFunnel('her', `PIX gerado R$ ${price}`, html)
+  pushFunnel('her', `Aqui está o PIX R$ ${price} 💚`, html)
 }
 
 function closePixModal() {
@@ -1449,7 +1467,7 @@ async function onFunnelPaid() {
     funnelChatUnlocked.value = true
     startLiveChatPoll()
     await funnelType(
-      'Pronto 🔥 O chat tá liberado aqui mesmo pra gente conversar.\n\nMe conta o que você quer em especial… sexting, uma conversa bem picante, trocar fotinhos… o que te deixa mais louco? Assim eu já entro no clima certo pra você 😏',
+      'Recebi 🔥 Agora a gente pode ir mais fundo…\n\nMe conta o que você quer em especial: sexting, fotos, vídeo, videochamada… o que te deixa mais louco? Assim eu já entro no clima certo pra você 😏',
       2200,
     )
     funnelStep.value = 'other'
