@@ -1,67 +1,48 @@
 #!/usr/bin/env python3
-"""Restore full app.vue and make video_consult honor typed duration (10 min)."""
+"""Quote 90min/2h/3h videochamada prices instead of dumping preset buttons."""
 from pathlib import Path
-import subprocess
 
 APP = Path("app.vue")
-GOOD = "f4db22a4fcaae6060f1841b65fc049d3a147ed4a"
 
 
-def restore_full_app() -> str:
-    raw = subprocess.check_output(["git", "show", f"{GOOD}:app.vue"], text=True)
-    if "sendFunnelFreeText" not in raw or len(raw) < 10000:
-        raise SystemExit("restored app.vue looks truncated")
-    return raw
-
-
-def apply_video_consult_fix(s: str) -> str:
-    old_parse = """  if (/\\b30\\s*min/.test(t) || /\\bmeia\\s*hora\\b/.test(t) || /\\b30m\\b/.test(t) || t.trim() === '30') {
-    return { key: 'vid_30', label: 'Videochamada 30 min', price: '229,90', min: 30 }
-  }
-  if (/\\b20\\s*min/.test(t) || /\\b20m\\b/.test(t) || t.trim() === '20') {
-    return { key: 'vid_20', label: 'Videochamada 20 min', price: '149,90', min: 20 }
-  }
-  if (/\\b10\\s*min/.test(t) || /\\b10m\\b/.test(t) || t.trim() === '10') {
-    return { key: 'vid_10', label: 'Videochamada 10 min', price: '99,90', min: 10 }
+def apply(s: str) -> str:
+    old_parse_3h = """  if (/\\b(3|tres|tr[eê]s)\\s*horas?\\b/.test(t) || /\\b180\\s*min/.test(t) || /\\b3\\s*h\\b/.test(t)) {
+    return { key: 'vid_180', label: 'Videochamada 3 horas', price: '999,90', min: 180 }
   }"""
-
-    new_parse = """  const bareDur = (n: string) => new RegExp(
-    '(?:^|\\b)(?:so(?:\\s+o)?\\s+|quero(?:\\s+o)?\\s+|vou(?:\\s+de)?\\s+)?' + n + '(?:\\s*min(?:utos?)?|min|m)?\\b'
-  )
-  if (/\\b30\\s*min/.test(t) || /\\bmeia\\s*hora\\b/.test(t) || /\\b30m\\b/.test(t) || /\\b30min\\b/.test(t) || t.trim() === '30' || bareDur('30').test(t)) {
-    return { key: 'vid_30', label: 'Videochamada 30 min', price: '229,90', min: 30 }
-  }
-  if (/\\b20\\s*min/.test(t) || /\\b20m\\b/.test(t) || /\\b20min\\b/.test(t) || t.trim() === '20' || bareDur('20').test(t)) {
-    return { key: 'vid_20', label: 'Videochamada 20 min', price: '149,90', min: 20 }
-  }
-  if (/\\b10\\s*min/.test(t) || /\\b10m\\b/.test(t) || /\\b10min\\b/.test(t) || t.trim() === '10' || bareDur('10').test(t)) {
-    return { key: 'vid_10', label: 'Videochamada 10 min', price: '99,90', min: 10 }
+    new_parse_3h = """  if (/\\b(3|tres|tr[eê]s)\\s*h(ora)?s?\\b/.test(t) || /\\b180\\s*min/.test(t) || /\\b3\\s*h(r|rs)?\\b/.test(t) || /\\b3hrs?\\b/.test(t)) {
+    return { key: 'vid_180', label: 'Videochamada 3 horas', price: '999,90', min: 180 }
   }"""
-
-    if old_parse not in s:
-        if "video_consult_typed" in s and "bareDur" in s:
-            print("parse already patched")
-        else:
-            raise SystemExit("parse 10/20/30 block not found")
+    if old_parse_3h in s:
+        s = s.replace(old_parse_3h, new_parse_3h, 1)
+        print("patched 3h parse")
+    elif "vid_180" in s:
+        print("3h parse already flexible or present")
     else:
-        s = s.replace(old_parse, new_parse, 1)
+        raise SystemExit("3h parse block missing")
 
-    old_consult = """  if (funnelStep.value === 'video_consult') {
-    const consultChoice = parseVideoCallChoice(lower)
-    if (consultChoice) {
-      await quoteSpecificVideoDuration(consultChoice)
-      try { saveFunnelState() } catch {}
-      return
-    }
-    funnelStep.value = 'video'
-    await funnelType(
-      'Entendi o clima que você quer 😈\\n\\nPra gente fazer isso ao vivo, escolhe o tempo:\\n\\n• 10 min  R$ 99,90\\n• 20 min  R$ 149,90\\n• 30 min  R$ 229,90\\n• 1 hora  R$ 399,90\\n• 90 min  R$ 549,90\\n• 2 horas  R$ 699,90\\n• 3 horas  R$ 999,90\\n\\nMe fala qual encaixa melhor pra você agora — ou se prefere outro tempo.',
-      1800,
-    )
-    return
+    old_parse_2h = """  if (/\\b(2|duas|dois)\\s*horas?\\b/.test(t) || /\\b120\\s*min/.test(t) || /\\b2\\s*h\\b/.test(t)) {
+    return { key: 'vid_120', label: 'Videochamada 2 horas', price: '699,90', min: 120 }
   }"""
+    new_parse_2h = """  if (/\\b(2|duas|dois)\\s*h(ora)?s?\\b/.test(t) || /\\b120\\s*min/.test(t) || /\\b2\\s*h(r|rs)?\\b/.test(t) || /\\b2hrs?\\b/.test(t)) {
+    return { key: 'vid_120', label: 'Videochamada 2 horas', price: '699,90', min: 120 }
+  }"""
+    if old_parse_2h in s:
+        s = s.replace(old_parse_2h, new_parse_2h, 1)
+        print("patched 2h parse")
+    elif "vid_120" in s:
+        print("2h parse already flexible or present")
+    else:
+        raise SystemExit("2h parse block missing")
 
-    new_consult = """  if (funnelStep.value === 'video_consult') {
+    old_ask = "  const asksPrice = /quanto|custa|pre[cç]o|valor|cobra|fica quanto|qto/.test(t)"
+    new_ask = "  const asksPrice = /quanto|custa|pre[cç]o|valor|cobra|fica quanto|qto|q custa|qn?to/.test(t)"
+    if old_ask in s:
+        s = s.replace(old_ask, new_ask, 1)
+        print("patched asksPrice")
+    else:
+        print("asksPrice already patched or different")
+
+    old_vc = """  if (funnelStep.value === 'video_consult') {
     const choice = resolveVideoChoiceFromContext(lower) || parseVideoCallChoice(lower)
     if (choice) {
       selectedPack.value = { key: choice.key, label: choice.label, price: choice.price }
@@ -70,29 +51,56 @@ def apply_video_consult_fix(s: str) -> str:
       await funnelTypeParts(`Fechado: ${choice.label} por R$ ${choice.price}.|||Vou preparar o PIX pra você.`, 1000)
       await startFunnelCheckout()
       return
-    }
-    // only if NO duration in message:
-    funnelStep.value = 'video'
-    await funnelType(
-      'Entendi o clima que você quer 😈\\n\\nPra gente fazer isso ao vivo, escolhe o tempo:\\n\\n• 10 min  R$ 99,90\\n• 20 min  R$ 149,90\\n• 30 min  R$ 229,90\\n• 1 hora  R$ 399,90\\n• 90 min  R$ 549,90\\n• 2 horas  R$ 699,90\\n• 3 horas  R$ 999,90\\n\\nMe fala qual encaixa melhor pra você agora — ou se prefere outro tempo.',
-      1800,
-    )
-    return
-  }"""
-
-    if old_consult not in s:
-        if "source: 'video_consult_typed'" in s:
-            print("video_consult already patched")
-        else:
-            raise SystemExit("video_consult block not found")
+    }"""
+    new_vc = """  if (funnelStep.value === 'video_consult') {
+    const choice = resolveVideoChoiceFromContext(lower) || parseVideoCallChoice(lower)
+    if (choice) {
+      // duração específica: cotar aquele tempo (não listar 10/20/30/60)
+      await quoteSpecificVideoDuration(choice)
+      try { saveFunnelState() } catch {}
+      return
+    }"""
+    if old_vc in s:
+        s = s.replace(old_vc, new_vc, 1)
+        print("patched video_consult to quote specific duration")
+    elif "quoteSpecificVideoDuration(choice)" in s:
+        print("video_consult already quotes specific duration")
     else:
-        s = s.replace(old_consult, new_consult, 1)
+        print("video_consult block variant — leaving as-is if early handler exists")
+
+    old_opts = """  if (funnelStep.value === 'video') {
+    // Tempo já combinado: não reoferece a lista — só PIX ou mudar tempo"""
+    new_opts = """  if (funnelStep.value === 'video_consult') {
+    if ((selectedPack.value?.key || '').startsWith('vid_')) {
+      return [
+        { key: 'pix_yes', label: 'Sim, pode mandar o PIX 💚', variant: 'wa-quick--yes' },
+        { key: 'change_time', label: 'Mudar tempo', variant: 'wa-quick--no' },
+      ]
+    }
+    return []
+  }
+  if (funnelStep.value === 'video') {
+    // Tempo já combinado: não reoferece a lista — só PIX ou mudar tempo"""
+    marker = "if (funnelStep.value === 'video_consult') {\n    if ((selectedPack.value?.key || '').startsWith('vid_'))"
+    if marker not in s:
+        if old_opts in s:
+            s = s.replace(old_opts, new_opts, 1)
+            print("patched funnelOptions for video_consult")
+        else:
+            print("video options anchor not found")
+    else:
+        print("video_consult options already present")
+
+    if "EARLY: duração específica" not in s:
+        raise SystemExit("missing EARLY duration+price handler")
     return s
 
 
 def main() -> None:
-    s = restore_full_app()
-    s = apply_video_consult_fix(s)
+    s = APP.read_text(encoding="utf-8")
+    if "sendFunnelFreeText" not in s or len(s) < 10000:
+        raise SystemExit("app.vue looks truncated")
+    s = apply(s)
     APP.write_text(s, encoding="utf-8")
     print(f"wrote app.vue ({len(s)} bytes)")
 
