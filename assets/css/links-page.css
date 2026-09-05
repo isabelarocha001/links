@@ -2078,3 +2078,76 @@ button {
 .wa-media-img {
   cursor: zoom-in;
 }
+
+/* Modal justificativa — lead bloqueia Wanessa */
+.block-reason-card {
+  width: min(92vw, 400px);
+  background: #1f2c34;
+  border-radius: 16px;
+  padding: 22px 18px 18px;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0,0,0,.45);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.block-reason-title {
+  margin: 0 28px 8px 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e9edef;
+}
+.block-reason-sub {
+  margin: 0 0 14px;
+  font-size: 0.86rem;
+  color: #8696a0;
+  line-height: 1.4;
+}
+.block-reason-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.35);
+  color: #fff;
+  padding: 12px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 96px;
+  outline: none;
+}
+.block-reason-input:focus {
+  border-color: rgba(37, 211, 102, .45);
+}
+.block-reason-error {
+  margin: 8px 0 0;
+  color: #f87171;
+  font-size: 0.82rem;
+}
+.block-reason-confirm {
+  margin-top: 14px;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: #ef4444;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.block-reason-confirm:active {
+  transform: scale(0.98);
+}
+.wa-avatar-wrap--blocked {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #2a3942;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wa-avatar-blocked-ph {
+  font-size: 1.1rem;
+  line-height: 1;
+}

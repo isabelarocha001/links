@@ -175,7 +175,13 @@
       <div v-if="showWaFunnel" class="wa-funnel-overlay" @click.self="closeWaFunnel">
         <div class="wa-funnel-shell" role="dialog" aria-modal="true" :style="funnelShellStyle" style="position:relative" @click.stop>
           <header class="wa-header wa-funnel-header">
-            <button type="button" class="wa-avatar-btn" aria-label="Ver foto de perfil" @click.stop="openFunnelPhoto">
+            <button
+              v-if="!leadBlockedWanessa"
+              type="button"
+              class="wa-avatar-btn"
+              aria-label="Ver foto de perfil"
+              @click.stop="openFunnelPhoto"
+            >
               <span class="wa-avatar-wrap wa-avatar-wrap--lg">
                 <img
                   class="wa-avatar"
@@ -194,10 +200,19 @@
                 ></span>
               </span>
             </button>
-            <button type="button" class="wa-header-info wa-header-info-btn" @click="showFunnelProfile = true">
-              <p class="wa-name">Wanessa</p>
+            <div v-else class="wa-avatar-wrap wa-avatar-wrap--lg wa-avatar-wrap--blocked" aria-hidden="true">
+              <span class="wa-avatar-blocked-ph">🚫</span>
+            </div>
+            <button
+              type="button"
+              class="wa-header-info wa-header-info-btn"
+              :disabled="leadBlockedWanessa"
+              @click="!leadBlockedWanessa && (showFunnelProfile = true)"
+            >
+              <p class="wa-name">{{ leadBlockedWanessa ? 'Contato bloqueado' : 'Wanessa' }}</p>
               <p class="wa-status">
-                <span v-if="funnelTyping" class="wa-status-typing">digitando…</span>
+                <span v-if="leadBlockedWanessa" class="wa-status-last">você bloqueou este contato</span>
+                <span v-else-if="funnelTyping" class="wa-status-typing">digitando…</span>
                 <span v-else-if="adminPresenceOnline" class="wa-status-online">online</span>
                 <span v-else class="wa-status-last">{{ adminPresenceLabel }}</span>
               </p>
@@ -697,7 +712,37 @@
         </div>
       </div>
 
-      <div v-if="funnelPermBlocked && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
+      <!-- Lead bloqueou Wanessa: justificativa obrigatória -->
+      <div v-if="showBlockReasonModal" class="chat-plans-overlay" style="z-index:40070" @click.self="closeBlockReasonModal">
+        <div class="block-reason-card" @click.stop>
+          <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeBlockReasonModal">✕</button>
+          <p class="block-reason-title">Por que você quer bloquear essa pessoa?</p>
+          <p class="block-reason-sub">A justificativa é obrigatória para o sistema registrar o bloqueio.</p>
+          <textarea
+            v-model="blockReasonDraft"
+            class="block-reason-input"
+            rows="4"
+            maxlength="400"
+            placeholder="Explique o motivo…"
+          ></textarea>
+          <p v-if="blockReasonError" class="block-reason-error">{{ blockReasonError }}</p>
+          <button type="button" class="block-reason-confirm" @click="confirmLeadBlock">
+            Confirmar bloqueio
+          </button>
+        </div>
+      </div>
+
+      <!-- Lead bloqueou Wanessa (tela do lead) — SEM segunda chance / mimo -->
+      <div v-if="leadBlockedWanessa && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
+        <div class="wa-perm-block-card">
+          <p class="wa-perm-block-title">Você bloqueou Wanessa</p>
+          <p class="wa-perm-block-sub">Você não poderá mais mandar mensagem pra ela nem ela pra você.</p>
+          <p v-if="leadBlockReason" class="wa-perm-block-sub" style="opacity:.75">Motivo: {{ leadBlockReason }}</p>
+        </div>
+      </div>
+
+      <!-- Só quando WANESSA/sistema bloqueia o lead → segunda chance com mimo -->
+      <div v-if="funnelPermBlocked && !leadBlockedWanessa && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
         <div class="wa-perm-block-card">
           <p class="wa-perm-block-title">Wanessa te bloqueou permanentemente</p>
           <p class="wa-perm-block-sub">Você não pode digitar, enviar áudio, emoji, mídia nem fazer chamadas.</p>
@@ -985,9 +1030,15 @@ const funnelInput = ref('')
 const funnelShellStyle = ref<Record<string, string>>({})
 const funnelChatUnlocked = ref(false)
 const funnelBlocked = ref(false) // lead insistiu em programa/encontro presencial
-const funnelPermBlocked = ref(false) // bloqueio permanente (menu → Bloquear)
+const funnelPermBlocked = ref(false) // Wanessa/sistema bloqueou o lead → segunda chance com mimo
+const leadBlockedWanessa = ref(false) // lead bloqueou Wanessa (com justificativa) — SEM mimo
+const showBlockReasonModal = ref(false)
+const blockReasonDraft = ref('')
+const blockReasonError = ref('')
+const leadBlockReason = ref('')
 const showBlockedUnlock = ref(false)
 const PERM_BLOCK_KEY = 'wanessa_perm_block_v1'
+const LEAD_BLOCK_KEY = 'wanessa_lead_block_v1'
 const SEGUNDA_CHANCE_PLAN = { key: 'chat_unlock_segunda_chance', title: 'Segunda chance', desc: 'mimo para desbloquear o chat', price: 29.9, priceLabel: '29,90' }
 const showMimoGiftModal = ref(false)
 const mimoGiftAmount = ref('')
@@ -1020,7 +1071,7 @@ function requireFunnelChatOrPay(): boolean {
   return true
 }
 function onFunnelComposerInteract(e?: Event) {
-  if (funnelPermBlocked.value) {
+  if (funnelPermBlocked.value || leadBlockedWanessa.value) {
     try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
     return
   }
@@ -1063,7 +1114,7 @@ function closeFunnelEmojiPicker() {
 }
 function onFunnelVideoCall() {
   showFunnelMoreMenu.value = false
-  if (funnelPermBlocked.value) return
+  if (funnelPermBlocked.value || leadBlockedWanessa.value) return
   if (videoCallUnlocked.value || isAdmin.value) {
     openVideoCallPlayer()
     return
@@ -1135,11 +1186,8 @@ function onFunnelMoreAction(kind: string) {
     return
   }
   if (kind === 'block') {
-    try {
-      openBlockReasonModal()
-    } catch {
-      applyPermanentBlock()
-    }
+    // Menu do LEAD → bloqueia Wanessa (justificativa). NÃO é bloqueio da Wanessa nem segunda chance.
+    openBlockReasonModal()
     return
   }
   if (kind === 'mute') {
@@ -1266,7 +1314,58 @@ function onPreviewAudioTime() {
 }
 
 
+function openBlockReasonModal() {
+  showFunnelMoreMenu.value = false
+  if (leadBlockedWanessa.value) return
+  blockReasonDraft.value = ''
+  blockReasonError.value = ''
+  showBlockReasonModal.value = true
+}
+
+function closeBlockReasonModal() {
+  showBlockReasonModal.value = false
+  blockReasonError.value = ''
+}
+
+function confirmLeadBlock() {
+  const reason = String(blockReasonDraft.value || '').trim()
+  if (reason.length < 5) {
+    blockReasonError.value = 'Escreva o motivo (mín. 5 caracteres) para confirmar o bloqueio.'
+    return
+  }
+  leadBlockedWanessa.value = true
+  leadBlockReason.value = reason.slice(0, 400)
+  funnelBlocked.value = true
+  showBlockReasonModal.value = false
+  showFunnelEmojiPicker.value = false
+  showFunnelAttachMenu.value = false
+  showFunnelMoreMenu.value = false
+  showFunnelPhoto.value = false
+  showFunnelProfile.value = false
+  try {
+    const vid = getOrCreateVisitorId()
+    localStorage.setItem(
+      LEAD_BLOCK_KEY,
+      JSON.stringify({ visitor_id: vid, reason: leadBlockReason.value, at: Date.now() }),
+    )
+  } catch {}
+  try { saveFunnelState() } catch {}
+  try { track('funnel_lead_block', { offer_slug: 'lead_block' }) } catch {}
+  try {
+    logFunnelMessage(
+      'lead',
+      `Lead te bloqueou: ${leadBlockReason.value}`,
+      {
+        event: 'lead_blocked',
+        block_reason: leadBlockReason.value,
+        blocked_by: 'lead',
+      },
+    )
+  } catch {}
+}
+
 function applyPermanentBlock() {
+  // Só bloqueio do lado Wanessa/sistema → lead (segunda chance com mimo)
   funnelPermBlocked.value = true
   funnelBlocked.value = true
   showFunnelEmojiPicker.value = false
@@ -1290,18 +1389,30 @@ function clearPermanentBlock() {
 function loadPermanentBlock() {
   try {
     const raw = localStorage.getItem(PERM_BLOCK_KEY)
+    if (raw) {
+      const data = JSON.parse(raw)
+      const vid = getOrCreateVisitorId()
+      if (data?.visitor_id && data.visitor_id === vid) {
+        funnelPermBlocked.value = true
+        funnelBlocked.value = true
+      }
+    }
+  } catch {}
+  try {
+    const raw = localStorage.getItem(LEAD_BLOCK_KEY)
     if (!raw) return
     const data = JSON.parse(raw)
     const vid = getOrCreateVisitorId()
     if (data?.visitor_id && data.visitor_id === vid) {
-      funnelPermBlocked.value = true
+      leadBlockedWanessa.value = true
+      leadBlockReason.value = String(data.reason || '')
       funnelBlocked.value = true
     }
   } catch {}
 }
 
 function onFunnelGiftMimo() {
-  if (funnelPermBlocked.value) return
+  if (funnelPermBlocked.value || leadBlockedWanessa.value) return
   mimoGiftError.value = ''
   mimoGiftAmount.value = ''
   mimoGiftMessage.value = ''
