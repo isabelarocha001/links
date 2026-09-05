@@ -241,16 +241,43 @@
             <div class="wa-day">Hoje</div>
             <div
               v-for="(m, i) in funnelMessages"
-              :key="i"
+              :key="m.id || i"
               class="wa-row"
               :class="m.from === 'me' ? 'wa-row--me' : 'wa-row--her'"
             >
-              <div class="wa-bubble" :class="m.from === 'me' ? 'wa-bubble--me' : 'wa-bubble--her'">
-                <p class="wa-text" v-html="m.html || escapeHtml(m.text)"></p>
+              <div
+                class="wa-bubble"
+                :class="[
+                  m.from === 'me' ? 'wa-bubble--me' : 'wa-bubble--her',
+                  m.mediaKind ? 'wa-bubble--media' : '',
+                  m.deleted ? 'wa-bubble--deleted' : '',
+                ]"
+                @contextmenu.prevent="m.from === 'me' && !m.deleted && openFunnelMsgMenu(i)"
+                @touchstart.passive="m.from === 'me' && !m.deleted && onFunnelMsgTouchStart(i, $event)"
+                @touchend.passive="onFunnelMsgTouchEnd"
+                @touchmove.passive="onFunnelMsgTouchEnd"
+              >
+                <template v-if="m.deleted">
+                  <p class="wa-text wa-text--deleted">Mensagem apagada</p>
+                </template>
+                <template v-else-if="funnelEditingIdx === i">
+                  <div class="wa-edit-box">
+                    <input v-model="funnelEditDraft" class="wa-edit-input" type="text" @keydown.enter.prevent="saveFunnelMsgEdit" />
+                    <div class="wa-edit-actions">
+                      <button type="button" class="wa-edit-btn" @click="cancelFunnelMsgEdit">Cancelar</button>
+                      <button type="button" class="wa-edit-btn wa-edit-btn--ok" @click="saveFunnelMsgEdit">Salvar</button>
+                    </div>
+                  </div>
+                </template>
+                <template v-else>
+                  <div v-if="m.html" class="wa-media" v-html="m.html"></div>
+                  <p v-else class="wa-text">{{ m.text }}</p>
+                  <span v-if="m.edited" class="wa-edited">editada</span>
+                </template>
                 <span class="wa-meta">
                   <span class="wa-time">{{ m.time }}</span>
                   <span
-                    v-if="m.from === 'me'"
+                    v-if="m.from === 'me' && !m.deleted"
                     class="wa-ticks"
                     :class="{
                       'wa-ticks--sent': !m.status || m.status === 'sent',
@@ -263,8 +290,24 @@
                     <svg class="wa-tick wa-tick--second" viewBox="0 0 16 11" width="16" height="11"><path d="M5.6 10.2L0.8 5.4l1.3-1.3 3.5 3.5L13.5.7 14.8 2z" fill="currentColor"/></svg>
                   </span>
                 </span>
+                <button
+                  v-if="m.from === 'me' && !m.deleted && funnelEditingIdx !== i"
+                  type="button"
+                  class="wa-msg-menu-btn"
+                  aria-label="Opções da mensagem"
+                  @click.stop="openFunnelMsgMenu(i)"
+                >⋮</button>
               </div>
-              <div v-if="m.from === 'me' && m.status === 'read'" class="wa-read-label">Visualizado</div>
+              <div v-if="m.from === 'me' && m.status === 'read' && !m.deleted" class="wa-read-label">Visualizado</div>
+            </div>
+
+            <!-- Menu editar / apagar mensagem -->
+            <div v-if="funnelMsgMenuIdx !== null" class="wa-msg-sheet-overlay" @click.self="funnelMsgMenuIdx = null">
+              <div class="wa-msg-sheet" role="dialog">
+                <button type="button" class="wa-msg-sheet-item" @click="startFunnelMsgEdit">Editar mensagem</button>
+                <button type="button" class="wa-msg-sheet-item wa-msg-sheet-item--danger" @click="deleteFunnelMsg">Apagar mensagem</button>
+                <button type="button" class="wa-msg-sheet-item wa-msg-sheet-item--cancel" @click="funnelMsgMenuIdx = null">Cancelar</button>
+              </div>
             </div>
             <div v-if="funnelTyping" class="wa-row wa-row--her">
               <div class="wa-bubble wa-bubble--her wa-bubble--typing">
@@ -742,6 +785,10 @@ const funnelShellStyle = ref<Record<string, string>>({})
 const funnelChatUnlocked = ref(false)
 const funnelBlocked = ref(false) // lead insistiu em programa/encontro presencial
 const showBlockedUnlock = ref(false)
+const funnelMsgMenuIdx = ref<number | null>(null)
+const funnelEditingIdx = ref<number | null>(null)
+const funnelEditDraft = ref('')
+
 const blockedUnlockLoading = ref(false)
 const blockedUnlockError = ref('')
 const BLOCKED_UNLOCK_PLAN = { key: 'chat_unlock_blocked', title: 'Desbloquear chat', desc: 'libera a conversa de novo', price: 49.9, priceLabel: '49,90' }
@@ -877,13 +924,13 @@ function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc
   if (!file || !funnelChatUnlocked.value) return
   const url = URL.createObjectURL(file)
   if (kind === 'photo') {
-    pushFunnel('me', 'Foto', `<img src="${url}" alt="foto" style="max-width:100%;border-radius:10px;display:block" />`)
+    pushFunnel('me', 'Foto', `<img class="wa-media-img" src="${url}" alt="foto" />`, { mediaKind: 'photo' })
   } else if (kind === 'video') {
-    pushFunnel('me', 'Video', `<video src="${url}" controls playsinline style="max-width:100%;border-radius:10px;display:block"></video>`)
+    pushFunnel('me', 'Video', `<video class="wa-media-video" src="${url}" controls playsinline preload="metadata"></video>`, { mediaKind: 'video' })
   } else if (kind === 'doc') {
-    pushFunnel('me', 'Documento', `<div style="padding:8px 10px;background:rgba(0,0,0,.2);border-radius:10px">📄 ${file.name || 'documento'}</div>`)
+    pushFunnel('me', 'Documento', `<div class="wa-media-doc">📄 ${file.name || 'documento'}</div>`, { mediaKind: 'doc' })
   } else {
-    pushFunnel('me', 'Audio', `<audio src="${url}" controls style="width:100%;min-width:180px"></audio>`)
+    pushFunnel('me', 'Audio', `<div class="wa-media-audio"><audio src="${url}" controls preload="metadata"></audio></div>`, { mediaKind: 'audio' })
   }
   try { track('funnel_media_sent', { kind }) } catch {}
   setTimeout(() => { funnelType('Recebi aqui, amor… me conta o que você quer que eu faça com isso 😏', 800) }, 400)
@@ -905,7 +952,7 @@ async function onFunnelAudio() {
       funnelRecording.value = false
       const blob = new Blob(funnelAudioChunks, { type: 'audio/webm' })
       const url = URL.createObjectURL(blob)
-      pushFunnel('me', 'Audio', `<audio src="${url}" controls style="width:100%;min-width:180px"></audio>`)
+      pushFunnel('me', 'Audio', `<div class="wa-media-audio"><audio src="${url}" controls preload="metadata"></audio></div>`, { mediaKind: 'audio' })
       try { track('funnel_media_sent', { kind: 'audio_record' }) } catch {}
       setTimeout(() => { funnelType('Recebi seu áudio. Ainda não consigo ouvir o conteúdo por aqui. Pode escrever o que você quer?', 900) }, 400)
     }
@@ -1298,7 +1345,7 @@ function unbindFunnelViewport() {
 
 const showFunnelProfile = ref(false)
 const funnelStep = ref<'greeting' | 'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'awaiting_payment' | 'paid' | 'redirect' | 'other' | 'video_consult' | 'video_avulso' | string>('greeting')
-const funnelMessages = ref<{ from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read' }[]>([])
+const funnelMessages = ref<{ id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; edited?: boolean; deleted?: boolean }[]>([])
 const funnelTyping = ref(false)
 const funnelChatBox = ref<HTMLElement | null>(null)
 const selectedPack = ref<{ key: string; label: string; price: string } | null>(null)
@@ -1799,12 +1846,14 @@ function markLastLeadMessage(status: 'delivered' | 'read') {
   }
 }
 
-function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean }) {
-  const row: { from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read' } = {
+function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null }) {
+  const row: { id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; edited?: boolean; deleted?: boolean } = {
+    id: `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     from,
     text,
     html,
     time: nowTime(),
+    mediaKind: (opts as any)?.mediaKind || null,
   }
   if (from === 'me') row.status = 'sent'
   funnelMessages.value.push(row)
@@ -2387,6 +2436,68 @@ function resolveVideoChoiceFromContext(lower: string): { key: string; label: str
     }
   }
   return null
+}
+
+
+let funnelMsgLongPressTimer: ReturnType<typeof setTimeout> | null = null
+function onFunnelMsgTouchStart(i: number, _e: TouchEvent) {
+  if (funnelMsgLongPressTimer) clearTimeout(funnelMsgLongPressTimer)
+  funnelMsgLongPressTimer = setTimeout(() => openFunnelMsgMenu(i), 450)
+}
+function onFunnelMsgTouchEnd() {
+  if (funnelMsgLongPressTimer) {
+    clearTimeout(funnelMsgLongPressTimer)
+    funnelMsgLongPressTimer = null
+  }
+}
+function openFunnelMsgMenu(i: number) {
+  const m = funnelMessages.value[i]
+  if (!m || m.from !== 'me' || m.deleted) return
+  funnelMsgMenuIdx.value = i
+}
+function startFunnelMsgEdit() {
+  const i = funnelMsgMenuIdx.value
+  funnelMsgMenuIdx.value = null
+  if (i === null) return
+  const m = funnelMessages.value[i]
+  if (!m || m.from !== 'me' || m.deleted) return
+  // foto/vídeo/áudio: não edita conteúdo, só apaga pelo outro botão
+  if (m.mediaKind) {
+    return
+  }
+  funnelEditingIdx.value = i
+  funnelEditDraft.value = m.text || ''
+}
+function cancelFunnelMsgEdit() {
+  funnelEditingIdx.value = null
+  funnelEditDraft.value = ''
+}
+function saveFunnelMsgEdit() {
+  const i = funnelEditingIdx.value
+  if (i === null) return
+  const m = funnelMessages.value[i]
+  if (!m || m.from !== 'me' || m.deleted) return
+  const next = (funnelEditDraft.value || '').trim()
+  if (!next) return
+  m.text = next
+  m.html = undefined
+  m.edited = true
+  m.time = nowTime()
+  funnelEditingIdx.value = null
+  funnelEditDraft.value = ''
+  try { saveFunnelState() } catch {}
+}
+function deleteFunnelMsg() {
+  const i = funnelMsgMenuIdx.value
+  funnelMsgMenuIdx.value = null
+  if (i === null) return
+  const m = funnelMessages.value[i]
+  if (!m || m.from !== 'me') return
+  m.deleted = true
+  m.text = ''
+  m.html = undefined
+  m.mediaKind = null
+  try { saveFunnelState() } catch {}
 }
 
 async function sendFunnelFreeText() {
