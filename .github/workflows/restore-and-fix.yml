@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Apply funnel duration fix
         run: python3 scripts/fix_video_custom_duration.py
       - name: Commit patched app.vue
@@ -24,5 +26,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add app.vue
           git diff --cached --quiet && echo "no app.vue change" && exit 0
-          git commit -m "Fix WhatsApp funnel: quote 90min/2h/3h video prices instead of dumping preset buttons"
+          git commit -m "fix(funnel): video_consult respeita tempo digitado (10 min)"
           git push
