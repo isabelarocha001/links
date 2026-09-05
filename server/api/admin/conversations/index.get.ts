@@ -53,6 +53,9 @@ export default defineEventHandler(async (event) => {
     const lastAt = last?.created_at || c.last_message_at || c.updated_at
     const lastTs = lastAt ? new Date(lastAt).getTime() : 0
     const is_new = last?.direction === 'lead' && lastTs >= dayAgo
+    const meta = (c.metadata && typeof c.metadata === 'object') ? c.metadata : {}
+    const lead_blocked = !!(meta as any).lead_blocked || c.status === 'blocked'
+    const block_reason = String((meta as any).block_reason || '')
     return {
       id: c.id,
       visitor_id: c.visitor_id,
@@ -63,6 +66,8 @@ export default defineEventHandler(async (event) => {
       created_at: c.created_at,
       last_message: last,
       is_new,
+      lead_blocked,
+      block_reason,
     }
   })
 
