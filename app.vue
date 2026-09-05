@@ -333,10 +333,11 @@
               <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
             </button>
             <button
-              v-if="funnelInput.trim() && !funnelBlocked"
+              v-if="!funnelBlocked"
               type="button"
               class="wa-send"
               aria-label="Enviar"
+              :disabled="!funnelInput.trim() || funnelTyping"
               @click="sendFunnelFreeText"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -826,9 +827,14 @@ function onFunnelMoreAction(kind: string) {
   }
   if (kind === 'clear') {
     funnelMessages.value = []
-    funnelStep.value = 'menu'
+    funnelStep.value = 'greeting'
+    funnelBlocked.value = false
+    selectedPack.value = null
+    funnelInput.value = ''
+    try { clearFunnelState() } catch {}
+    try { saveFunnelState() } catch {}
     setTimeout(() => {
-      funnelType('Conversa limpa… me diz de novo o que você quer de mim hoje 😘', 900)
+      funnelType('Conversa limpa. Pode falar de novo quando quiser.', 900)
     }, 200)
     return
   }
@@ -2095,9 +2101,10 @@ function loadFunnelState(): boolean {
 
 function clearFunnelState() {
   try { localStorage.removeItem(FUNNEL_STORAGE_KEY) } catch {}
-  funnelStep.value = 'menu'
+  funnelStep.value = 'greeting'
   funnelMessages.value = []
   selectedPack.value = null
+  funnelBlocked.value = false
 }
 
 function openWaFunnel(source = 'whatsapp') {
