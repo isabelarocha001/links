@@ -2123,61 +2123,75 @@ async function checkPixStatus(silent = false) {
 }
 
 
-function applyFunnelShellBox(layoutH: number, kbdInset: number) {
-  const h = Math.max(220, Math.round(layoutH))
+function applyFunnelShellBox(h: number, top: number, kbdInset: number) {
+  const hh = Math.max(220, Math.round(h))
+  const tt = Math.max(0, Math.round(top))
   const kbd = Math.max(0, Math.round(kbdInset))
   const next: Record<string, string> = {
     position: 'fixed',
     left: '0px',
     right: '0px',
     width: '100%',
-    top: '0px',
+    top: tt + 'px',
+    height: hh + 'px',
+    maxHeight: hh + 'px',
     bottom: 'auto',
-    height: h + 'px',
-    maxHeight: h + 'px',
-    // sobe o conteúdo sem "cortar" a shell (evita truncada ao fechar teclado)
     paddingBottom: kbd > 0 ? kbd + 'px' : '0px',
     boxSizing: 'border-box',
   }
   const cur = funnelShellStyle.value || {}
-  if (cur.height === next.height && cur.paddingBottom === next.paddingBottom) {
+  if (
+    cur.height === next.height &&
+    cur.top === next.top &&
+    cur.paddingBottom === next.paddingBottom
+  ) {
     return
   }
   funnelShellStyle.value = next
-  // só rola o chat quando o teclado ABRE (não a cada frame — evita truncada)
-  if (kbd > 0) {
-    try {
-      nextTick(() => scrollFunnel())
-    } catch {}
+  if (funnelKeyboardOpen.value) {
+    try { nextTick(() => scrollFunnel()) } catch {}
   }
 }
 
 function syncFunnelViewport(opts?: { forceKbd?: boolean }) {
   try {
     const vv = window.visualViewport
-    const layoutH = window.innerHeight || document.documentElement.clientHeight || 700
+    const innerH = window.innerHeight || document.documentElement.clientHeight || 700
+    const base = funnelKbdBaseH || innerH
     const forceKbd = !!(opts && opts.forceKbd)
-    let kbd = 0
 
+    // teclado fechado → tela cheia
+    if (!funnelKeyboardOpen.value) {
+      applyFunnelShellBox(innerH, 0, 0)
+      return
+    }
+
+    // 1) Browser já encolheu a janela (Chrome Android etc.) → só preencher innerH, SEM padding extra
+    if (innerH < base * 0.88) {
+      applyFunnelShellBox(innerH, 0, 0)
+      return
+    }
+
+    // 2) visualViewport encolheu → encaixar a shell exatamente na área visível
     if (vv) {
-      // diferença entre layout e visual = área coberta pelo teclado
-      kbd = Math.max(0, Math.round(layoutH - vv.height - (vv.offsetTop || 0)))
+      const vvH = Math.round(vv.height)
+      const vvTop = Math.round(vv.offsetTop || 0)
+      if (vvH < base * 0.88) {
+        applyFunnelShellBox(vvH, vvTop, 0)
+        return
+      }
     }
 
-    if (funnelKeyboardOpen.value) {
-      const base = funnelKbdBaseH || layoutH
-      // Instagram: visualViewport quase não muda → fallback só depois do toque
-      if (kbd < 80 && forceKbd) {
-        kbd = Math.round(base * 0.40)
-      }
-      if (kbd < 80 && !forceKbd) {
-        kbd = 0
-      }
-    } else {
-      kbd = 0
+    // 3) Instagram / WebView teimoso: nada encolheu → sobe o composer com padding
+    //    (só depois do toque, forceKbd=true)
+    if (forceKbd) {
+      const kbd = Math.round(base * 0.36)
+      applyFunnelShellBox(base, 0, kbd)
+      return
     }
 
-    applyFunnelShellBox(layoutH, kbd)
+    // ainda esperando o teclado aparecer
+    applyFunnelShellBox(innerH, 0, 0)
   } catch {
     // ignore
   }
@@ -2198,24 +2212,23 @@ function onFunnelOverlayClick() {
 function onFunnelInputFocus() {
   try { closeFunnelEmojiPicker() } catch {}
   try { showFunnelAttachMenu.value = false } catch {}
+  // altura ANTES do teclado
   funnelKbdBaseH = window.innerHeight || 700
   funnelKeyboardOpen.value = true
-  // não aplica fallback no mesmo frame do toque
   syncFunnelViewport({ forceKbd: false })
   stopFunnelKbdPoll()
   let ticks = 0
   funnelKbdPoll = setInterval(() => {
     ticks++
+    // fallback Instagram só a partir de ~400ms
     syncFunnelViewport({ forceKbd: ticks >= 4 })
-    if (ticks >= 16) stopFunnelKbdPoll()
+    if (ticks >= 18) stopFunnelKbdPoll()
   }, 100)
-  setTimeout(() => syncFunnelViewport({ forceKbd: false }), 80)
-  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 400)
-  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 700)
+  setTimeout(() => syncFunnelViewport({ forceKbd: false }), 100)
+  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 450)
 }
 
 function onFunnelInputBlur() {
-  // espera o teclado baixar antes de zerar o padding (evita "truncada")
   setTimeout(() => {
     try {
       const a = document.activeElement as HTMLElement | null
@@ -2225,13 +2238,9 @@ function onFunnelInputBlur() {
     } catch {}
     stopFunnelKbdPoll()
     funnelKeyboardOpen.value = false
-    // restaura em 2 passos suaves
     syncFunnelViewport({ forceKbd: false })
-    setTimeout(() => {
-      funnelKeyboardOpen.value = false
-      syncFunnelViewport({ forceKbd: false })
-    }, 200)
-  }, 180)
+    setTimeout(() => syncFunnelViewport({ forceKbd: false }), 220)
+  }, 150)
 }
 
 let funnelVvClean: (() => void) | null = null
