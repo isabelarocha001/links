@@ -54,6 +54,8 @@ export default defineNuxtConfig({
     '/chat/**': { ssr: true },
     '/CanalPublico': { ssr: true },
     '/canalpublico': { ssr: true },
+    '/admin/**': { ssr: false },
+    '/admin-chat': { ssr: false },
   },
 })
 
