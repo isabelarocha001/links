@@ -1,10 +1,28 @@
 name: restore-and-fix
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/fix_video_custom_duration.py
+      - .github/workflows/restore-and-fix.yml
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  noop:
+  apply-video-duration-fix:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "disabled - manual restore only"
+      - uses: actions/checkout@v4
+      - name: Apply funnel duration fix
+        run: python3 scripts/fix_video_custom_duration.py
+      - name: Commit patched app.vue
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app.vue
+          git diff --cached --quiet && echo "no app.vue change" && exit 0
+          git commit -m "Fix WhatsApp funnel: quote 90min/2h/3h video prices instead of dumping preset buttons"
+          git push
