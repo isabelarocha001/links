@@ -194,6 +194,21 @@
               </p>
             </button>
             <div class="wa-header-actions">
+              <button
+                type="button"
+                class="wa-header-icon-btn wa-header-icon-btn--gift"
+                aria-label="Enviar mimo"
+                title="Enviar mimo"
+                :disabled="blockedUnlockLoading"
+                @click="onFunnelGiftMimo"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="8" width="18" height="4" rx="1"/>
+                  <path d="M12 8v13"/>
+                  <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+                  <path d="M7.5 8a2.5 2.5 0 1 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 1 1 0 5"/>
+                </svg>
+              </button>
               <button type="button" class="wa-header-icon-btn" aria-label="Videochamada" @click="onFunnelVideoCall">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
               </button>
@@ -1021,8 +1036,19 @@ function loadPermanentBlock() {
   } catch {}
 }
 
+function onFunnelGiftMimo() {
+  if (blockedUnlockLoading.value) return
+  if (funnelPermBlocked.value) {
+    startSegundaChanceMimo()
+    return
+  }
+  // Mimo livre (presente) — mesmo valor da segunda chance
+  try { track('funnel_gift_mimo_open', { offer_slug: SEGUNDA_CHANCE_PLAN.key }) } catch {}
+  buySegundaChanceMimo()
+}
+
 function startSegundaChanceMimo() {
-  if (!funnelPermBlocked.value || blockedUnlockLoading.value) return
+  if (blockedUnlockLoading.value) return
   try { track('segunda_chance_mimo_open', { offer_slug: SEGUNDA_CHANCE_PLAN.key }) } catch {}
   buySegundaChanceMimo()
 }
