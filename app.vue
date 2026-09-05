@@ -999,7 +999,7 @@
             <div v-if="pixQrImage && pixIsEmv" class="chat-pix-qr-wrap">
               <img :src="pixQrImage" alt="QR Code PIX" class="chat-pix-qr" />
             </div>
-            <p class="chat-pix-hint">Copia e cola PIX (SyncPay):</p>
+            <p class="chat-pix-hint">Copia e cola PIX:</p>
             <textarea class="chat-pix-code chat-pix-code--area" readonly rows="3" :value="pixCopyCode" />
             <div class="chat-pix-copy-row">
               <button type="button" class="chat-pix-copy-btn chat-pix-copy-btn--full" @click="copyPixCode">{{ pixCopied ? 'Código copiado!' : 'Copiar código PIX' }}</button>
