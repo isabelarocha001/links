@@ -1005,12 +1005,22 @@
               <button type="button" class="chat-pix-copy-btn chat-pix-copy-btn--full" @click="copyPixCode">{{ pixCopied ? 'Código copiado!' : 'Copiar código PIX' }}</button>
             </div>
             <p class="chat-pix-status" :class="{ 'is-ok': pixPaid }">{{ pixStatusText }}</p>
-            <button type="button" class="chat-pix-status-btn" :disabled="pixStatusLoading" @click="checkPixStatus">
-              {{ pixStatusLoading ? 'Consultando Banco Central…' : 'Consultar status da transação' }}
+            <button type="button" class="chat-pix-status-btn" :disabled="pixStatusLoading" @click="checkPixStatus(false)">
+              {{ pixStatusLoading ? 'Consultando…' : 'Consultar status da transação' }}
             </button>
           </div>
         </div>
       </div>
+
+      <!-- Popup loading: consultando status PIX -->
+      <div v-if="showPixStatusChecking" class="chat-plans-overlay pix-status-check-overlay" style="z-index:40100" @click.stop>
+        <div class="pix-status-check-card" role="dialog" aria-modal="true" @click.stop>
+          <div class="pix-status-check-spinner" aria-hidden="true"></div>
+          <p class="pix-status-check-title">Consultando o status da transação no banco</p>
+          <p class="pix-status-check-sub">Aguarde um instante…</p>
+        </div>
+      </div>
+
       <div v-if="showLogin && !isAdmin" class="wl-overlay" @click.self="showLogin = false">
         <div class="wl-card" role="dialog" aria-modal="true" @click.stop>
           <h2>Acesso admin</h2>
@@ -2198,6 +2208,7 @@ const pixExternalId = ref('')
 const pixCopied = ref(false)
 const pixStatusText = ref('Aguardando pagamento…')
 const pixStatusLoading = ref(false)
+const showPixStatusChecking = ref(false)
 const pixPaid = ref(false)
 const pixIsEmv = computed(() => /^000201/.test(pixCopyCode.value || ''))
 let pixPollTimer: ReturnType<typeof setInterval> | null = null
@@ -2477,7 +2488,11 @@ async function checkPixStatus(silent = false) {
     if (!silent) pixStatusText.value = 'Sem ID de transação para consultar'
     return
   }
-  if (!silent) pixStatusLoading.value = true
+  const started = Date.now()
+  if (!silent) {
+    pixStatusLoading.value = true
+    showPixStatusChecking.value = true
+  }
   try {
     const st = await $fetch<{ status?: string; message?: string }>('/api/checkout/status', {
       query: { id },
@@ -2503,7 +2518,13 @@ async function checkPixStatus(silent = false) {
       pixStatusText.value = e?.data?.statusMessage || e?.message || 'Não foi possível consultar o status agora'
     }
   } finally {
-    if (!silent) pixStatusLoading.value = false
+    if (!silent) {
+      // garante que o popup de loading aparece pelo menos ~1.1s
+      const wait = Math.max(0, 1100 - (Date.now() - started))
+      if (wait) await new Promise((r) => setTimeout(r, wait))
+      showPixStatusChecking.value = false
+      pixStatusLoading.value = false
+    }
   }
 }
 
