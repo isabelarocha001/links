@@ -1,0 +1,30 @@
+name: restore-funnel-agreed
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/restore_funnel_agreed.py
+      - .github/workflows/restore-funnel-agreed.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  restore-and-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore truncated app.vue and apply agreed-time fix
+        run: python3 scripts/restore_funnel_agreed.py
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app.vue
+          git diff --cached --quiet && echo "no app.vue change" && exit 0
+          git commit -m "fix(funnel): nao reoferecer tempos se chamada ja combinada"
+          git push
