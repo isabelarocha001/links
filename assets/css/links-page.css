@@ -544,12 +544,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.28);
+  color: #ffffff;
   font-size: 0.78rem;
 }
 .wa-funnel-quick--busy .wa-funnel-quick-placeholder::after {
   content: 'ela está digitando…';
   letter-spacing: 0.02em;
+  color: #ffffff !important;
+  opacity: 1;
 }
 .wa-funnel-shell .wa-composer {
   flex: 0 0 auto;
@@ -1495,4 +1497,72 @@ button.direct-btn {
   border-top: 1px solid rgba(255,255,255,0.06);
   text-align: center;
   margin-top: 4px;
+}
+
+
+/* Preview de áudio gravado: pausar → descartar ou enviar */
+.wa-audio-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #1f2c34;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.wa-audio-preview audio {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+}
+.wa-audio-preview-btn {
+  border: none;
+  border-radius: 18px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wa-audio-preview-btn--discard {
+  background: rgba(248,113,113,0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(248,113,113,0.35);
+}
+.wa-audio-preview-btn--send {
+  background: #25d366;
+  color: #053b1c;
+}
+
+/* Painel de emojis */
+.wa-emoji-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 56px;
+  z-index: 35;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #1f2c34;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 10px 8px max(10px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.35);
+}
+.wa-emoji-item {
+  border: none;
+  background: transparent;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  padding: 6px 2px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.wa-emoji-item:active {
+  background: rgba(255,255,255,0.08);
+}
+.wa-funnel-shell {
+  position: relative;
 }
