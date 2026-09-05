@@ -178,7 +178,11 @@
             <button type="button" class="wa-avatar-btn" aria-label="Ver foto de perfil" @click="showFunnelPhoto = true">
               <span class="wa-avatar-wrap wa-avatar-wrap--lg">
                 <img class="wa-avatar" src="/model.jpg" alt="Wanessa" draggable="false" />
-                <span class="wa-online-dot" aria-hidden="true"></span>
+                <span
+                  class="wa-online-dot"
+                  :class="{ 'is-off': !adminPresenceOnline }"
+                  aria-hidden="true"
+                ></span>
               </span>
             </button>
             <button type="button" class="wa-header-info wa-header-info-btn" @click="showFunnelProfile = true">
