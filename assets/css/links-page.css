@@ -1579,3 +1579,117 @@ button.direct-btn {
 .wa-header-icon-btn--gift:disabled {
   opacity: 0.5;
 }
+
+.mimo-gift-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.mimo-gift-card {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  background: #1f2c34;
+  border-radius: 20px;
+  padding: 28px 20px 20px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.mimo-gift-x {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+.mimo-gift-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  margin: 0 auto 10px;
+  border: 3px solid rgba(249, 168, 212, 0.45);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  background: #2a3942;
+}
+.mimo-gift-name {
+  margin: 0 0 18px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e9edef;
+}
+.mimo-gift-label {
+  display: block;
+  text-align: left;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #e9edef;
+  margin: 0 0 8px;
+}
+.mimo-gift-label--msg {
+  margin-top: 14px;
+  color: #8696a0;
+  font-weight: 500;
+}
+.mimo-gift-amount-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0b141a;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.mimo-gift-currency {
+  color: #25d366;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.mimo-gift-amount {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #e9edef;
+  font-size: 1.15rem;
+  font-weight: 600;
+  outline: none;
+  width: 100%;
+}
+.mimo-gift-msg {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: #0b141a;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #e9edef;
+  font-size: 0.92rem;
+  resize: vertical;
+  min-height: 72px;
+  outline: none;
+  font-family: inherit;
+}
+.mimo-gift-error {
+  margin: 10px 0 0;
+  color: #f87171;
+  font-size: 0.82rem;
+  text-align: left;
+}
+.mimo-gift-send {
+  margin-top: 16px;
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 16px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: linear-gradient(135deg, #f9a8d4, #ec4899);
+  color: #1a0a12;
+}
+.mimo-gift-send:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
