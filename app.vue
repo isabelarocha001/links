@@ -1184,18 +1184,93 @@ function stopVideoCallTimer() {
   }
 }
 
+// --- Som de chamada entrando (ringtone sintetizado, sem arquivo externo) ---
+let incomingRingCtx: AudioContext | null = null
+let incomingRingTimer: ReturnType<typeof setInterval> | null = null
+let incomingRingOsc: OscillatorNode[] = []
+
+function stopIncomingRingtone() {
+  try {
+    if (incomingRingTimer) {
+      clearInterval(incomingRingTimer)
+      incomingRingTimer = null
+    }
+    for (const o of incomingRingOsc) {
+      try { o.stop() } catch {}
+    }
+    incomingRingOsc = []
+    if (incomingRingCtx) {
+      try { incomingRingCtx.close() } catch {}
+      incomingRingCtx = null
+    }
+  } catch {}
+}
+
+function playIncomingRingtone() {
+  stopIncomingRingtone()
+  try {
+    const AC = window.AudioContext || (window as any).webkitAudioContext
+    if (!AC) return
+    const ctx = new AC()
+    incomingRingCtx = ctx
+
+    const ringOnce = () => {
+      if (!incomingRingCtx) return
+      // Tom clássico de telefone: dois tons alternando (440Hz + 480Hz style)
+      const freqs = [440, 480]
+      freqs.forEach((f, i) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.value = f
+        gain.gain.value = 0.0001
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        const t0 = ctx.currentTime + i * 0.02
+        // envelope: sobe, segura, desce (padrão de toque)
+        gain.gain.setValueAtTime(0.0001, t0)
+        gain.gain.exponentialRampToValueAtTime(0.12, t0 + 0.05)
+        gain.gain.setValueAtTime(0.12, t0 + 0.35)
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.45)
+        osc.start(t0)
+        osc.stop(t0 + 0.5)
+        incomingRingOsc.push(osc)
+      })
+    }
+
+    // primeiro toque imediato
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+    ringOnce()
+    // repete a cada ~1.4s enquanto a tela de chamada estiver aberta
+    incomingRingTimer = setInterval(() => {
+      if (!showIncomingCall.value) {
+        stopIncomingRingtone()
+        return
+      }
+      incomingRingOsc = []
+      ringOnce()
+      try {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([180, 80, 180])
+      } catch {}
+    }, 1400)
+  } catch (e) {
+    console.warn('[ringtone]', e)
+  }
+}
+
 function startIncomingVideoCall() {
   showDeclineWhy.value = false
   declineWhyText.value = ''
   videoCallEndedUpsell.value = false
   showIncomingCall.value = true
+  playIncomingRingtone()
   try {
-    // vibração leve se o browser permitir
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([200, 100, 200])
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200])
   } catch {}
 }
 
 function acceptIncomingCall() {
+  stopIncomingRingtone()
   showIncomingCall.value = false
   funnelStep.value = 'video_consult'
   // Não joga preço. Primeiro cria desejo e pergunta como o lead quer a chamada.
@@ -1206,6 +1281,7 @@ function acceptIncomingCall() {
 }
 
 function declineIncomingCall() {
+  stopIncomingRingtone()
   showIncomingCall.value = false
   showDeclineWhy.value = true
   funnelStep.value = 'video_declined'
