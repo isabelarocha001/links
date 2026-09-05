@@ -1,5 +1,102 @@
 import { useServiceSupabase, getClientIp } from '../utils/supabase'
 
+type LeadClass = {
+  verdict: 'GOOD' | 'BAD' | 'UNKNOWN'
+  reason: string
+}
+
+/** Classifica o lead com Gemini (mesma chave do Supabase / app_secrets / env). */
+async function classifyLeadWithGemini(
+  message: string,
+  step?: string | null,
+): Promise<LeadClass> {
+  const env = process.env as Record<string, string | undefined>
+  let apiKey = String(env.GEMINI_API_KEY || env.NUXT_GEMINI_API_KEY || '').trim()
+  let model = String(env.GEMINI_MODEL || env.NUXT_GEMINI_MODEL || 'gemini-2.0-flash').trim()
+
+  if (!apiKey) {
+    try {
+      const supabase = useServiceSupabase()
+      const { data } = await supabase
+        .from('app_secrets')
+        .select('key, value')
+        .in('key', ['GEMINI_API_KEY', 'GEMINI_MODEL'])
+      for (const row of data || []) {
+        const k = String(row.key || '')
+        const v = row.value ? String(row.value).trim() : ''
+        if (!v) continue
+        if (!apiKey && k === 'GEMINI_API_KEY') apiKey = v
+        if (k === 'GEMINI_MODEL') model = v
+      }
+    } catch {}
+  }
+
+  if (!apiKey) {
+    return { verdict: 'UNKNOWN', reason: 'GEMINI_API_KEY não configurada' }
+  }
+
+  const prompt = `Você é um filtro de leads para o chat de uma criadora de conteúdo adulto (assinatura / oferta paga).
+
+Classifique a mensagem do lead como GOOD ou BAD.
+
+GOOD = lead parece disposto a pagar a oferta / assinar / comprar agora (pergunta preço, como pagar, PIX, quer acesso VIP, está na etapa de pagamento).
+BAD = lead só quer papo, encontros presenciais, conversar sem pagar, testar limites, enrolar, pedir conteúdo grátis, ou não demonstra intenção de pagar.
+
+Responda APENAS com JSON válido neste formato exato:
+{"verdict":"GOOD"|"BAD","reason":"frase curta em português explicando o porquê"}
+
+Contexto do funil (step): ${step || 'desconhecido'}
+Mensagem do lead:
+"""
+${message.slice(0, 1200)}
+"""`
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 256,
+          responseMimeType: 'application/json',
+        },
+      }),
+    })
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      console.warn('[funnel-chat] gemini http', res.status, body.slice(0, 200))
+      return { verdict: 'UNKNOWN', reason: `Gemini HTTP ${res.status}` }
+    }
+
+    const data = await res.json()
+    const text =
+      data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') ||
+      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      ''
+
+    let cleaned = String(text).replace(/```json|```/g, '').trim()
+    const start = cleaned.indexOf('{')
+    const end = cleaned.lastIndexOf('}')
+    if (start >= 0 && end > start) cleaned = cleaned.slice(start, end + 1)
+
+    const parsed = JSON.parse(cleaned)
+    const verdict = String(parsed?.verdict || '').toUpperCase()
+    const reason = String(parsed?.reason || 'sem motivo').slice(0, 300)
+
+    if (verdict === 'GOOD' || verdict === 'BAD') {
+      return { verdict, reason }
+    }
+    return { verdict: 'UNKNOWN', reason: reason || 'resposta inválida do Gemini' }
+  } catch (e: any) {
+    console.warn('[funnel-chat] gemini classify', e?.message || e)
+    return { verdict: 'UNKNOWN', reason: e?.message || 'erro ao classificar' }
+  }
+}
+
 async function notifyTelegramLeadMessage(opts: {
   conversationId: string
   visitorId: string
@@ -33,13 +130,26 @@ async function notifyTelegramLeadMessage(opts: {
     console.warn('[funnel-chat] telegram notify skipped: missing bot token or owner chat id')
     return
   }
+
+  // Classifica com Gemini — sempre notifica, mas deixa claro o veredito
+  const classification = await classifyLeadWithGemini(opts.message, opts.step)
+  const badge =
+    classification.verdict === 'GOOD'
+      ? '✅ LEAD BOM (Gemini)'
+      : classification.verdict === 'BAD'
+        ? '⚠️ LEAD RUIM (Gemini) — avalie manualmente'
+        : '❔ LEAD (Gemini não classificou)'
+
   const text =
+    `${badge}\n` +
     `💬 Lead no chat do site (desbloqueado)\n` +
     `Conv: ${opts.conversationId}\n` +
     `Visitor: ${opts.visitorId.slice(0, 12)}\n` +
     (opts.step ? `Step: ${opts.step}\n` : '') +
-    `\n${opts.message.slice(0, 1500)}\n\n` +
+    `\n📝 Mensagem do lead:\n${opts.message.slice(0, 1200)}\n\n` +
+    `🤖 Motivo Gemini (${classification.verdict}): ${classification.reason}\n\n` +
     `↩️ Responda esta mensagem (reply) pra falar com o lead no site.`
+
   try {
     const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
@@ -52,13 +162,35 @@ async function notifyTelegramLeadMessage(opts: {
     })
     const data = await res.json().catch(() => ({} as any))
     if (data?.result?.message_id) {
-      await supabase
-        .from('wa_funnel_conversations')
-        .update({
-          telegram_last_notify_id: data.result.message_id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', opts.conversationId)
+      try {
+        const { data: conv } = await supabase
+          .from('wa_funnel_conversations')
+          .select('metadata')
+          .eq('id', opts.conversationId)
+          .maybeSingle()
+        const prev = (conv?.metadata && typeof conv.metadata === 'object') ? conv.metadata : {}
+        await supabase
+          .from('wa_funnel_conversations')
+          .update({
+            telegram_last_notify_id: data.result.message_id,
+            metadata: {
+              ...prev,
+              last_gemini_verdict: classification.verdict,
+              last_gemini_reason: classification.reason,
+              last_gemini_at: new Date().toISOString(),
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', opts.conversationId)
+      } catch {
+        await supabase
+          .from('wa_funnel_conversations')
+          .update({
+            telegram_last_notify_id: data.result.message_id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', opts.conversationId)
+      }
     }
   } catch (e: any) {
     console.error('[funnel-chat] telegram notify', e?.message || e)
