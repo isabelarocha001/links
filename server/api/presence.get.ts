@@ -2,10 +2,10 @@ import { useServiceSupabase } from '../utils/supabase'
 
 /**
  * Status público de presença.
- * online só se is_online=true E last_seen recente.
+ * online só se is_online=true E last_seen_at há menos de 2s.
  * Nunca devolve label "offline" — só "visto por último…".
  */
-const ONLINE_MS = 30_000
+const ONLINE_MS = 2_000
 
 function formatLastSeen(iso: string | null | undefined): string {
   if (!iso) return 'visto por último recentemente'
