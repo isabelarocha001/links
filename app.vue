@@ -1139,7 +1139,7 @@ function unbindFunnelViewport() {
 }
 
 const showFunnelProfile = ref(false)
-const funnelStep = ref<'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'awaiting_payment' | 'paid' | 'redirect' | 'other'>('menu')
+const funnelStep = ref<'greeting' | 'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'awaiting_payment' | 'paid' | 'redirect' | 'other' | 'video_consult' | 'video_avulso' | string>('greeting')
 const funnelMessages = ref<{ from: 'her' | 'me'; text: string; html?: string; time: string }[]>([])
 const funnelTyping = ref(false)
 const funnelChatBox = ref<HTMLElement | null>(null)
@@ -1662,6 +1662,10 @@ function funnelType(text: string, delay = 0, html?: string) {
 }
 
 const funnelOptions = computed(() => {
+  // greeting: sem botões — espera o lead digitar e puxar intenção
+  if (funnelStep.value === 'greeting') {
+    return []
+  }
   // NÃO zera opções ao digitar — evita o chat "encolher"
   if (funnelStep.value === 'menu') {
     return [
@@ -1987,11 +1991,12 @@ function openWaFunnel(source = 'whatsapp') {
     return
   }
 
-  funnelStep.value = 'menu'
+  funnelStep.value = 'greeting'
   funnelMessages.value = []
   selectedPack.value = null
   nextTick(async () => {
-    await funnelType('Bem-vindo, amor 😘 O que você gostaria de ter de mim hoje?', 1200)
+    // Abertura natural: sem menu, sem pressionar escolha
+    await funnelType('Oi amor 😘 Que bom que você veio… pode falar comigo, estou aqui.', 1400)
     saveFunnelState()
   })
 }
@@ -2072,6 +2077,65 @@ async function sendFunnelFreeText() {
   try { track('whatsapp_funnel_free_text', { offer_slug: 'whatsapp', message: text.slice(0, 120) }) } catch {}
 
   const lower = text.toLowerCase()
+
+  // --- Conversação natural: no início (greeting) puxa intenção com Gemini antes de mostrar menu ---
+  if (funnelStep.value === 'greeting' || funnelStep.value === 'papo') {
+    try { logFunnelMessage('lead', text, { event: 'free_text_greeting' }) } catch {}
+    try {
+      const history = funnelMessages.value.slice(-10).map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`)
+      const res = await $fetch<{
+        ok?: boolean
+        intent?: string
+        reply?: string
+        show_menu?: boolean
+        suggest_step?: string | null
+        confidence?: number
+      }>('/api/funnel-intent', {
+        method: 'POST',
+        body: {
+          message: text,
+          history,
+          visitor_id: getOrCreateVisitorId(),
+        },
+      })
+      const reply = (res?.reply || 'Me conta mais, amor 😘').slice(0, 600)
+      const intent = String(res?.intent || 'unknown')
+      const step = res?.suggest_step ? String(res.suggest_step) : null
+      const showMenu = !!res?.show_menu
+
+      await funnelType(reply, 1200)
+
+      if (intent === 'encontros') {
+        // redireciona pro online, oferece menu
+        funnelStep.value = 'menu'
+      } else if (step === 'video_consult') {
+        funnelStep.value = 'video_consult'
+      } else if (step === 'video_avulso') {
+        funnelStep.value = 'video_avulso'
+      } else if (step === 'packs') {
+        funnelStep.value = 'packs'
+      } else if (step === 'webnamoro') {
+        funnelStep.value = 'webnamoro'
+      } else if (step === 'chat') {
+        funnelStep.value = 'chat'
+      } else if (showMenu || step === 'menu') {
+        funnelStep.value = 'menu'
+      } else if (intent === 'papo' || intent === 'unknown') {
+        // continua ouvindo, sem botões
+        funnelStep.value = 'greeting'
+      } else {
+        funnelStep.value = 'greeting'
+      }
+      try { saveFunnelState() } catch {}
+      try { logFunnelMessage('bot', reply, { event: 'intent_reply', intent, step: funnelStep.value }) } catch {}
+      return
+    } catch (e) {
+      console.warn('[funnel intent]', e)
+      await funnelType('Pode falar comigo… me conta o que você tá a fim 😘', 1000)
+      funnelStep.value = 'greeting'
+      return
+    }
+  }
 
   // Se a gente perguntou "posso passar o PIX?" e o lead confirma → mostra o código na hora
   if (
@@ -2211,7 +2275,7 @@ async function sendFunnelFreeText() {
     return
   }
   if (/oi|ol[aá]|bom dia|boa tarde|boa noite|e a[ií]|hey|hello/.test(lower)) {
-    await funnelType('Oi amor 😘 Me conta o que você quer de mim hoje — pack, videochamada, webnamoro ou só um papo safado?', 1100)
+    await funnelType('Oi amor 😘 Pode falar… o que te trouxe até aqui?', 1100)
     return
   }
   if (/encont|presencial|sair|te encontrar|programad/.test(lower)) {
@@ -2223,7 +2287,7 @@ async function sendFunnelFreeText() {
   }
 
   const replies = [
-    'Hmm entendi… me conta melhor o que você quer, amor 😏 Pode escolher pelos botões ou escrever: pack, videochamada, webnamoro...',
+    'Hmm entendi… me conta melhor o que você tá a fim, amor 😏 Pode escrever à vontade.',
     'Tô aqui 🔥 Quer conteúdo, call ao vivo ou webnamoro? Pode digitar ou usar os botões.',
     'Gostei de você falando comigo 😘 O que te deixa mais louco: pack, videochamada ou ser meu webnamorado?',
   ]
