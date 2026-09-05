@@ -2010,3 +2010,32 @@ img.wa-avatar {
   transform: translateZ(0) scale(0.5);
   transform-origin: top left;
 }
+
+/* Remove flash azul de toque no mobile */
+.wa-funnel-overlay,
+.wa-funnel-overlay *,
+.wa-funnel-shell,
+.wa-funnel-shell *,
+.wa-header-info-btn,
+.wa-avatar-btn,
+.wa-header-icon-btn,
+.wa-close-btn,
+.wa-more-item,
+.wa-composer,
+.wa-composer * {
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none;
+}
+.wa-header-info-btn,
+.wa-avatar-btn,
+.wa-header-icon-btn,
+button {
+  outline: none;
+}
+.wa-header-info-btn:focus,
+.wa-header-info-btn:focus-visible,
+.wa-avatar-btn:focus,
+.wa-avatar-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
