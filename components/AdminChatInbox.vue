@@ -94,13 +94,21 @@ async function doLogin() {
 async function doLogout() {
   stopPresence()
   stopPolling()
+  // Offline ANTES de invalidar o cookie (logout no server também zera presença)
+  try {
+    await $fetch('/api/admin/presence', { method: 'POST', body: { offline: true } })
+  } catch {}
   try {
     await $fetch('/api/admin/logout', { method: 'POST' })
   } catch {}
+  presenceOk.value = false
   authed.value = false
   conversations.value = []
   selectedId.value = null
   messages.value = []
+  if (import.meta.client) {
+    await navigateTo('/', { replace: true })
+  }
 }
 
 async function sendPresence(offline = false) {
@@ -250,20 +258,28 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   stopPresence()
-  sendPresence(true)
   stopPolling()
+  // Prefer fetch com cookie (beacon às vezes não manda credenciais)
+  try {
+    $fetch('/api/admin/presence', { method: 'POST', body: { offline: true } }).catch(() => {})
+  } catch {}
 })
 
-// Fecha aba / navega fora → tenta marcar offline
 if (typeof window !== 'undefined') {
-  window.addEventListener('pagehide', () => {
+  const markOffline = () => {
     try {
-      navigator.sendBeacon(
-        '/api/admin/presence',
-        new Blob([JSON.stringify({ offline: true })], { type: 'application/json' }),
-      )
+      // keepalive mantém cookie da sessão na requisição
+      fetch('/api/admin/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offline: true }),
+        credentials: 'same-origin',
+        keepalive: true,
+      }).catch(() => {})
     } catch {}
-  })
+  }
+  window.addEventListener('pagehide', markOffline)
+  window.addEventListener('beforeunload', markOffline)
 }
 </script>
 
