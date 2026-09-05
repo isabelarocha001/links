@@ -621,11 +621,9 @@ button.direct-btn {
 
 /* Foto circular full (clique na foto) */
 .wa-profile-photo-overlay {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 10050 !important;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 20;
   background: #0b141a;
   display: flex;
   flex-direction: column;
@@ -633,7 +631,6 @@ button.direct-btn {
   justify-content: center;
   gap: 16px;
   padding: 24px;
-  margin: 0;
 }
 .wa-profile-photo-close {
   position: absolute;
@@ -1695,4 +1692,46 @@ button.direct-btn {
 .mimo-gift-send:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+.wa-media-img {
+  max-width: 220px;
+  width: 100%;
+  border-radius: 10px;
+  display: block;
+  cursor: zoom-in;
+}
+.wa-chat-media-fs {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10060 !important;
+  background: rgba(0, 0, 0, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  margin: 0;
+}
+.wa-chat-media-fs-close {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.14);
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 2;
+}
+.wa-chat-media-fs-img {
+  max-width: min(96vw, 720px);
+  max-height: min(88vh, 900px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
 }
