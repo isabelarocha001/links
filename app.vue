@@ -574,7 +574,18 @@
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('search')">Pesquisar</button>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('mute')">Silenciar notificações</button>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('clear')">Limpar conversa</button>
-              <button type="button" class="wa-more-item wa-more-item--danger" @click="onFunnelMoreAction('block')">Bloquear</button>
+              <button
+                v-if="!leadBlockedWanessa"
+                type="button"
+                class="wa-more-item wa-more-item--danger"
+                @click="onFunnelMoreAction('block')"
+              >Bloquear</button>
+              <button
+                v-else
+                type="button"
+                class="wa-more-item wa-more-item--yes"
+                @click="onFunnelMoreAction('unblock')"
+              >Desbloquear</button>
               <button type="button" class="wa-more-item wa-more-item--cancel" @click="showFunnelMoreMenu = false">Fechar</button>
             </div>
           </div>
@@ -733,14 +744,19 @@
       </div>
 
       <!-- Lead bloqueou Wanessa (tela do lead) — SEM segunda chance / mimo -->
-      <div v-if="leadBlockedWanessa && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
-        <div class="wa-perm-block-card">
+      <div
+        v-if="leadBlockedWanessa && showWaFunnel"
+        class="wa-perm-block-overlay wa-perm-block-overlay--lead"
+        @click.stop
+      >
+        <div class="wa-perm-block-card" @click.stop>
           <p class="wa-perm-block-title">Você bloqueou esta pessoa</p>
           <p class="wa-perm-block-sub">Você não poderá mais mandar mensagem pra ela nem ela pra você.</p>
           <p v-if="leadBlockReason" class="wa-perm-block-sub" style="opacity:.75">Motivo: {{ leadBlockReason }}</p>
           <button type="button" class="wa-perm-block-btn wa-perm-block-btn--unblock" @click="unblockLeadBlock">
             Desbloquear
           </button>
+          <p class="wa-perm-block-hint">Ou use os ⋮ no canto e toque em Desbloquear</p>
         </div>
       </div>
 
@@ -1193,6 +1209,10 @@ function onFunnelMoreAction(kind: string) {
     openBlockReasonModal()
     return
   }
+  if (kind === 'unblock') {
+    unblockLeadBlock()
+    return
+  }
   if (kind === 'mute') {
     try { funnelType('Notificações silenciadas neste aparelho.', 600) } catch {}
   }
@@ -1359,7 +1379,7 @@ function confirmLeadBlock() {
     pushFunnel(
       'me',
       'Você bloqueou esta pessoa',
-      `<p class="wa-text wa-text--system">Você bloqueou esta pessoa</p>`,
+      `<div class="wa-system-banner"><span>Você bloqueou esta pessoa</span></div>`,
       { skipLog: true },
     )
   } catch {}
@@ -1378,12 +1398,13 @@ function confirmLeadBlock() {
 }
 
 function unblockLeadBlock() {
-  // Volta ao estado antes do bloqueio do lead
+  // Volta ao estado antes do bloqueio do lead (foto de perfil volta no header)
   leadBlockedWanessa.value = false
   leadBlockReason.value = ''
   blockReasonDraft.value = ''
   blockReasonError.value = ''
   showBlockReasonModal.value = false
+  showFunnelMoreMenu.value = false
   // Só libera o blocked se não for bloqueio permanente da Wanessa
   if (!funnelPermBlocked.value) {
     funnelBlocked.value = false
@@ -1393,7 +1414,7 @@ function unblockLeadBlock() {
     pushFunnel(
       'me',
       'Você desbloqueou esta pessoa',
-      `<p class="wa-text wa-text--system">Você desbloqueou esta pessoa</p>`,
+      `<div class="wa-system-banner"><span>Você desbloqueou esta pessoa</span></div>`,
       { skipLog: true },
     )
   } catch {}
