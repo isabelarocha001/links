@@ -1,5 +1,11 @@
 <script setup lang="ts">
-// Rota /admin/chat — UI do inbox vive em components/AdminChatInbox.vue (via app.vue)
+/**
+ * Rota /admin/chat — exige sessão admin (middleware admin-chat → 404 se não logado).
+ * UI em components/AdminChatInbox.vue via app.vue.
+ */
+definePageMeta({
+  middleware: ['admin-chat'],
+})
 </script>
 
 <template>
