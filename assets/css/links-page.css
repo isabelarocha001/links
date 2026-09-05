@@ -1916,3 +1916,58 @@ button.direct-btn {
   font-size: 1.15rem;
   cursor: pointer;
 }
+
+:root {
+  --avatar-focus-x: 50%;
+  --avatar-focus-y: 20%;
+}
+.wa-avatar,
+.wa-profile-photo-circle img,
+.wa-profile-big-avatar img,
+.mimo-gift-avatar,
+.wa-funnel-header .wa-avatar {
+  object-fit: cover !important;
+  object-position: var(--avatar-focus-x) var(--avatar-focus-y) !important;
+}
+.wl-avatar-frame {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 4px;
+}
+.wl-avatar-frame-preview {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid rgba(192,132,252,0.45);
+  background: #1a1a22;
+}
+.wl-avatar-frame-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.wl-avatar-frame-controls {
+  flex: 1;
+  min-width: 180px;
+}
+.wl-avatar-slider-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: rgba(245,240,255,0.7);
+  margin: 6px 0 4px;
+}
+.wl-range {
+  width: 100%;
+  accent-color: #c084fc;
+  cursor: pointer;
+}
