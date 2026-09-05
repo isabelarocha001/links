@@ -12,7 +12,7 @@ async function classifyLeadWithGemini(
 ): Promise<LeadClass> {
   const env = process.env as Record<string, string | undefined>
   let apiKey = String(env.GEMINI_API_KEY || env.NUXT_GEMINI_API_KEY || '').trim()
-  let model = String(env.GEMINI_MODEL || env.NUXT_GEMINI_MODEL || 'gemini-2.0-flash').trim()
+  let model = String(env.GEMINI_MODEL || env.NUXT_GEMINI_MODEL || 'gemini-3.5-flash').trim()
 
   if (!apiKey) {
     try {
