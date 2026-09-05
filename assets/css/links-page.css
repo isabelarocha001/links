@@ -1566,3 +1566,8 @@ button.direct-btn {
 .wa-funnel-shell {
   position: relative;
 }
+
+.wa-status-last {
+  color: #8696a0;
+  font-size: 0.72rem;
+}
