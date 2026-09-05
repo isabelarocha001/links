@@ -2123,60 +2123,61 @@ async function checkPixStatus(silent = false) {
 }
 
 
-function applyFunnelShellBox(h: number, top: number) {
-  const hh = Math.max(220, Math.round(h))
-  const tt = Math.max(0, Math.round(top))
+function applyFunnelShellBox(layoutH: number, kbdInset: number) {
+  const h = Math.max(220, Math.round(layoutH))
+  const kbd = Math.max(0, Math.round(kbdInset))
   const next: Record<string, string> = {
     position: 'fixed',
     left: '0px',
     right: '0px',
     width: '100%',
-    top: tt + 'px',
-    height: hh + 'px',
-    maxHeight: hh + 'px',
+    top: '0px',
     bottom: 'auto',
+    height: h + 'px',
+    maxHeight: h + 'px',
+    // sobe o conteúdo sem "cortar" a shell (evita truncada ao fechar teclado)
+    paddingBottom: kbd > 0 ? kbd + 'px' : '0px',
+    boxSizing: 'border-box',
   }
   const cur = funnelShellStyle.value || {}
-  if (cur.height === next.height && cur.top === next.top && cur.maxHeight === next.maxHeight) {
+  if (cur.height === next.height && cur.paddingBottom === next.paddingBottom) {
     return
   }
   funnelShellStyle.value = next
-  try {
-    nextTick(() => {
-      scrollFunnel()
-      const el = document.querySelector('.wa-funnel-composer') as HTMLElement | null
-      el?.scrollIntoView({ block: 'end', behavior: 'auto' })
-    })
-  } catch {}
+  // só rola o chat quando o teclado ABRE (não a cada frame — evita truncada)
+  if (kbd > 0) {
+    try {
+      nextTick(() => scrollFunnel())
+    } catch {}
+  }
 }
 
 function syncFunnelViewport(opts?: { forceKbd?: boolean }) {
   try {
     const vv = window.visualViewport
     const layoutH = window.innerHeight || document.documentElement.clientHeight || 700
-    let h = vv ? Math.round(vv.height) : layoutH
-    let top = vv ? Math.round(vv.offsetTop || 0) : 0
     const forceKbd = !!(opts && opts.forceKbd)
+    let kbd = 0
+
+    if (vv) {
+      // diferença entre layout e visual = área coberta pelo teclado
+      kbd = Math.max(0, Math.round(layoutH - vv.height - (vv.offsetTop || 0)))
+    }
 
     if (funnelKeyboardOpen.value) {
       const base = funnelKbdBaseH || layoutH
-      const shrunk = h < base * 0.88
-      // Só força encolher DEPOIS do toque (forceKbd), senão o click cai no overlay e fecha o chat
-      if (!shrunk && forceKbd) {
-        const kbd = Math.round(base * 0.42)
-        h = Math.max(220, base - kbd)
-        top = 0
-      } else if (!shrunk && !forceKbd) {
-        // teclado "aberto" mas ainda sem evidência → mantém tela cheia
-        h = layoutH
-        top = 0
+      // Instagram: visualViewport quase não muda → fallback só depois do toque
+      if (kbd < 80 && forceKbd) {
+        kbd = Math.round(base * 0.40)
+      }
+      if (kbd < 80 && !forceKbd) {
+        kbd = 0
       }
     } else {
-      h = layoutH
-      top = 0
+      kbd = 0
     }
 
-    applyFunnelShellBox(h, top)
+    applyFunnelShellBox(layoutH, kbd)
   } catch {
     // ignore
   }
@@ -2190,7 +2191,6 @@ function stopFunnelKbdPoll() {
 }
 
 function onFunnelOverlayClick() {
-  // Não fecha o chat ao tocar no fundo enquanto digita (evita fechar no focus do input)
   if (funnelKeyboardOpen.value) return
   closeWaFunnel()
 }
@@ -2200,23 +2200,22 @@ function onFunnelInputFocus() {
   try { showFunnelAttachMenu.value = false } catch {}
   funnelKbdBaseH = window.innerHeight || 700
   funnelKeyboardOpen.value = true
-  // NÃO encolher na hora do focus — o mesmo toque ainda está ativo e fecharia o chat
+  // não aplica fallback no mesmo frame do toque
   syncFunnelViewport({ forceKbd: false })
   stopFunnelKbdPoll()
   let ticks = 0
   funnelKbdPoll = setInterval(() => {
     ticks++
-    // a partir de 300ms permite fallback Instagram
-    syncFunnelViewport({ forceKbd: ticks >= 3 })
-    if (ticks >= 20) stopFunnelKbdPoll()
+    syncFunnelViewport({ forceKbd: ticks >= 4 })
+    if (ticks >= 16) stopFunnelKbdPoll()
   }, 100)
-  setTimeout(() => syncFunnelViewport({ forceKbd: false }), 50)
-  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 350)
-  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 600)
-  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 900)
+  setTimeout(() => syncFunnelViewport({ forceKbd: false }), 80)
+  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 400)
+  setTimeout(() => syncFunnelViewport({ forceKbd: true }), 700)
 }
 
 function onFunnelInputBlur() {
+  // espera o teclado baixar antes de zerar o padding (evita "truncada")
   setTimeout(() => {
     try {
       const a = document.activeElement as HTMLElement | null
@@ -2224,12 +2223,15 @@ function onFunnelInputBlur() {
         return
       }
     } catch {}
-    funnelKeyboardOpen.value = false
     stopFunnelKbdPoll()
+    funnelKeyboardOpen.value = false
+    // restaura em 2 passos suaves
     syncFunnelViewport({ forceKbd: false })
-    setTimeout(() => syncFunnelViewport({ forceKbd: false }), 150)
-    setTimeout(() => syncFunnelViewport({ forceKbd: false }), 350)
-  }, 120)
+    setTimeout(() => {
+      funnelKeyboardOpen.value = false
+      syncFunnelViewport({ forceKbd: false })
+    }, 200)
+  }, 180)
 }
 
 let funnelVvClean: (() => void) | null = null

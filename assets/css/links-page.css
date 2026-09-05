@@ -2324,6 +2324,7 @@ button {
   flex-direction: column !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
+  transition: padding-bottom 0.22s ease-out;
 }
 .wa-funnel-shell--kbd {
   /* quando teclado aberto: sem padding extra de safe-area no composer */
