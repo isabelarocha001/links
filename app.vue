@@ -463,12 +463,17 @@
           <!-- Menu ⋮ mais opções -->
           <div v-if="showFunnelMoreMenu" class="wa-more-menu" @click.self="showFunnelMoreMenu = false">
             <div class="wa-more-sheet">
+              <div class="wa-more-sheet-head">
+                <span class="wa-more-sheet-title">Opções</span>
+                <button type="button" class="wa-more-x" aria-label="Fechar opções" @click="showFunnelMoreMenu = false">✕</button>
+              </div>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('ai')">Respostas da IA</button>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('charge')">Cobrar cliente</button>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('media')">Mídia, links e docs</button>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('search')">Pesquisar</button>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('mute')">Silenciar notificações</button>
               <button type="button" class="wa-more-item" @click="onFunnelMoreAction('clear')">Limpar conversa</button>
+              <button type="button" class="wa-more-item wa-more-item--danger" @click="onFunnelMoreAction('block')">Bloquear</button>
               <button type="button" class="wa-more-item wa-more-item--cancel" @click="showFunnelMoreMenu = false">Fechar</button>
             </div>
           </div>
@@ -566,6 +571,17 @@
 
 
       <!-- Unlock após bloqueio (programa/presencial) -->
+      <div v-if="funnelPermBlocked && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
+        <div class="wa-perm-block-card">
+          <p class="wa-perm-block-title">Wanessa te bloqueou permanentemente</p>
+          <p class="wa-perm-block-sub">Você não pode digitar, enviar áudio, emoji, mídia nem fazer chamadas.</p>
+          <p class="wa-perm-block-sub">Ainda quer uma segunda chance? Envie um mimo para desbloqueio automático.</p>
+          <button type="button" class="wa-perm-block-btn" :disabled="blockedUnlockLoading" @click="startSegundaChanceMimo">
+            {{ blockedUnlockLoading ? 'Gerando PIX…' : 'Enviar mimo · R$ 29,90' }}
+          </button>
+        </div>
+      </div>
+
       <div v-if="showBlockedUnlock" class="chat-plans-overlay" style="z-index:40050" @click.self="showBlockedUnlock = false">
         <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
           <div class="chat-plans-handle" aria-hidden="true"></div>
@@ -812,7 +828,10 @@ const funnelInput = ref('')
 const funnelShellStyle = ref<Record<string, string>>({})
 const funnelChatUnlocked = ref(false)
 const funnelBlocked = ref(false) // lead insistiu em programa/encontro presencial
+const funnelPermBlocked = ref(false) // bloqueio permanente (menu → Bloquear)
 const showBlockedUnlock = ref(false)
+const PERM_BLOCK_KEY = 'wanessa_perm_block_v1'
+const SEGUNDA_CHANCE_PLAN = { key: 'chat_unlock_segunda_chance', title: 'Segunda chance', desc: 'mimo para desbloquear o chat', price: 29.9, priceLabel: '29,90' }
 const funnelMsgMenuIdx = ref<number | null>(null)
 const funnelEditingIdx = ref<number | null>(null)
 const funnelEditDraft = ref('')
@@ -839,6 +858,10 @@ function requireFunnelChatOrPay(): boolean {
   return true
 }
 function onFunnelComposerInteract(e?: Event) {
+  if (funnelPermBlocked.value) {
+    try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
+    return
+  }
   if (!funnelBlocked.value) return
   try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
   blockedUnlockError.value = ''
@@ -878,6 +901,7 @@ function closeFunnelEmojiPicker() {
 }
 function onFunnelVideoCall() {
   showFunnelMoreMenu.value = false
+  if (funnelPermBlocked.value) return
   if (videoCallUnlocked.value || isAdmin.value) {
     openVideoCallPlayer()
     return
@@ -954,11 +978,125 @@ function onFunnelMoreAction(kind: string) {
     }, 200)
     return
   }
+  if (kind === 'block') {
+    applyPermanentBlock()
+    return
+  }
   if (kind === 'mute' || kind === 'search' || kind === 'media') {
-    // feedback leve
     return
   }
 }
+
+function applyPermanentBlock() {
+  funnelPermBlocked.value = true
+  funnelBlocked.value = true
+  showFunnelEmojiPicker.value = false
+  showFunnelAttachMenu.value = false
+  showFunnelMoreMenu.value = false
+  try {
+    const vid = getOrCreateVisitorId()
+    localStorage.setItem(PERM_BLOCK_KEY, JSON.stringify({ visitor_id: vid, at: Date.now() }))
+  } catch {}
+  try { saveFunnelState() } catch {}
+  try { track('funnel_perm_block', { offer_slug: 'block' }) } catch {}
+  try { logFunnelMessage('bot', '[bloqueio permanente]', { event: 'perm_block' }) } catch {}
+}
+
+function clearPermanentBlock() {
+  funnelPermBlocked.value = false
+  try { localStorage.removeItem(PERM_BLOCK_KEY) } catch {}
+  try { saveFunnelState() } catch {}
+}
+
+function loadPermanentBlock() {
+  try {
+    const raw = localStorage.getItem(PERM_BLOCK_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    const vid = getOrCreateVisitorId()
+    if (data?.visitor_id && data.visitor_id === vid) {
+      funnelPermBlocked.value = true
+      funnelBlocked.value = true
+    }
+  } catch {}
+}
+
+function startSegundaChanceMimo() {
+  if (!funnelPermBlocked.value || blockedUnlockLoading.value) return
+  try { track('segunda_chance_mimo_open', { offer_slug: SEGUNDA_CHANCE_PLAN.key }) } catch {}
+  buySegundaChanceMimo()
+}
+
+async function buySegundaChanceMimo() {
+  blockedUnlockError.value = ''
+  blockedUnlockLoading.value = true
+  selectedChatPlan.value = {
+    key: SEGUNDA_CHANCE_PLAN.key,
+    title: SEGUNDA_CHANCE_PLAN.title,
+    desc: SEGUNDA_CHANCE_PLAN.desc,
+    price: SEGUNDA_CHANCE_PLAN.price,
+    priceLabel: SEGUNDA_CHANCE_PLAN.priceLabel,
+  }
+  selectedPack.value = {
+    key: SEGUNDA_CHANCE_PLAN.key,
+    label: SEGUNDA_CHANCE_PLAN.title,
+    price: SEGUNDA_CHANCE_PLAN.priceLabel,
+  }
+  try {
+    let visitor_id: string | null = null
+    try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
+    const res = await $fetch<{
+      ok: boolean
+      pix_code?: string
+      qr_image?: string
+      payment_id?: string
+      external_id?: string
+      error?: string
+    }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: SEGUNDA_CHANCE_PLAN.key,
+        amount: SEGUNDA_CHANCE_PLAN.price,
+        title: SEGUNDA_CHANCE_PLAN.title,
+        visitor_id,
+        source: 'links_segunda_chance',
+      },
+    })
+    if (!res?.ok || !res.pix_code) throw new Error(res?.error || 'Falha ao gerar PIX')
+    pixPaid.value = false
+    pixCopyCode.value = res.pix_code
+    funnelPixCode.value = res.pix_code
+    const isEmv = /^000201/.test(res.pix_code)
+    pixQrImage.value = isEmv
+      ? (res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`)
+      : ''
+    pixPaymentId.value = res.payment_id || ''
+    pixExternalId.value = res.external_id || res.payment_id || ''
+    funnelPaymentId.value = pixPaymentId.value
+    funnelExternalId.value = pixExternalId.value
+    showPixModal.value = true
+    funnelStep.value = 'awaiting_payment'
+    try { track('segunda_chance_checkout', { offer_slug: SEGUNDA_CHANCE_PLAN.key, amount: 29.9 }) } catch {}
+    if (pixExternalId.value || pixPaymentId.value) {
+      if (pixPollTimer) clearInterval(pixPollTimer)
+      let tries = 0
+      pixPollTimer = setInterval(() => {
+        checkPixStatus(true)
+        tries++
+        if (tries > 45 && pixPollTimer) {
+          clearInterval(pixPollTimer)
+          pixPollTimer = null
+        }
+      }, 5000)
+    }
+  } catch (e: any) {
+    blockedUnlockError.value = e?.data?.statusMessage || e?.message || 'Não deu pra gerar o PIX agora'
+    try { alert(blockedUnlockError.value) } catch {}
+  } finally {
+    blockedUnlockLoading.value = false
+  }
+}
+
 function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc') {
   const input = ev.target as HTMLInputElement
   const file = input.files?.[0]
@@ -1843,14 +1981,28 @@ async function checkFunnelPayment(silent = false) {
 
 async function onFunnelPaid() {
   const pack = selectedPack.value
+  const planKey = String(pack?.key || selectedChatPlan.value?.key || '')
   funnelStep.value = 'paid'
-  track('whatsapp_funnel_paid', { offer_slug: pack?.key || 'paid' })
-  const isChat = !!(pack?.key || '').startsWith('chat_')
-  const isVideo = !!(pack?.key || '').startsWith('vid_')
-  const isPack = !!(pack?.key || '').startsWith('pack_')
-  const isWeb = !!(pack?.key || '').startsWith('web_')
+  track('whatsapp_funnel_paid', { offer_slug: planKey || 'paid' })
+  const isSegunda = planKey === 'chat_unlock_segunda_chance' || planKey === 'chat_unlock_blocked'
+  const isChat = planKey.startsWith('chat_')
+  const isVideo = planKey.startsWith('vid_')
+  const isPack = planKey.startsWith('pack_')
+  const isWeb = planKey.startsWith('web_')
 
   await funnelType('Recebi o PIX aqui, meu amor ✅', 1200)
+
+  if (isSegunda) {
+    clearPermanentBlock()
+    funnelBlocked.value = false
+    funnelChatUnlocked.value = true
+    startLiveChatPoll()
+    showPixModal.value = false
+    showBlockedUnlock.value = false
+    await funnelType('Segunda chance aceita 💚 Chat liberado de novo. Se comporta, hein…', 1600)
+    funnelStep.value = 'other'
+    return
+  }
 
   if (isChat) {
     funnelChatUnlocked.value = true
@@ -2296,6 +2448,7 @@ function saveFunnelState() {
         messages: funnelMessages.value,
         selectedPack: selectedPack.value,
         blocked: funnelBlocked.value,
+        permBlocked: funnelPermBlocked.value,
         savedAt: Date.now(),
       }),
     )
@@ -2334,6 +2487,7 @@ function clearFunnelState() {
 function openWaFunnel(source = 'whatsapp') {
   warmSyncPay()
   loadFunnelConversationLocal()
+  loadPermanentBlock()
 
   track('whatsapp_funnel_open', { offer_slug: source || 'whatsapp' })
   try { onCardClick('WhatsApp Funnel', whatsappUrl.value) } catch {}
