@@ -11,6 +11,8 @@ type ConvItem = {
   last_message_at?: string
   is_new?: boolean
   last_message?: { direction: string; message: string; created_at: string } | null
+  lead_blocked?: boolean
+  block_reason?: string
 }
 
 type ChatMsg = {
@@ -54,6 +56,14 @@ const filteredConversations = computed(() => {
 const selectedTitle = computed(() => {
   const c = conversations.value.find((x) => x.id === selectedId.value)
   return c?.title || (selectedId.value ? `Conversa ${selectedId.value.slice(0, 8)}` : '')
+})
+const selectedIsBlocked = computed(() => {
+  const c = conversations.value.find((x) => x.id === selectedId.value)
+  return !!(c?.lead_blocked || c?.status === 'blocked')
+})
+const selectedBlockReason = computed(() => {
+  const c = conversations.value.find((x) => x.id === selectedId.value)
+  return String(c?.block_reason || '')
 })
 
 async function checkSession() {
@@ -505,6 +515,15 @@ if (typeof window !== 'undefined') {
   padding: 2px 7px;
   font-weight: 700;
 }
+.ac-preview--blocked { color: #f87171; font-weight: 600; }
+.ac-blocked-banner {
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  font-size: 0.82rem;
+  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+}
+.ac-composer--blocked { justify-content: center; padding: 14px; }
 .ac-preview {
   margin: 4px 0 0;
   font-size: 0.8rem;
