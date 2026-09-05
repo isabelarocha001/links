@@ -2151,3 +2151,36 @@ button {
   font-size: 1.1rem;
   line-height: 1;
 }
+
+.wa-text--system {
+  text-align: center;
+  color: #8696a0 !important;
+  font-size: 0.82rem !important;
+  font-style: italic;
+  margin: 0;
+}
+.wa-bubble:has(.wa-text--system) {
+  background: transparent !important;
+  box-shadow: none !important;
+  align-self: center;
+  max-width: 90%;
+}
+.wa-row:has(.wa-text--system) {
+  justify-content: center;
+}
+
+.wa-perm-block-btn--unblock {
+  margin-top: 16px;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: #25d366;
+  color: #0b141a;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.wa-perm-block-btn--unblock:active {
+  transform: scale(0.98);
+}

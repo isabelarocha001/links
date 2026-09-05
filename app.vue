@@ -735,9 +735,12 @@
       <!-- Lead bloqueou Wanessa (tela do lead) — SEM segunda chance / mimo -->
       <div v-if="leadBlockedWanessa && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
         <div class="wa-perm-block-card">
-          <p class="wa-perm-block-title">Você bloqueou Wanessa</p>
+          <p class="wa-perm-block-title">Você bloqueou esta pessoa</p>
           <p class="wa-perm-block-sub">Você não poderá mais mandar mensagem pra ela nem ela pra você.</p>
           <p v-if="leadBlockReason" class="wa-perm-block-sub" style="opacity:.75">Motivo: {{ leadBlockReason }}</p>
+          <button type="button" class="wa-perm-block-btn wa-perm-block-btn--unblock" @click="unblockLeadBlock">
+            Desbloquear
+          </button>
         </div>
       </div>
 
@@ -1352,6 +1355,15 @@ function confirmLeadBlock() {
   try { saveFunnelState() } catch {}
   try { track('funnel_lead_block', { offer_slug: 'lead_block' }) } catch {}
   try {
+    // Aviso no chat do lead (estilo sistema)
+    pushFunnel(
+      'me',
+      'Você bloqueou esta pessoa',
+      `<p class="wa-text wa-text--system">Você bloqueou esta pessoa</p>`,
+      { skipLog: true },
+    )
+  } catch {}
+  try {
     logFunnelMessage(
       'lead',
       `Lead te bloqueou: ${leadBlockReason.value}`,
@@ -1362,6 +1374,38 @@ function confirmLeadBlock() {
       },
     )
   } catch {}
+  try { saveFunnelState() } catch {}
+}
+
+function unblockLeadBlock() {
+  // Volta ao estado antes do bloqueio do lead
+  leadBlockedWanessa.value = false
+  leadBlockReason.value = ''
+  blockReasonDraft.value = ''
+  blockReasonError.value = ''
+  showBlockReasonModal.value = false
+  // Só libera o blocked se não for bloqueio permanente da Wanessa
+  if (!funnelPermBlocked.value) {
+    funnelBlocked.value = false
+  }
+  try { localStorage.removeItem(LEAD_BLOCK_KEY) } catch {}
+  try {
+    pushFunnel(
+      'me',
+      'Você desbloqueou esta pessoa',
+      `<p class="wa-text wa-text--system">Você desbloqueou esta pessoa</p>`,
+      { skipLog: true },
+    )
+  } catch {}
+  try {
+    logFunnelMessage(
+      'lead',
+      'Lead desbloqueou o contato',
+      { event: 'lead_unblocked', blocked_by: 'lead' },
+    )
+  } catch {}
+  try { track('funnel_lead_unblock', { offer_slug: 'lead_unblock' }) } catch {}
+  try { saveFunnelState() } catch {}
 }
 
 function applyPermanentBlock() {
