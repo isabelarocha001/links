@@ -11,15 +11,14 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Restore CSS from last good commit
+      - name: Download good CSS
         run: |
-          git show 8b59f0f:assets/css/links-page.css > assets/css/links-page.css
-          # white typing status
+          curl -fsSL "https://raw.githubusercontent.com/isabelarocha001/links/8b59f0f/assets/css/links-page.css" -o assets/css/links-page.css
           python3 - <<'PY'
           p = 'assets/css/links-page.css'
           css = open(p).read()
+          print('downloaded', len(css))
+          assert len(css) > 20000, 'CSS too small'
           old = '.wa-status-typing { color: #25d366; font-style: italic; }'
           new = '''.wa-status-typing { color: #ffffff; font-style: italic; }
 .wa-funnel-header .wa-status-typing,
@@ -28,16 +27,16 @@ jobs:
               css = css.replace(old, new, 1)
               open(p,'w').write(css)
               print('applied typing fix')
-          print('size', len(css))
+          print('final', len(css))
           PY
-      - name: Commit if changed
+      - name: Commit and push
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add assets/css/links-page.css
           if git diff --staged --quiet; then
             echo 'No changes'
-          else
-            git commit -m 'fix: restaurar CSS completo da pagina de links (truncado)'
-            git push
+            exit 0
           fi
+          git commit -m 'fix: restaurar CSS completo da pagina de links (truncado)'
+          git push
