@@ -1,5 +1,79 @@
 <template>
   <NuxtPage />
+
+    <!-- Inbox admin (não depende de rota /admin/chat) -->
+    <div v-if="isAdmin && showAdminInbox" class="ac-overlay">
+      <div class="ac">
+        <header class="ac-top">
+          <div>
+            <h1>Conversas</h1>
+            <p class="ac-sub">
+              <span class="ac-dot" :class="{ on: adminInboxPresenceOk }"></span>
+              {{ adminInboxPresenceOk ? 'Online no chat do lead' : 'Presença offline / tabela' }}
+              · {{ adminInboxNewCount }} nova(s)
+            </p>
+          </div>
+          <div class="ac-top-actions">
+            <button type="button" class="ac-btn ghost" @click="loadAdminInboxList">Atualizar</button>
+            <button type="button" class="ac-btn ghost" @click="closeAdminInbox">Fechar</button>
+          </div>
+        </header>
+        <div class="ac-filters">
+          <button type="button" :class="{ active: adminInboxFilter === 'all' }" @click="adminInboxFilter = 'all'">Todas</button>
+          <button type="button" :class="{ active: adminInboxFilter === 'new' }" @click="adminInboxFilter = 'new'">Novas</button>
+          <button type="button" :class="{ active: adminInboxFilter === 'open' }" @click="adminInboxFilter = 'open'">Abertas</button>
+        </div>
+        <div class="ac-body">
+          <aside class="ac-list">
+            <p v-if="adminInboxListLoading && !adminInboxConversations.length" class="ac-muted">Carregando…</p>
+            <p v-if="adminInboxListError" class="ac-err">{{ adminInboxListError }}</p>
+            <button
+              v-for="c in adminInboxFiltered"
+              :key="c.id"
+              type="button"
+              class="ac-item"
+              :class="{ active: adminInboxSelectedId === c.id, new: c.is_new }"
+              @click="openAdminInboxConversation(c.id)"
+            >
+              <div class="ac-item-top">
+                <strong>{{ c.title || c.visitor_id?.slice(0, 8) }}</strong>
+                <span v-if="c.is_new" class="ac-badge">nova</span>
+              </div>
+              <p class="ac-preview">
+                {{ c.last_message?.direction === 'lead' ? 'Lead: ' : 'Você: ' }}
+                {{ c.last_message?.message || '—' }}
+              </p>
+              <span class="ac-time">{{ formatAdminInboxTime(c.last_message_at || c.last_message?.created_at) }}</span>
+            </button>
+            <p v-if="!adminInboxListLoading && !adminInboxFiltered.length" class="ac-muted">Nenhuma conversa.</p>
+          </aside>
+          <section class="ac-thread">
+            <div v-if="!adminInboxSelectedId" class="ac-center muted">Selecione uma conversa</div>
+            <template v-else>
+              <header class="ac-thread-head">
+                <h2>{{ adminInboxSelectedTitle }}</h2>
+              </header>
+              <div id="admin-msg-list" class="ac-msgs">
+                <div
+                  v-for="(m, i) in adminInboxMessages"
+                  :key="m.id || i"
+                  class="ac-bubble"
+                  :class="m.direction === 'lead' ? 'lead' : 'bot'"
+                >
+                  <p>{{ m.message }}</p>
+                  <span>{{ formatAdminInboxTime(m.created_at) }} · {{ m.direction }}</span>
+                </div>
+              </div>
+              <form class="ac-composer" @submit.prevent="sendAdminInboxReply">
+                <input v-model="adminInboxReply" class="ac-input" type="text" placeholder="Responder como Wanessa…" :disabled="adminInboxSending" />
+                <button type="submit" class="ac-btn" :disabled="adminInboxSending || !adminInboxReply.trim()">Enviar</button>
+              </form>
+            </template>
+          </section>
+        </div>
+      </div>
+    </div>
+
   <div v-if="!isAdminRoute" class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="bg-grain" aria-hidden="true"></div>
@@ -715,7 +789,7 @@
     <Teleport to="body">
       <div v-if="isAdmin && showAdminPanel" class="wl-overlay" @click.self="closeAdmin">
         <div class="wl-card" role="dialog" aria-modal="true" @click.stop>
-          <div class="wl-head"><h2>Editar apresentação</h2><div class="wl-head-actions" style="display:flex;gap:8px;align-items:center"><button type="button" class="wl-x" style="width:auto;min-width:52px;padding:0 10px;font-size:13px" @click="doLogout">Sair</button><button type="button" class="wl-x" @click="closeAdmin">×</button></div></div>
+          <div class="wl-head"><h2>Editar apresentação</h2><div class="wl-head-actions" style="display:flex;gap:8px;align-items:center"><button type="button" class="wl-x" style="width:auto;min-width:auto;padding:0 12px;font-size:13px;background:#25d366;color:#053b1c;border:none;border-radius:8px;font-weight:700" @click="openAdminInbox">Conversas</button><button type="button" class="wl-x" style="width:auto;min-width:52px;padding:0 10px;font-size:13px" @click="doLogout">Sair</button><button type="button" class="wl-x" @click="closeAdmin">×</button></div></div>
           <label class="wl-label">Nome</label>
           <input v-model="edit.name" type="text" maxlength="80" class="wl-input" />
           <label class="wl-label">Tagline / Bio</label>
@@ -769,7 +843,7 @@ import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i1
 const route = useRoute()
 const isAdminRoute = computed(() => {
   const p = String(route.path || '').toLowerCase()
-  return p === '/admin' || p.startsWith('/admin/') || p === '/admin-chat' || p === '/adminchat'
+  return p === '/admin' || p.startsWith('/admin/')
 })
 const hidePublicChannel = computed(() => {
   const raw = (route.path || '') + ' ' + (route.fullPath || '')
@@ -3351,6 +3425,32 @@ const configReady = ref(false)
 const showLogin = ref(false)
 const isAdmin = ref(false)
 const showAdminPanel = ref(false)
+const showAdminInbox = ref(false)
+const adminInboxConversations = ref<any[]>([])
+const adminInboxNewCount = ref(0)
+const adminInboxListLoading = ref(false)
+const adminInboxListError = ref('')
+const adminInboxFilter = ref<'all' | 'new' | 'open'>('all')
+const adminInboxSelectedId = ref<string | null>(null)
+const adminInboxMessages = ref<any[]>([])
+const adminInboxReply = ref('')
+const adminInboxSending = ref(false)
+const adminInboxPresenceOk = ref(false)
+let adminInboxPresenceTimer: ReturnType<typeof setInterval> | null = null
+let adminInboxListTimer: ReturnType<typeof setInterval> | null = null
+let adminInboxMsgTimer: ReturnType<typeof setInterval> | null = null
+
+const adminInboxFiltered = computed(() => {
+  let list = adminInboxConversations.value
+  if (adminInboxFilter.value === 'new') list = list.filter((c: any) => c.is_new)
+  if (adminInboxFilter.value === 'open') list = list.filter((c: any) => c.status === 'open')
+  return list
+})
+const adminInboxSelectedTitle = computed(() => {
+  const c = adminInboxConversations.value.find((x: any) => x.id === adminInboxSelectedId.value)
+  return c?.title || (adminInboxSelectedId.value ? `Conversa ${adminInboxSelectedId.value.slice(0, 8)}` : '')
+})
+
 const videoCallVideos = ref<string[]>([])
 const showVideoCallPlayer = ref(false)
 const videoCallIndex = ref(0)
@@ -3545,7 +3645,91 @@ onUnmounted(() => {
   if (photoTimer) clearInterval(photoTimer)
   if (typingTimer) clearTimeout(typingTimer)
 })
+
+async function sendAdminInboxPresence(offline = false) {
+  try {
+    const res = await $fetch<{ ok?: boolean }>('/api/admin/presence', { method: 'POST', body: { offline } })
+    adminInboxPresenceOk.value = !!res?.ok
+  } catch { adminInboxPresenceOk.value = false }
+}
+function startAdminInboxPresence() {
+  stopAdminInboxPresence()
+  sendAdminInboxPresence(false)
+  adminInboxPresenceTimer = setInterval(() => sendAdminInboxPresence(false), 15000)
+}
+function stopAdminInboxPresence() {
+  if (adminInboxPresenceTimer) { clearInterval(adminInboxPresenceTimer); adminInboxPresenceTimer = null }
+}
+async function loadAdminInboxList() {
+  adminInboxListLoading.value = true
+  adminInboxListError.value = ''
+  try {
+    const res = await $fetch<{ conversations?: any[]; new_count?: number }>('/api/admin/conversations', { query: { limit: 80 } })
+    adminInboxConversations.value = res?.conversations || []
+    adminInboxNewCount.value = res?.new_count || 0
+  } catch (e: any) {
+    adminInboxListError.value = e?.data?.statusMessage || e?.message || 'Erro ao carregar'
+  } finally {
+    adminInboxListLoading.value = false
+  }
+}
+async function openAdminInboxConversation(id: string) {
+  adminInboxSelectedId.value = id
+  adminInboxMessages.value = []
+  await loadAdminInboxMessages()
+  if (adminInboxMsgTimer) clearInterval(adminInboxMsgTimer)
+  adminInboxMsgTimer = setInterval(() => { if (adminInboxSelectedId.value) loadAdminInboxMessages() }, 4000)
+}
+async function loadAdminInboxMessages() {
+  if (!adminInboxSelectedId.value) return
+  try {
+    const res = await $fetch<{ messages?: any[] }>(`/api/admin/conversations/${adminInboxSelectedId.value}`)
+    adminInboxMessages.value = res?.messages || []
+    await nextTick()
+    const el = document.getElementById('admin-msg-list')
+    if (el) el.scrollTop = el.scrollHeight
+  } catch {}
+}
+async function sendAdminInboxReply() {
+  const text = adminInboxReply.value.trim()
+  if (!text || !adminInboxSelectedId.value || adminInboxSending.value) return
+  adminInboxSending.value = true
+  try {
+    await $fetch(`/api/admin/conversations/${adminInboxSelectedId.value}/reply`, { method: 'POST', body: { message: text } })
+    adminInboxReply.value = ''
+    await loadAdminInboxMessages()
+    await loadAdminInboxList()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Falha ao enviar')
+  } finally {
+    adminInboxSending.value = false
+  }
+}
+function formatAdminInboxTime(iso?: string) {
+  if (!iso) return ''
+  try {
+    return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso))
+  } catch { return '' }
+}
+function openAdminInbox() {
+  showAdminPanel.value = false
+  showAdminInbox.value = true
+  startAdminInboxPresence()
+  loadAdminInboxList()
+  if (adminInboxListTimer) clearInterval(adminInboxListTimer)
+  adminInboxListTimer = setInterval(() => loadAdminInboxList(), 12000)
+}
+function closeAdminInbox() {
+  showAdminInbox.value = false
+  stopAdminInboxPresence()
+  sendAdminInboxPresence(true)
+  if (adminInboxListTimer) { clearInterval(adminInboxListTimer); adminInboxListTimer = null }
+  if (adminInboxMsgTimer) { clearInterval(adminInboxMsgTimer); adminInboxMsgTimer = null }
+  adminInboxSelectedId.value = null
+}
+
 function openLogin() {
+
   if (isAdmin.value) {
     openEdit()
     return
