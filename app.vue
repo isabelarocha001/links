@@ -363,11 +363,7 @@
 
           <!-- Perfil / bio (estilo WhatsApp) -->
           <div v-if="showFunnelProfile" class="wa-profile-panel">
-            <header class="wa-profile-panel-top">
-              <button type="button" class="wa-close-btn" aria-label="Voltar" @click="showFunnelProfile = false">‹</button>
-              <span class="wa-profile-panel-title">Dados do contato</span>
-              <span class="wa-profile-panel-spacer"></span>
-            </header>
+            <button type="button" class="wa-profile-back" aria-label="Voltar" @click="showFunnelProfile = false">‹</button>
             <div class="wa-profile-panel-body">
               <button type="button" class="wa-profile-big-avatar" @click.stop="openFunnelPhoto">
                 <img src="/model.jpg" alt="Wanessa" draggable="false" />
@@ -553,6 +549,7 @@
           </div>
 
           <div
+            v-if="!showFunnelProfile"
             class="wa-composer wa-funnel-composer"
             :class="{ 'wa-composer--blocked': funnelBlocked }"
             @click.capture="funnelBlocked && onFunnelComposerInteract($event)"
