@@ -77,6 +77,38 @@ def main() -> None:
     }
 """
 
+    old3b = """  // Depois da consultoria da videochamada: lead descreveu o que quer → aí sim oferece tempo/preço
+  if (funnelStep.value === 'video_consult') {
+    const choice = resolveVideoChoiceFromContext(lower) || parseVideoCallChoice(lower)
+    if (choice) {
+      selectedPack.value = { key: choice.key, label: choice.label, price: choice.price }
+      videoCallPurchasedMin.value = choice.min
+      track('whatsapp_funnel_select', { offer_slug: choice.key, source: 'video_consult_typed' })
+      await funnelTypeParts(`Fechado: ${choice.label} por R$ ${choice.price}.|||Vou preparar o PIX pra você.`, 1000)
+      await startFunnelCheckout()
+      return
+    }
+    // only if NO duration in message:
+    funnelStep.value = 'video'
+"""
+    new3b = """  // Depois da consultoria da videochamada: parseia duração ANTES de listar tempos
+  if (funnelStep.value === 'video_consult') {
+    const choice = resolveVideoChoiceFromContext(lower) || parseVideoCallChoice(lower)
+    if (choice || (selectedPack.value?.key || '').startsWith('vid_')) {
+      if (choice) {
+        selectedPack.value = { key: choice.key, label: choice.label, price: choice.price }
+        videoCallPurchasedMin.value = choice.min
+        track('whatsapp_funnel_select', { offer_slug: choice.key, source: 'video_consult_typed' })
+        await funnelTypeParts(`Fechado: ${choice.label} por R$ ${choice.price}.|||Vou preparar o PIX pra você.`, 1000)
+      }
+      try { saveFunnelState() } catch {}
+      await startFunnelCheckout()
+      return
+    }
+    // only if NO duration was agreed yet:
+    funnelStep.value = 'video'
+"""
+
     old4 = """    if (step === 'video_consult') funnelStep.value = 'video_consult'
     else if (step === 'video_avulso') funnelStep.value = 'video_avulso'
 """
@@ -115,7 +147,8 @@ def main() -> None:
     replacements = [
         (old1, new1, True),
         (old2, new2, True),
-        (old3, new3, True),
+        (old3, new3, False),
+        (old3b, new3b, False),
         (old4, new4, True),
         (old5, new5, False),
     ]
