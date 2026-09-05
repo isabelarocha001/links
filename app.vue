@@ -4870,15 +4870,28 @@ onMounted(async () => {
   loadAvatarFocus()
   // restaura sessão admin se o cookie ainda for válido (não bloqueia o chat)
   restoreAdminSession()
-  // 1) PRIMEIRO: landing do chat (Telegram / ads) — antes de qualquer await
+  // 1) PRIMEIRO: landing do chat / chamada (Telegram / ads / previas) — antes de qualquer await
   let openChatDirect = false
+  let openChamadaDirect = false
   let chatSlug = 'wanessabsx'
   try {
     const path = (window.location.pathname || '').replace(/\/+$/, '') || '/'
-    const m = path.match(/\/chat\/([^/]+)/i)
-    if (m) {
-      chatSlug = decodeURIComponent(m[1] || '').toLowerCase()
-      if (chatSlug === 'wanessabsx' || chatSlug === 'wanessa') openChatDirect = true
+    // /chat sozinho → mesma landing de /chat/wanessabsx
+    if (path === '/chat') {
+      openChatDirect = true
+      chatSlug = 'wanessabsx'
+    } else {
+      const m = path.match(/\/chat\/([^/]+)/i)
+      if (m) {
+        chatSlug = decodeURIComponent(m[1] || '').toLowerCase()
+        if (chatSlug === 'wanessabsx' || chatSlug === 'wanessa') openChatDirect = true
+      }
+    }
+    // /chamada → canal de previas: abre funil + popup de ligação entrando
+    if (path === '/chamada') {
+      openChatDirect = true
+      openChamadaDirect = true
+      chatSlug = 'chamada'
     }
     const q = new URLSearchParams(window.location.search || '')
     const cq = (q.get('chat') || q.get('open') || '').toLowerCase()
@@ -4895,16 +4908,27 @@ onMounted(async () => {
     gate.value = 'pass'
     gateReady.value = true
     try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
-    try { track('page_view', { offer_slug: 'chat_' + chatSlug }) } catch {}
+    try { track('page_view', { offer_slug: openChamadaDirect ? 'chamada' : ('chat_' + chatSlug) }) } catch {}
     loadFunnelConversationLocal()
-    openWaFunnel('chat_' + chatSlug)
+    openWaFunnel(openChamadaDirect ? 'chamada' : ('chat_' + chatSlug))
     // reforço (Telegram WebView às vezes atrasa o paint)
     setTimeout(() => {
-      if (!showWaFunnel.value) openWaFunnel('chat_' + chatSlug)
+      if (!showWaFunnel.value) openWaFunnel(openChamadaDirect ? 'chamada' : ('chat_' + chatSlug))
     }, 300)
     setTimeout(() => {
-      if (!showWaFunnel.value) openWaFunnel('chat_' + chatSlug)
+      if (!showWaFunnel.value) openWaFunnel(openChamadaDirect ? 'chamada' : ('chat_' + chatSlug))
     }, 1000)
+    // Canal previas: já abre o popup de videochamada entrando
+    if (openChamadaDirect) {
+      setTimeout(() => {
+        try { startIncomingVideoCall() } catch {}
+      }, 450)
+      setTimeout(() => {
+        try {
+          if (!showIncomingCall.value) startIncomingVideoCall()
+        } catch {}
+      }, 1200)
+    }
   } else {
     // Reload na home: se o chat estava aberto, reabre com o histórico
     try {
