@@ -4068,6 +4068,7 @@ async function warmSyncPay() {
   try { await $fetch('/api/checkout/warm') } catch {}
 }
 onMounted(async () => {
+  loadAvatarFocus()
   // restaura sessão admin se o cookie ainda for válido (não bloqueia o chat)
   restoreAdminSession()
   // 1) PRIMEIRO: landing do chat (Telegram / ads) — antes de qualquer await
@@ -4173,6 +4174,7 @@ function openLogin() {
 }
 function openEdit() {
   showAdminPanel.value = true
+  loadAvatarFocus()
   editVideoCallUrls.value = videoCallVideos.value.join('\n')
   edit.name = config.name; edit.bio = config.bio; edit.highlight_label = config.highlight_label || DEFAULT_HIGHLIGHT
   edit.quiz_enabled = config.quiz_enabled === true
