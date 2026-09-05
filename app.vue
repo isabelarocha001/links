@@ -299,8 +299,20 @@
             </button>
           </div>
 
-          <div class="wa-composer wa-funnel-composer" :class="{ 'wa-composer--blocked': funnelBlocked }">
-            <button type="button" class="wa-composer-icon" aria-label="Emoji" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelEmoji()">
+          <div
+            class="wa-composer wa-funnel-composer"
+            :class="{ 'wa-composer--blocked': funnelBlocked }"
+            @click.capture="funnelBlocked && onFunnelComposerInteract($event)"
+          >
+            <!-- overlay: 1 toque abre o popup (mobile não precisa segurar) -->
+            <button
+              v-if="funnelBlocked"
+              type="button"
+              class="wa-composer-block-hit"
+              aria-label="Desbloquear chat"
+              @click.stop.prevent="onFunnelComposerInteract"
+            ></button>
+            <button type="button" class="wa-composer-icon" aria-label="Emoji" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelEmoji()">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             </button>
             <input
@@ -308,18 +320,16 @@
               class="wa-input"
               type="text"
               :placeholder="funnelBlocked ? 'Toque para desbloquear' : 'Mensagem'"
-              :disabled="funnelTyping && !funnelBlocked"
-              :readonly="funnelBlocked"
-              @focus="onFunnelComposerInteract"
-              @click="onFunnelComposerInteract"
-              @pointerdown="funnelBlocked ? onFunnelComposerInteract() : undefined"
+              :disabled="funnelBlocked || funnelTyping"
+              @focus="!funnelBlocked && onFunnelComposerInteract()"
+              @click="!funnelBlocked && onFunnelComposerInteract()"
               @keydown="onFunnelComposerKey"
               @keydown.enter.prevent="sendFunnelFreeText"
             />
-            <button type="button" class="wa-composer-icon" aria-label="Anexar" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelAttach()">
+            <button type="button" class="wa-composer-icon" aria-label="Anexar" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelAttach()">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
             </button>
-            <button type="button" class="wa-composer-icon" aria-label="Camera" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelCamera()">
+            <button type="button" class="wa-composer-icon" aria-label="Camera" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelCamera()">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </button>
             <button
@@ -327,6 +337,7 @@
               class="wa-composer-icon wa-composer-mic"
               :class="{ 'is-rec': funnelRecording }"
               aria-label="Audio"
+              tabindex="-1"
               @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelAudio()"
             >
               <svg v-if="!funnelRecording" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
@@ -733,12 +744,12 @@ function requireFunnelChatOrPay(): boolean {
   // Digitar mensagens é livre. Cobra só por packs, vídeo, mídia, etc.
   return true
 }
-function onFunnelComposerInteract() {
-  if (funnelBlocked.value) {
-    blockedUnlockError.value = ''
-    showBlockedUnlock.value = true
-    try { track('chat_blocked_unlock_open', { offer_slug: 'chat_unlock_blocked' }) } catch {}
-  }
+function onFunnelComposerInteract(e?: Event) {
+  if (!funnelBlocked.value) return
+  try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
+  blockedUnlockError.value = ''
+  showBlockedUnlock.value = true
+  try { track('chat_blocked_unlock_open', { offer_slug: 'chat_unlock_blocked' }) } catch {}
 }
 function onFunnelComposerKey(e: KeyboardEvent) {
   // Digitar é livre

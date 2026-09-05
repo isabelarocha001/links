@@ -1281,3 +1281,24 @@ button.direct-btn {
   width: 18px !important;
   height: 18px !important;
 }
+
+
+/* Toque único abre popup de desbloqueio */
+.wa-funnel-shell .wa-composer--blocked {
+  position: relative !important;
+  cursor: pointer !important;
+}
+.wa-composer-block-hit {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 20 !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  -webkit-tap-highlight-color: rgba(37, 211, 102, 0.15);
+}
+.wa-funnel-shell .wa-composer--blocked .wa-input {
+  pointer-events: none !important;
+}
