@@ -614,6 +614,17 @@
               aria-label="Desbloquear chat"
               @click.stop.prevent="onFunnelComposerInteract"
             ></button>
+            <!-- Chat bloqueado: barra grande (mobile) — 1 toque abre popup -->
+            <button
+              v-if="!funnelChatUnlocked && !funnelBlocked && !leadBlockedWanessa"
+              type="button"
+              class="wa-unlock-bar"
+              @click.stop.prevent="openChatUnlockInfo('chat')"
+              @touchend.stop.prevent="openChatUnlockInfo('chat')"
+            >
+              🔒 Toque pra liberar o chat · R$ 3
+            </button>
+            <template v-else>
             <button type="button" class="wa-composer-icon" aria-label="Emoji" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelEmoji()">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             </button>
@@ -623,14 +634,12 @@
               type="text"
               enterkeyhint="send"
               autocomplete="off"
-              :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : (funnelChatUnlocked ? 'Mensagem' : 'Toque para liberar o chat'))"
-              :readonly="!funnelChatUnlocked"
+              :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : 'Mensagem')"
               :disabled="funnelBlocked || funnelTyping || leadBlockedWanessa"
-              @click.stop="onComposerPointer($event)"
-              @focus="onComposerFocus($event)"
+              @focus="onFunnelInputFocus(); !funnelBlocked && onFunnelComposerInteract()"
               @blur="onFunnelInputBlur()"
               @keydown="onFunnelComposerKey"
-              @keydown.enter.prevent="onSendOrUnlock"
+              @keydown.enter.prevent="sendFunnelFreeText"
             />
             <button type="button" class="wa-composer-icon" aria-label="Anexar" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : (closeFunnelEmojiPicker(), onFunnelAttach())">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -654,11 +663,12 @@
               type="button"
               class="wa-send"
               aria-label="Enviar"
-              :disabled="funnelTyping || (funnelChatUnlocked && !funnelInput.trim())"
-              @click.stop.prevent="onSendOrUnlock"
+              :disabled="!funnelInput.trim() || funnelTyping"
+              @click.stop.prevent="sendFunnelFreeText"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
+            </template>
           </div>
 
           <!-- Menu anexos estilo WhatsApp -->
@@ -1302,9 +1312,13 @@ function requireFunnelChatOrPay(): boolean {
 
 const chatUnlockReason = ref<'chat' | 'call' | 'media'>('chat')
 
+let _unlockTapAt = 0
 function openChatUnlockInfo(reason: 'chat' | 'call' | 'media' = 'chat') {
   if (funnelChatUnlocked.value) return
   if (leadBlockedWanessa.value) return
+  const now = Date.now()
+  if (now - _unlockTapAt < 500) return
+  _unlockTapAt = now
   chatUnlockReason.value = reason || 'chat'
   showChatUnlockPix.value = false
   showChatUnlockInfo.value = true
@@ -6169,5 +6183,31 @@ useHead({
   color: #8696a0;
 }
 
+
+
+.wa-unlock-bar {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 22px;
+  padding: 12px 16px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  box-shadow: 0 4px 16px rgba(37,211,102,.35);
+  white-space: nowrap;
+}
+.wa-unlock-bar:active {
+  transform: scale(0.98);
+  opacity: 0.92;
+}
+.wa-send, .wa-composer-icon {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
 
 </style>
