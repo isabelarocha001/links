@@ -42,6 +42,11 @@ const messagesLoading = ref(false)
 const replyText = ref('')
 const replySending = ref(false)
 const presenceOk = ref(false)
+const leadPresenceOnline = ref(false)
+const leadPresenceLabel = ref('offline')
+const leadPresenceActivity = ref('idle')
+const leadLastReadId = ref<string | null>(null)
+let leadPresenceTimer: ReturnType<typeof setInterval> | null = null
 
 let presenceTimer: ReturnType<typeof setInterval> | null = null
 let listTimer: ReturnType<typeof setInterval> | null = null
@@ -175,11 +180,55 @@ async function loadConversations() {
   }
 }
 
+
+async function pullLeadPresence() {
+  if (!selectedId.value) {
+    leadPresenceOnline.value = false
+    leadPresenceLabel.value = 'offline'
+    leadPresenceActivity.value = 'idle'
+    return
+  }
+  try {
+    const conv = conversations.value.find((c) => c.id === selectedId.value)
+    const res = await $fetch<{
+      online?: boolean
+      label?: string
+      activity?: string
+      last_read_message_id?: string | null
+    }>('/api/admin/lead-presence', {
+      query: {
+        conversation_id: selectedId.value,
+        ...(conv?.visitor_id ? { visitor_id: conv.visitor_id } : {}),
+      },
+    })
+    leadPresenceOnline.value = !!res?.online
+    leadPresenceLabel.value = res?.label || (res?.online ? 'online' : 'offline')
+    leadPresenceActivity.value = res?.activity || 'idle'
+    leadLastReadId.value = res?.last_read_message_id || null
+  } catch {
+    // keep last
+  }
+}
+
+function startLeadPresencePoll() {
+  stopLeadPresencePoll()
+  pullLeadPresence()
+  leadPresenceTimer = setInterval(() => pullLeadPresence(), 2000)
+}
+
+function stopLeadPresencePoll() {
+  if (leadPresenceTimer) {
+    clearInterval(leadPresenceTimer)
+    leadPresenceTimer = null
+  }
+}
+
 async function openConversation(id: string) {
   selectedId.value = id
   messages.value = []
   await loadMessages()
   startMsgPoll()
+  startLeadPresencePoll()
 }
 
 async function loadMessages() {
@@ -385,6 +434,15 @@ async function sendReply() {
   }
 }
 
+function isMsgReadByLead(m: ChatMsg) {
+  if (!leadLastReadId.value || !m?.id) return false
+  // se last_read é o id, ok; senão compara created_at se disponível nas msgs
+  if (String(m.id) === String(leadLastReadId.value)) return true
+  const readMsg = messages.value.find((x) => String(x.id) === String(leadLastReadId.value))
+  if (!readMsg?.created_at || !m.created_at) return false
+  return new Date(m.created_at).getTime() <= new Date(readMsg.created_at).getTime() && m.direction !== 'lead'
+}
+
 function formatTime(iso?: string) {
   if (!iso) return ''
   try {
@@ -555,11 +613,15 @@ if (typeof window !== 'undefined') {
         <!-- Thread -->
         <section class="ac-thread" v-if="selectedId">
           <header class="ac-thread-head">
-            <button type="button" class="ac-back" aria-label="Voltar" @click="selectedId = null; stopPolling()">‹</button>
+            <button type="button" class="ac-back" aria-label="Voltar" @click="selectedId = null; stopPolling(); stopLeadPresencePoll()">‹</button>
             <div class="ac-thread-who">
               <div class="ac-avatar ac-avatar--sm">{{ selectedTitle.slice(0, 1).toUpperCase() }}</div>
               <div>
                 <h2>{{ selectedTitle }}</h2>
+                <p class="ac-status-line" :class="{ on: leadPresenceOnline, act: leadPresenceActivity !== 'idle' }">
+                  <span class="ac-status-dot"></span>
+                  {{ leadPresenceLabel }}
+                </p>
                 <p class="ac-muted tight">{{ selectedId.slice(0, 10) }}…</p>
               </div>
             </div>
@@ -579,7 +641,10 @@ if (typeof window !== 'undefined') {
               :class="m.direction === 'lead' ? 'lead' : 'bot'"
             >
               <p>{{ labelAdminMessage(m.message) }}</p>
-              <span>{{ formatTime(m.created_at) }}</span>
+              <span>
+                {{ formatTime(m.created_at) }}
+                <template v-if="m.direction !== 'lead' && isMsgReadByLead(m)"> · visualizado</template>
+              </span>
             </div>
           </div>
 
