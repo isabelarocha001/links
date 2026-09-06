@@ -4593,7 +4593,11 @@ if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30' || opt.
     selectedPack.value = { key: opt.key, label: p.label, price: p.price }
     videoCallPurchasedMin.value = p.min
     track('whatsapp_funnel_select', { offer_slug: opt.key })
-    await startFunnelCheckout()
+    funnelStep.value = 'pix_ask'
+    await funnelType(
+      `Fechado: ${p.label} por R$ ${p.price} 🔥\n\nPosso te mandar a chave PIX copia e cola aqui na conversa agora?`,
+      1100,
+    )
     return
   }
 
@@ -4861,6 +4865,161 @@ const videoCallVideos = ref<string[]>([])
 const showVideoCallPlayer = ref(false)
 const videoCallIndex = ref(0)
 const videoCallUnlocked = ref(false)
+const showCallSalesBalloon = ref(false)
+const callPlaylist = ref<string[]>([])
+const callPlaylistIndex = ref(0)
+const callSessionStartedAt = ref(0)
+
+const CALL_CREDIT_KEY = 'wanessa_call_credit_v1'
+const CALL_WATCHED_KEY = 'wanessa_call_watched_v1'
+
+type CallCredit = {
+  secondsLeft: number
+  secondsBought: number
+  planKey: string
+  paymentAt: number
+  visitor_id?: string
+}
+
+function callCreditStorageKey() {
+  try {
+    return CALL_CREDIT_KEY + '_' + (getOrCreateVisitorId() || 'anon')
+  } catch {
+    return CALL_CREDIT_KEY + '_anon'
+  }
+}
+function callWatchedStorageKey() {
+  try {
+    return CALL_WATCHED_KEY + '_' + (getOrCreateVisitorId() || 'anon')
+  } catch {
+    return CALL_WATCHED_KEY + '_anon'
+  }
+}
+
+function loadCallCredit(): CallCredit | null {
+  try {
+    const raw = localStorage.getItem(callCreditStorageKey())
+    if (!raw) return null
+    const data = JSON.parse(raw)
+    if (!data || typeof data.secondsLeft !== 'number') return null
+    if (data.secondsLeft <= 0) return null
+    return data as CallCredit
+  } catch {
+    return null
+  }
+}
+
+function saveCallCredit(credit: CallCredit | null) {
+  try {
+    if (!credit || credit.secondsLeft <= 0) {
+      localStorage.removeItem(callCreditStorageKey())
+      return
+    }
+    localStorage.setItem(callCreditStorageKey(), JSON.stringify(credit))
+  } catch {}
+}
+
+function grantCallCredit(minutes: number, planKey: string) {
+  const secs = Math.max(1, Math.floor(Number(minutes) || 10)) * 60
+  const prev = loadCallCredit()
+  const credit: CallCredit = {
+    secondsLeft: (prev?.secondsLeft || 0) + secs,
+    secondsBought: (prev?.secondsBought || 0) + secs,
+    planKey,
+    paymentAt: Date.now(),
+  }
+  try { credit.visitor_id = getOrCreateVisitorId() } catch {}
+  saveCallCredit(credit)
+  videoCallUnlocked.value = true
+  videoCallPurchasedMin.value = Math.ceil(credit.secondsLeft / 60)
+  try {
+    track('call_credit_grant', { minutes, plan_key: planKey, seconds_left: credit.secondsLeft })
+  } catch {}
+  // log no funil (admin vê no histórico)
+  try {
+    logFunnelMessage('bot', `Crédito de chamada: +${minutes} min (${planKey})`, {
+      event: 'call_credit_grant',
+      minutes,
+      plan_key: planKey,
+      seconds_left: credit.secondsLeft,
+    })
+  } catch {}
+}
+
+function consumeCallCredit(usedSeconds: number) {
+  const used = Math.max(0, Math.floor(usedSeconds || 0))
+  const credit = loadCallCredit()
+  if (!credit) {
+    videoCallUnlocked.value = false
+    return
+  }
+  credit.secondsLeft = Math.max(0, credit.secondsLeft - used)
+  saveCallCredit(credit.secondsLeft > 0 ? credit : null)
+  if (credit.secondsLeft <= 0) videoCallUnlocked.value = false
+  try {
+    logFunnelMessage('bot', `Chamada consumida: ${used}s · restam ${credit.secondsLeft}s`, {
+      event: 'call_credit_consume',
+      used_sec: used,
+      seconds_left: credit.secondsLeft,
+    })
+  } catch {}
+  try {
+    track('call_credit_consume', { used_sec: used, seconds_left: credit.secondsLeft })
+  } catch {}
+}
+
+function loadWatchedVideos(): string[] {
+  try {
+    const raw = localStorage.getItem(callWatchedStorageKey())
+    if (!raw) return []
+    const arr = JSON.parse(raw)
+    return Array.isArray(arr) ? arr.map(String) : []
+  } catch {
+    return []
+  }
+}
+
+function markVideosWatched(urls: string[]) {
+  const set = new Set(loadWatchedVideos())
+  for (const u of urls) {
+    if (u) set.add(u)
+  }
+  try {
+    localStorage.setItem(callWatchedStorageKey(), JSON.stringify([...set]))
+  } catch {}
+}
+
+function markCurrentCallVideosWatched() {
+  // marca todos os clips já tocados nesta sessão (até o index atual)
+  const watched: string[] = []
+  for (let i = 0; i <= callPlaylistIndex.value && i < callPlaylist.value.length; i++) {
+    watched.push(callPlaylist.value[i])
+  }
+  const cur = videoCallVideos.value[videoCallIndex.value]
+  if (cur) watched.push(cur)
+  markVideosWatched(watched)
+}
+
+function buildCallPlaylist(): string[] {
+  const watched = new Set(loadWatchedVideos())
+  const all = videoCallVideos.value.filter(Boolean)
+  const fresh = all.filter((u) => !watched.has(u))
+  // se todos já foram vistos, não repete — lista vazia (força compra/nova leva de vídeos)
+  return fresh
+}
+
+function closeCallSalesBalloon() {
+  showCallSalesBalloon.value = false
+}
+
+async function onCallSalesWantLive() {
+  showCallSalesBalloon.value = false
+  funnelStep.value = 'video'
+  await funnelType(
+    'Perfeito… escolhe o tempo da nossa chamada 🔥\n\nQuanto mais minutos, mais fundo a gente vai.',
+    1200,
+  )
+}
 const editVideoCallUrls = ref('')
 const AVATAR_FOCUS_KEY = 'wanessa_avatar_focus_v1'
 const avatarFocusX = ref(50)
