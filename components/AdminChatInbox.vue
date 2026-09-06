@@ -72,11 +72,8 @@ async function checkSession() {
     await $fetch('/api/admin/session')
     authed.value = true
   } catch {
-    // Sem sessão: não oferece login aqui — rota deve ter dado 404 pelo middleware
+    // Sem sessão: mostra formulário de login nesta rota
     authed.value = false
-    if (import.meta.client) {
-      await navigateTo('/', { replace: true })
-    }
   } finally {
     authChecking.value = false
   }
@@ -117,7 +114,7 @@ async function doLogout() {
   selectedId.value = null
   messages.value = []
   if (import.meta.client) {
-    await navigateTo('/', { replace: true })
+    // permanece em /admin/chat com formulário de login
   }
 }
 
@@ -297,8 +294,21 @@ if (typeof window !== 'undefined') {
   <div class="ac">
     <div v-if="authChecking" class="ac-center">Verificando sessão…</div>
 
-    <div v-else-if="!authed" class="ac-center">
-      <p>Acesso negado.</p>
+    <div v-else-if="!authed" class="ac-login">
+      <h1>Admin · Conversas</h1>
+      <p class="ac-hint">Digite a senha para entrar. Esta página não aparece na home.</p>
+      <input
+        v-model="password"
+        class="ac-input"
+        type="password"
+        autocomplete="current-password"
+        placeholder="Senha"
+        @keydown.enter.prevent="doLogin"
+      />
+      <p v-if="loginError" class="ac-err">{{ loginError }}</p>
+      <button type="button" class="ac-btn" :disabled="loginLoading || !password.trim()" @click="doLogin">
+        {{ loginLoading ? 'Entrando…' : 'Entrar' }}
+      </button>
     </div>
 
     <template v-else>
