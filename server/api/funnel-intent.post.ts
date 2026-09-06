@@ -11,6 +11,7 @@ type IntentResult = {
 async function getGeminiKey(): Promise<{ key: string; model: string }> {
   const env = process.env as Record<string, string | undefined>
   let key = String(env.GEMINI_API_KEY || env.NUXT_GEMINI_API_KEY || '').trim()
+  // Prefer model estável e atual; fallback para 3.5-flash se configurado no banco
   let model = String(env.GEMINI_MODEL || env.NUXT_GEMINI_MODEL || 'gemini-3.5-flash').trim()
   if (!key) {
     try {
@@ -32,7 +33,7 @@ async function getGeminiKey(): Promise<{ key: string; model: string }> {
 }
 
 function localIntent(message: string): IntentResult {
-  const t = message.toLowerCase()
+  const t = message.toLowerCase().trim()
 
   // NUNCA tratar preço de oferta online como "programa"
   const isOnlineOfferAsk = /chamada|videochamad|v[ií]deo\s*call|\bcall\b|\bpack\b|webnamoro|\bchat\b|\bmin\b|minuto|\bhora\b|pix|assinatura|conte[uú]do|ao vivo|online/.test(t)
@@ -57,6 +58,7 @@ function localIntent(message: string): IntentResult {
       suggest_step: 'video',
     }
   }
+
   // "quanto cobra chamada de 10 min" etc. = oferta online
   if (/quanto (voc[eê] )?(cobra|custa|é)|pre[cç]o|valor/.test(t) && /(chamada|call|video|v[ií]deo|pack|chat|webnamoro|\bmin\b|minuto|hora)/.test(t)) {
     if (/chamada|call|videochamad|v[ií]deo/.test(t)) {
@@ -69,7 +71,8 @@ function localIntent(message: string): IntentResult {
       }
     }
   }
-    if (/v[ií]deo\s*chamad|videochamad|chamada de v[ií]deo|call ao vivo|ao vivo/.test(t)) {
+
+  if (/v[ií]deo\s*chamad|videochamad|chamada de v[ií]deo|call ao vivo|ao vivo/.test(t)) {
     return {
       intent: 'video',
       confidence: 0.9,
@@ -78,6 +81,7 @@ function localIntent(message: string): IntentResult {
       suggest_step: 'video_consult',
     }
   }
+
   if (/v[ií]deo avulso|v[ií]deo personaliz|me grava|grava pra mim|v[ií]deo sob demanda/.test(t)) {
     return {
       intent: 'video_avulso',
@@ -87,6 +91,7 @@ function localIntent(message: string): IntentResult {
       suggest_step: 'video_avulso',
     }
   }
+
   if (/pack|conte[uú]do|fotos? e v[ií]deos|pacote|assinatura|vip|only/.test(t)) {
     return {
       intent: 'pack',
@@ -96,6 +101,7 @@ function localIntent(message: string): IntentResult {
       suggest_step: 'packs',
     }
   }
+
   if (/webnamoro|namoro virtual|namoradinha|namorar/.test(t)) {
     return {
       intent: 'webnamoro',
@@ -105,6 +111,23 @@ function localIntent(message: string): IntentResult {
       suggest_step: 'webnamoro',
     }
   }
+
+  // Desejo / flerte curto ("quero vc", "quero você", "te quero", "quero te ver", etc.)
+  // NÃO cair em genérico — engaja e direciona pro online
+  if (
+    /quero\s*(vc|você|voce|te|tu)|te\s*quero|quero\s*te\s*(ver|comer|pegar|foder|fuder)|quero\s*(muito\s*)?(vc|você)|me\s*quer|quero\s*você\s*agora|quero\s*vc\s*agora|só\s*quero\s*(vc|você)/i.test(t) ||
+    /^(quero vc|quero você|quero voce|te quero|quero te|me quer)$/i.test(t)
+  ) {
+    return {
+      intent: 'papo',
+      confidence: 0.82,
+      reply: 'Hmm que delícia ouvir isso 😏|||Aqui é tudo online, amor. Videochamada, chat safado, packs…|||O que você mais quer fazer comigo agora?',
+      show_menu: true,
+      suggest_step: 'menu',
+    }
+  }
+
+  // Saudações e papo leve
   if (/s[oó] conversar|s[oó] papo|bater papo|conversar sem|s[oó] falar|\boi\b|\bol[aá]\b|oie|oii+|bom dia|boa tarde|boa noite|tudo bem|td bem|e a[ií]|blz|beleza|oi amor|ola amor/.test(t)) {
     return {
       intent: 'papo',
@@ -114,6 +137,7 @@ function localIntent(message: string): IntentResult {
       suggest_step: null,
     }
   }
+
   if (/chat|conversa safad|papo quente|sexting/.test(t)) {
     return {
       intent: 'chat',
@@ -123,6 +147,7 @@ function localIntent(message: string): IntentResult {
       suggest_step: 'chat',
     }
   }
+
   if (/pre[cç]o|valor|quanto custa|quanto [eé]|pix|pagar|assin/.test(t)) {
     return {
       intent: 'unknown',
@@ -133,10 +158,11 @@ function localIntent(message: string): IntentResult {
     }
   }
 
+  // Fallback NÃO genérico: engaja de forma natural e convida a falar o desejo
   return {
-    intent: 'unknown',
-    confidence: 0.4,
-    reply: 'Pode repetir com outras palavras? Quero te entender certinho.',
+    intent: 'papo',
+    confidence: 0.45,
+    reply: 'Conta mais, amor 😏 O que você tá pensando agora?',
     show_menu: false,
     suggest_step: null,
   }
@@ -154,7 +180,6 @@ SUA TAREFA:
 1) Responder de verdade o que o lead perguntou ou comentou (use o histórico).
 2) Classificar a intenção.
 3) Só empurrar oferta quando fizer sentido na conversa.
-
 
 Preços fixos (use SEMPRE estes, não invente):
 - Videochamada 10 min: R$ 99,90
@@ -178,6 +203,7 @@ Intenções:
 Regras OBRIGATÓRIAS:
 1. A "reply" DEVE responder o conteúdo da mensagem do lead E o histórico. Se vocês já falaram de videochamada de 10 min e o lead diz "quero só o de 10", confirme o fechamento (R$ 99,90) e pergunte se gera o PIX. Proibido "me conta mais" quando a intenção já está clara no histórico.
 1b. Nunca diga que ouviu áudio se não há transcrição no histórico.
+1c. Mensagens curtas de desejo tipo "quero vc", "quero você", "te quero", "quero te ver": responda de forma safadinha e acolhedora, deixe claro que é ONLINE e pergunte o que ele mais quer fazer (videochamada, chat, pack…). NUNCA peça pra repetir com outras palavras.
 2. Se for oi / bom dia / boa tarde / tudo bem / oi amor: responda A SAUDAÇÃO de verdade (ex: "Oi amor" + "Tudo bem sim, e você?"). Nunca ignore a saudação. Nunca pule pro menu de vendas nessa hora. Conexão primeiro.
 3. Se perguntar preço/como funciona de algo online: explique de forma direta e ofereça o caminho.
 4. Se pedir encontro PRESENCIAL / programa / sair / hotel / "quanto cobra pra SAIR": intent=encontros, closed_offline. NÃO confundir com preço de videochamada, pack, chat ou "quanto cobra uma chamada de 10 min" — isso é oferta ONLINE (intent video/pack/chat).
@@ -189,6 +215,7 @@ Regras OBRIGATÓRIAS:
    - NÃO use reticências (...) nem travessão/hífen de lista (-) — isso denuncia IA.
    - NÃO monte textão. NÃO use bullet points. NÃO use markdown.
    - Pode usar emoji com moderação (no máximo 1 por fala).
+8. PROIBIDO respostas genéricas de "não entendi" / "pode repetir com outras palavras" / "quero te entender certinho". Sempre engaje de forma natural. Se a mensagem for ambígua, pergunte o desejo de forma safada (ex: "Conta o que você tá pensando agora 😏").
 
 Responda APENAS JSON válido:
 {"intent":"video|video_avulso|pack|webnamoro|chat|papo|encontros|unknown","confidence":0.0-1.0,"reply":"...","show_menu":true|false,"suggest_step":"menu|video_consult|video_avulso|packs|webnamoro|chat|closed_offline|null"}
@@ -209,14 +236,15 @@ ${message.slice(0, 800)}
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.55,
+          temperature: 0.65,
           maxOutputTokens: 2048,
           responseMimeType: 'application/json',
         },
       }),
     })
     if (!res.ok) {
-      console.warn('[funnel-intent] gemini', res.status)
+      const errText = await res.text().catch(() => '')
+      console.warn('[funnel-intent] gemini', res.status, errText.slice(0, 200))
       return null
     }
     const data = await res.json()
@@ -236,10 +264,20 @@ ${message.slice(0, 800)}
     const parsed = JSON.parse(cleaned)
     const intent = String(parsed.intent || 'unknown')
     const allowed = new Set(['video', 'video_avulso', 'pack', 'webnamoro', 'chat', 'papo', 'encontros', 'unknown'])
+
+    let reply = String(parsed.reply || '').slice(0, 500)
+    // Bloqueia respostas genéricas ruins mesmo se o modelo gerar
+    if (
+      !reply ||
+      /pode repetir com outras palavras|quero te entender certinho|não entendi|me explica melhor|pode reformular/i.test(reply)
+    ) {
+      reply = 'Conta mais, amor 😏 O que você tá pensando agora?'
+    }
+
     return {
       intent: (allowed.has(intent) ? intent : 'unknown') as IntentResult['intent'],
       confidence: Number(parsed.confidence) || 0.5,
-      reply: String(parsed.reply || '').slice(0, 500) || 'Me conta mais, amor 😘',
+      reply,
       show_menu: !!parsed.show_menu,
       suggest_step: parsed.suggest_step ? String(parsed.suggest_step) : null,
     }
