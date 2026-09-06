@@ -510,7 +510,7 @@
             ></textarea>
             <button
               type="button"
-              :disabled="!funnelInput.trim() || funnelTyping"
+              :disabled="funnelTyping || (funnelChatUnlocked && !funnelInput.trim())"
               @click="sendFunnelFreeText"
               style="align-self:flex-end;border:0;border-radius:999px;padding:10px 18px;font-weight:600;font-size:14px;cursor:pointer;background:#25d366;color:#06280f;opacity:1"
               :style="{ opacity: (!funnelInput.trim() || funnelTyping) ? 0.5 : 1 }"
@@ -586,13 +586,12 @@
               enterkeyhint="send"
               autocomplete="off"
               :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : (funnelChatUnlocked ? 'Mensagem' : 'Toque para liberar o chat'))"
-              :readonly="!funnelChatUnlocked && !funnelBlocked && !leadBlockedWanessa"
+              :readonly="!funnelChatUnlocked"
               :disabled="funnelBlocked || funnelTyping || leadBlockedWanessa"
-              @mousedown.prevent="!funnelChatUnlocked && onLockedComposerTap($event)"
-              @touchstart.prevent="!funnelChatUnlocked && onLockedComposerTap($event)"
-              @focus="funnelChatUnlocked ? (onFunnelInputFocus(), !funnelBlocked && onFunnelComposerInteract()) : onLockedComposerTap($event)"
+              @pointerdown="onComposerPointer($event)"
+              @click="onComposerPointer($event)"
+              @focus="onComposerFocus($event)"
               @blur="onFunnelInputBlur()"
-              @click="!funnelBlocked && onFunnelComposerInteract()"
               @keydown="onFunnelComposerKey"
               @keydown.enter.prevent="sendFunnelFreeText"
             />
@@ -618,7 +617,7 @@
               type="button"
               class="wa-send"
               aria-label="Enviar"
-              :disabled="!funnelInput.trim() || funnelTyping"
+              :disabled="funnelTyping || (funnelChatUnlocked && !funnelInput.trim())"
               @click="sendFunnelFreeText"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -1313,8 +1312,22 @@ function openChatUnlockInfo(reason: 'chat' | 'call' | 'media' = 'chat') {
 function onLockedComposerTap(e?: Event) {
   if (funnelChatUnlocked.value) return
   if (funnelBlocked.value || leadBlockedWanessa.value) return
-  try { e?.preventDefault?.(); (e?.target as any)?.blur?.() } catch {}
-  openChatUnlockInfo()
+  try { e?.preventDefault?.(); e?.stopPropagation?.(); (e?.target as any)?.blur?.() } catch {}
+  openChatUnlockInfo('chat')
+}
+
+function onComposerPointer(e: Event) {
+  if (funnelChatUnlocked.value) return
+  onLockedComposerTap(e)
+}
+
+function onComposerFocus(e: Event) {
+  if (!funnelChatUnlocked.value) {
+    onLockedComposerTap(e)
+    return
+  }
+  onFunnelInputFocus()
+  if (!funnelBlocked.value) onFunnelComposerInteract()
 }
 
 function closeChatUnlockInfo() {
@@ -4555,19 +4568,24 @@ function deleteFunnelMsg() {
 }
 
 async function sendFunnelFreeText() {
-  // Mensagem digitada é PAGA (R$ 9,90). Filtra lead que não gasta.
+  // Mensagem digitada é PAGA (R$ 3,00). Filtra lead que não gasta.
   if (funnelBlocked.value) return
   if (funnelPermBlocked.value || leadBlockedWanessa.value) return
-  const text = (funnelInput.value || '').trim()
-  if (!text || funnelTyping.value) return
+  if (funnelTyping.value) return
 
-  // GATE: sem pagar → popup de benefícios (não envia, não Gemini)
+  // GATE: mesmo sem texto → mesmo popup da chamada
   if (!funnelChatUnlocked.value) {
-    try { (window as any).__pendingLeadText = text } catch {}
-    funnelInput.value = ''
-    openChatUnlockInfo()
+    const text = (funnelInput.value || '').trim()
+    if (text) {
+      try { (window as any).__pendingLeadText = text } catch {}
+      funnelInput.value = ''
+    }
+    openChatUnlockInfo('chat')
     return
   }
+
+  const text = (funnelInput.value || '').trim()
+  if (!text) return
 
   funnelInput.value = ''
   pushFunnel('me', text)
