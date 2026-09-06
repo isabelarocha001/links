@@ -4382,10 +4382,16 @@ async function sendFunnelFreeText() {
           step: funnelStep.value,
         },
       })
-      const reply = (res?.reply || 'Me fala o que você quer, amor.').slice(0, 600)
+      const reply = String(res?.reply || '').trim().slice(0, 600)
       const intent = String(res?.intent || 'unknown')
       const step = res?.suggest_step ? String(res.suggest_step) : null
       const showMenu = !!res?.show_menu
+
+      // Só responde se o Gemini devolveu texto. Falha = vácuo (sem mensagem genérica).
+      if (!reply) {
+        console.warn('[funnel intent] Gemini sem reply — lead fica no vácuo')
+        return
+      }
 
       await funnelTypeParts(reply, 1100)
 
@@ -4431,9 +4437,8 @@ async function sendFunnelFreeText() {
       try { logFunnelMessage('bot', reply, { event: 'intent_reply', intent, step: funnelStep.value }) } catch {}
       return
     } catch (e) {
+      // Gemini/rede falhou — não manda mensagem genérica; deixa o lead no vácuo
       console.warn('[funnel intent]', e)
-      await funnelType('Pode falar comigo… me conta o que você tá a fim 😘', 1000)
-      funnelStep.value = 'greeting'
       return
     }
   }
@@ -4625,7 +4630,12 @@ async function sendFunnelFreeText() {
       return
     }
 
-    await funnelTypeParts(reply || 'Me fala de novo o que você quer, amor.', 1100)
+    // Só responde se o Gemini devolveu texto. Falha = vácuo.
+    if (!reply) {
+      console.warn('[funnel gemini] sem reply — lead fica no vácuo')
+      return
+    }
+    await funnelTypeParts(reply, 1100)
 
     if (step === 'video_consult') {
       const agreed = parseVideoCallChoice(lower)
@@ -4649,8 +4659,8 @@ async function sendFunnelFreeText() {
     try { logFunnelMessage('bot', reply || '', { event: 'gemini_reply', intent, step: funnelStep.value }) } catch {}
     try { saveFunnelState() } catch {}
   } catch (e) {
+    // Gemini/rede falhou — não manda mensagem genérica; deixa o lead no vácuo
     console.warn('[funnel gemini fallback]', e)
-    await funnelType('Conta mais, amor 😏 O que você tá pensando agora?', 1000)
   }
 }
 
