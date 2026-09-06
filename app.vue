@@ -1255,8 +1255,22 @@ let funnelMediaRecorder: MediaRecorder | null = null
 let funnelAudioChunks: BlobPart[] = []
 
 function requireFunnelChatOrPay(): boolean {
-  // Digitar mensagens é livre. Cobra só por packs, vídeo, mídia, etc.
-  return true
+  // Mensagem / mídia só depois de pagar R$ 9,90
+  if (funnelChatUnlocked.value) return true
+  try {
+    funnelStep.value = 'chat_unlock'
+    selectedPack.value = {
+      key: CHAT_MSG_UNLOCK_PLAN.key,
+      label: CHAT_MSG_UNLOCK_PLAN.title,
+      price: CHAT_MSG_UNLOCK_PLAN.priceLabel,
+    }
+    selectedChatPlan.value = CHAT_MSG_UNLOCK_PLAN
+    funnelType(
+      'Pra mandar mensagem aqui é R$ 9,90 💚|||Gero o PIX agora?',
+      1000,
+    ).then(() => buyChatPlan(CHAT_MSG_UNLOCK_PLAN)).catch(() => {})
+  } catch {}
+  return false
 }
 function onFunnelComposerInteract(e?: Event) {
   if (funnelPermBlocked.value || leadBlockedWanessa.value) {
@@ -4020,6 +4034,7 @@ function saveFunnelState() {
         selectedPack: selectedPack.value,
         blocked: funnelBlocked.value,
         permBlocked: funnelPermBlocked.value,
+        chatUnlocked: !!funnelChatUnlocked.value,
         open: !!showWaFunnel.value,
         savedAt: Date.now(),
       }),
@@ -4042,6 +4057,8 @@ function loadFunnelState(): boolean {
     funnelMessages.value = data.messages
     selectedPack.value = data.selectedPack || null
     funnelBlocked.value = !!data.blocked || data.step === 'closed_offline'
+    // Só restaura unlock se realmente pagou (flag salva após PIX)
+    funnelChatUnlocked.value = !!data.chatUnlocked
     return true
   } catch {
     return false
@@ -4397,19 +4414,16 @@ function deleteFunnelMsg() {
 async function sendFunnelFreeText() {
   // Mensagem digitada é PAGA (R$ 9,90). Filtra lead que não gasta.
   if (funnelBlocked.value) return
+  if (funnelPermBlocked.value || leadBlockedWanessa.value) return
   const text = (funnelInput.value || '').trim()
   if (!text || funnelTyping.value) return
 
+  // GATE OBRIGATÓRIO: sem pagamento não processa resposta (Gemini/script)
   if (!funnelChatUnlocked.value) {
-    // Guarda o texto e cobra o unlock
     try { (window as any).__pendingLeadText = text } catch {}
     funnelInput.value = ''
-    pushFunnel('me', text)
-    try { logFunnelMessage('lead', text, { event: 'paid_chat_gate', pending_unlock: true }) } catch {}
-    await funnelType(
-      'Pra eu te responder aqui no chat é R$ 9,90 💚|||É só o valor de entrada — filtra quem é sério.|||Gero o PIX agora?',
-      1200,
-    )
+    // mostra a tentativa do lead + cobrança
+    pushFunnel('me', text, undefined, { logExtra: { event: 'paid_chat_gate', pending_unlock: true } })
     funnelStep.value = 'chat_unlock'
     selectedPack.value = {
       key: CHAT_MSG_UNLOCK_PLAN.key,
@@ -4417,8 +4431,20 @@ async function sendFunnelFreeText() {
       price: CHAT_MSG_UNLOCK_PLAN.priceLabel,
     }
     selectedChatPlan.value = CHAT_MSG_UNLOCK_PLAN
-    try { await buyChatPlan(CHAT_MSG_UNLOCK_PLAN) } catch {}
-    return
+    try { saveFunnelState() } catch {}
+    await funnelType(
+      'Pra eu te responder aqui no chat é R$ 9,90 💚|||É o valor de entrada.|||Gero o PIX agora?',
+      1100,
+    )
+    try {
+      await buyChatPlan(CHAT_MSG_UNLOCK_PLAN)
+    } catch (e) {
+      console.warn('[chat-gate] buyChatPlan', e)
+      try {
+        await funnelType('Toca em Liberar mensagens R$ 9,90 pra eu gerar o PIX 💚', 900)
+      } catch {}
+    }
+    return // NUNCA cai no Gemini sem pagar
   }
 
   funnelInput.value = ''
