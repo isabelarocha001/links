@@ -229,26 +229,34 @@ function stopLeadPresencePoll() {
 async function openConversation(id: string) {
   selectedId.value = id
   messages.value = []
-  await loadMessages()
+  await loadMessages({ forceScroll: true })
   startMsgPoll()
   startLeadPresencePoll()
 }
 
-async function loadMessages() {
+async function loadMessages(opts?: { forceScroll?: boolean }) {
   if (!selectedId.value) return
-  messagesLoading.value = true
+  const wasEmpty = !messages.value.length
+  const forceScroll = !!opts?.forceScroll || wasEmpty
+  // poll silencioso não liga loading (evita “piscar” e não rouba o scroll)
+  const silent = !wasEmpty && !opts?.forceScroll
+  if (!silent) messagesLoading.value = true
   try {
     const res = await $fetch<{
       messages?: ChatMsg[]
       conversation?: { title?: string }
     }>(`/api/admin/conversation-messages?id=${selectedId.value}`)
-    messages.value = res?.messages || []
+    const prevLen = messages.value.length
+    const next = res?.messages || []
+    messages.value = next
     await nextTick()
-    scrollMsgs()
+    // Só desce se: abriu conversa / pediu force / usuário já estava no fim e chegou msg nova
+    if (forceScroll) scrollMsgs(true)
+    else if (next.length > prevLen) scrollMsgs(false)
   } catch (e: any) {
     if (e?.statusCode === 401) authed.value = false
   } finally {
-    messagesLoading.value = false
+    if (!silent) messagesLoading.value = false
   }
 }
 
@@ -274,17 +282,22 @@ function stopPolling() {
   }
 }
 
-function scrollMsgs() {
+/** true se o admin está perto do fim (aí pode auto-descer) */
+function isAdminMsgsNearBottom(threshold = 120) {
+  const el = document.getElementById('admin-msg-list')
+  if (!el) return true
+  return el.scrollHeight - el.scrollTop - el.clientHeight < threshold
+}
+
+/** force=true: sempre desce (nova conversa / envio). Senão só se já estiver embaixo. */
+function scrollMsgs(force = false) {
   const el = document.getElementById('admin-msg-list')
   if (!el) return
-  el.scrollTop = el.scrollHeight
-  // reforço (layout mobile / teclado)
-  requestAnimationFrame(() => {
-    el.scrollTop = el.scrollHeight
-  })
-  setTimeout(() => {
-    el.scrollTop = el.scrollHeight
-  }, 50)
+  if (!force && !isAdminMsgsNearBottom()) return
+  const go = () => { el.scrollTop = el.scrollHeight }
+  go()
+  requestAnimationFrame(go)
+  setTimeout(go, 50)
 }
 
 const replyError = ref('')
@@ -386,10 +399,10 @@ async function sendAdminAction(body: Record<string, any>) {
       method: 'POST',
       body: { id: selectedId.value, ...body },
     })
-    await loadMessages()
+    await loadMessages({ forceScroll: true })
     await loadConversations()
     await nextTick()
-    scrollMsgs()
+    scrollMsgs(true)
   } catch (e: any) {
     replyError.value = e?.data?.statusMessage || e?.message || 'Falha ao enviar'
   } finally {
@@ -479,16 +492,16 @@ async function sendReply() {
   }
   messages.value = [...messages.value, optimistic]
   await nextTick()
-  scrollMsgs()
+  scrollMsgs(true)
   try {
     await $fetch('/api/admin/conversation-reply', {
       method: 'POST',
       body: { id: selectedId.value, message: pending },
     })
-    await loadMessages()
+    await loadMessages({ forceScroll: true })
     await loadConversations()
     await nextTick()
-    scrollMsgs()
+    scrollMsgs(true)
   } catch (e: any) {
     // remove otimista se falhou
     messages.value = messages.value.filter((m) => m.id !== optimistic.id)
@@ -498,7 +511,7 @@ async function sendReply() {
   } finally {
     replySending.value = false
     await nextTick()
-    scrollMsgs()
+    scrollMsgs(true)
   }
 }
 
