@@ -177,6 +177,44 @@
   <ClientOnly>
     <Teleport to="body">
 
+        <!-- Popup 1: explicação simples do chat bloqueado -->
+        <div v-if="showChatUnlockInfo" class="cu-overlay" style="z-index:2147483000" @click.self="closeChatUnlockInfo">
+          <div class="cu-card" role="dialog" aria-modal="true" @click.stop>
+            <button type="button" class="cu-x" aria-label="Fechar" @click="closeChatUnlockInfo">✕</button>
+            <p class="cu-title">{{ chatUnlockReason === 'call' ? 'Oi amor… a chamada tá bloqueada' : 'Oi amor… o chat tá bloqueado' }}</p>
+            <div class="cu-body">
+              <p>O envio de mensagens fica trancado de propósito.</p>
+              <p>Serve de <strong>filtro</strong> — pra evitar gente que não valoriza meu tempo.</p>
+              <p>É só um valor simbólico de <strong>R$ 3,00</strong> pra liberar o chat.</p>
+              <p>Aí você conversa comigo, pede o que quiser… e tem <strong>muito mais coisa boa e quente</strong> te esperando depois de desbloquear 🔥</p>
+            </div>
+            <div class="cu-actions">
+              <button type="button" class="cu-btn cu-btn--no" @click="refuseChatUnlock">Não quero, sou viado</button>
+              <button type="button" class="cu-btn cu-btn--yes" @click="acceptChatUnlock">Desbloquear chat</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Popup 2: balão gamificado + Sim amor → PIX R$ 3 -->
+        <div v-if="showChatUnlockPix" class="cu-overlay" style="z-index:2147483001" @click.self="closeChatUnlockPix">
+          <div class="cu-pix-wrap" role="dialog" aria-modal="true" @click.stop>
+            <div class="cu-avatar-ring">
+              <img src="/model.jpg" alt="" class="cu-avatar" draggable="false" />
+            </div>
+            <div class="cu-balloon">
+              <p class="cu-balloon-text">Posso te mandar a chave PIX pra liberar o chat? 💚</p>
+              <span class="cu-balloon-tail" aria-hidden="true"></span>
+            </div>
+            <p class="cu-pix-hint">R$ 3,00 · libera na hora</p>
+            <button type="button" class="cu-btn cu-btn--yes cu-btn--wide" :disabled="!!chatPayLoading" @click="confirmChatUnlockPix">
+              {{ chatPayLoading ? 'Gerando PIX…' : 'Sim amor' }}
+            </button>
+            <button type="button" class="cu-btn-link" @click="refuseChatUnlock">Não quero, sou viado</button>
+          </div>
+        </div>
+
+
+
       <div
         v-if="showWaFunnel"
         class="wa-funnel-overlay"
@@ -947,41 +985,6 @@
       </div>
 
       
-        <!-- Popup 1: explicação simples do chat bloqueado -->
-        <div v-if="showChatUnlockInfo" class="cu-overlay" style="z-index:40130" @click.self="closeChatUnlockInfo">
-          <div class="cu-card" role="dialog" aria-modal="true" @click.stop>
-            <button type="button" class="cu-x" aria-label="Fechar" @click="closeChatUnlockInfo">✕</button>
-            <p class="cu-title">{{ chatUnlockReason === 'call' ? 'Oi amor… a chamada tá bloqueada' : 'Oi amor… o chat tá bloqueado' }}</p>
-            <div class="cu-body">
-              <p>O envio de mensagens fica trancado de propósito.</p>
-              <p>Serve de <strong>filtro</strong> — pra evitar gente que não valoriza meu tempo.</p>
-              <p>É só um valor simbólico de <strong>R$ 3,00</strong> pra liberar o chat.</p>
-              <p>Aí você conversa comigo, pede o que quiser… e tem <strong>muito mais coisa boa e quente</strong> te esperando depois de desbloquear 🔥</p>
-            </div>
-            <div class="cu-actions">
-              <button type="button" class="cu-btn cu-btn--no" @click="refuseChatUnlock">Não quero, sou viado</button>
-              <button type="button" class="cu-btn cu-btn--yes" @click="acceptChatUnlock">Desbloquear chat</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Popup 2: balão gamificado + Sim amor → PIX R$ 3 -->
-        <div v-if="showChatUnlockPix" class="cu-overlay" style="z-index:40140" @click.self="closeChatUnlockPix">
-          <div class="cu-pix-wrap" role="dialog" aria-modal="true" @click.stop>
-            <div class="cu-avatar-ring">
-              <img src="/model.jpg" alt="" class="cu-avatar" draggable="false" />
-            </div>
-            <div class="cu-balloon">
-              <p class="cu-balloon-text">Posso te mandar a chave PIX pra liberar o chat? 💚</p>
-              <span class="cu-balloon-tail" aria-hidden="true"></span>
-            </div>
-            <p class="cu-pix-hint">R$ 3,00 · libera na hora</p>
-            <button type="button" class="cu-btn cu-btn--yes cu-btn--wide" :disabled="!!chatPayLoading" @click="confirmChatUnlockPix">
-              {{ chatPayLoading ? 'Gerando PIX…' : 'Sim amor' }}
-            </button>
-            <button type="button" class="cu-btn-link" @click="refuseChatUnlock">Não quero, sou viado</button>
-          </div>
-        </div>
 <div v-if="showChatPlans" class="chat-plans-overlay" @click.self="closeChatPlans">
         <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
           <div class="chat-plans-handle" aria-hidden="true"></div>
@@ -1302,8 +1305,9 @@ const chatUnlockReason = ref<'chat' | 'call' | 'media'>('chat')
 
 function openChatUnlockInfo(reason: 'chat' | 'call' | 'media' = 'chat') {
   if (funnelChatUnlocked.value) return
-  if (funnelBlocked.value || funnelPermBlocked.value || leadBlockedWanessa.value) return
-  chatUnlockReason.value = reason
+  if (leadBlockedWanessa.value) return
+  chatUnlockReason.value = reason || 'chat'
+  showChatUnlockPix.value = false
   showChatUnlockInfo.value = true
   try { track('chat_unlock_info_open', { offer_slug: 'chat_quick', reason }) } catch {}
 }
@@ -1428,9 +1432,8 @@ function closeFunnelEmojiPicker() {
 }
 function onFunnelVideoCall() {
   showFunnelMoreMenu.value = false
-  if (funnelPermBlocked.value || leadBlockedWanessa.value) return
-  // Chat bloqueado → popup de desbloquear (não abre chamada)
-  if (!funnelChatUnlocked.value && !isAdmin.value) {
+  if (leadBlockedWanessa.value) return
+  if (!funnelChatUnlocked.value) {
     openChatUnlockInfo('call')
     return
   }
@@ -4213,8 +4216,8 @@ function loadFunnelState(): boolean {
     funnelMessages.value = data.messages
     selectedPack.value = data.selectedPack || null
     funnelBlocked.value = !!data.blocked || data.step === 'closed_offline'
-    // Só restaura unlock se realmente pagou (flag salva após PIX)
-    funnelChatUnlocked.value = !!data.chatUnlocked
+    // Não restaura unlock do storage — só após PIX nesta sessão
+    funnelChatUnlocked.value = false
     return true
   } catch {
     return false
@@ -4568,22 +4571,19 @@ function deleteFunnelMsg() {
 }
 
 async function sendFunnelFreeText() {
-  // Mensagem digitada é PAGA (R$ 3,00). Filtra lead que não gasta.
-  if (funnelBlocked.value) return
-  if (funnelPermBlocked.value || leadBlockedWanessa.value) return
+  if (leadBlockedWanessa.value) return
   if (funnelTyping.value) return
-
-  // GATE: mesmo sem texto → mesmo popup da chamada
   if (!funnelChatUnlocked.value) {
-    const text = (funnelInput.value || '').trim()
-    if (text) {
-      try { (window as any).__pendingLeadText = text } catch {}
+    const pending = (funnelInput.value || '').trim()
+    if (pending) {
+      try { (window as any).__pendingLeadText = pending } catch {}
       funnelInput.value = ''
     }
     openChatUnlockInfo('chat')
     return
   }
-
+  if (funnelBlocked.value) return
+  if (funnelPermBlocked.value) return
   const text = (funnelInput.value || '').trim()
   if (!text) return
 
@@ -5959,6 +5959,8 @@ useHead({
   meta: [{ name: 'description', content: 'Acesso restrito — privacidade e alto nível.' }, { name: 'theme-color', content: '#12081a' }],
 })
 </script>
+<style scoped>
+
 .cu-overlay {
   position: fixed;
   inset: 0;
@@ -6121,3 +6123,5 @@ useHead({
   color: #8696a0;
 }
 
+
+</style>
