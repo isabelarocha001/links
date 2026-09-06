@@ -76,11 +76,6 @@
           <div class="photo-stage">
             <div class="photo-frame">
               <img v-for="(src, i) in gallery" :key="src + i" :src="src" :class="['hero-photo', { 'is-active': i === photoIndex }]" alt="" decoding="async" draggable="false" />
-              <!-- RGB em loop no corpo (não na borda do frame) -->
-              <div class="photo-rgb" aria-hidden="true">
-                <span class="photo-rgb-layer photo-rgb-layer--a"></span>
-                <span class="photo-rgb-layer photo-rgb-layer--b"></span>
-              </div>
               <div class="photo-shine" aria-hidden="true"></div>
               <div class="photo-vignette" aria-hidden="true"></div>
             </div>
