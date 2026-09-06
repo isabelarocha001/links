@@ -3586,6 +3586,36 @@ function saveFunnelConversationLocal(conversation_id: string, access_token: stri
   } catch {}
 }
 
+/** Garante conversation_id + access_token no client (precisa pra puxar reply do admin). */
+async function ensureFunnelConversation(): Promise<boolean> {
+  try {
+    if (!funnelConversationId.value || !funnelAccessToken.value) loadFunnelConversationLocal()
+    if (funnelConversationId.value && funnelAccessToken.value) return true
+    const visitor_id = getOrCreateVisitorId()
+    const res = await $fetch<{ ok?: boolean; conversation_id?: string; access_token?: string }>('/api/funnel-chat', {
+      method: 'POST',
+      body: {
+        visitor_id,
+        session_id: getFunnelSessionId(),
+        conversation_id: null,
+        access_token: null,
+        creator_slug: 'wanessabsx',
+        direction: 'lead',
+        message: '[sync]',
+        step: funnelStep.value || 'greeting',
+        chat_unlocked: !!funnelChatUnlocked.value,
+        metadata: { event: 'ensure_conversation' },
+      },
+    })
+    if (res?.conversation_id && res?.access_token) {
+      saveFunnelConversationLocal(res.conversation_id, res.access_token)
+      return true
+    }
+  } catch (e) {
+    console.warn('[ensureFunnelConversation]', e)
+  }
+  return !!(funnelConversationId.value && funnelAccessToken.value)
+
 
 async function uploadLeadMediaAndNotify(label: string, kind: string, blobUrl: string, html?: string) {
   try {
@@ -3656,18 +3686,8 @@ function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Rec
         }
       } catch {}
     }
-    // Com chat desbloqueado sempre fetch (notifica Telegram no server)
-    // sendBeacon só no funil automático sem unlock
-    if (
-      !unlocked &&
-      funnelConversationId.value &&
-      typeof navigator !== 'undefined' &&
-      typeof navigator.sendBeacon === 'function'
-    ) {
-      const blob = new Blob([json], { type: 'application/json' })
-      navigator.sendBeacon('/api/funnel-chat', blob)
-      return
-    }
+    // Sempre fetch (não sendBeacon) pra receber conversation_id/access_token
+    // e o lead conseguir puxar respostas do admin em tempo real
     fetch('/api/funnel-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3895,13 +3915,14 @@ function applyAdminLivePayload(raw: string) {
 }
 
 async function pullLiveAdminReplies() {
-  if (!funnelChatUnlocked.value) return
+  // Sempre busca respostas do admin enquanto o funil está aberto (não só chat pago liberado)
+  if (!showWaFunnel.value) return
   if (!funnelConversationId.value || !funnelAccessToken.value) return
   try {
     const visitor_id = getOrCreateVisitorId()
     const res = await $fetch<{
       ok?: boolean
-      messages?: Array<{ id: string; direction: string; message: string; created_at?: string }>
+      messages?: Array<{ id: string; direction: string; message: string; step?: string; created_at?: string }>
     }>('/api/funnel-chat', {
       query: {
         conversation_id: funnelConversationId.value,
@@ -3915,10 +3936,20 @@ async function pullLiveAdminReplies() {
       if (!m.id || seenLiveMsgIds.value[m.id]) continue
       const text = String(m.message || '').trim()
       if (!text) continue
+      // Só mensagens do admin (painel / telegram / live), não respostas automáticas do funil
+      const step = String(m.step || '')
+      const isAdminMsg =
+        step === 'live_admin' ||
+        text.startsWith('⟦ADMIN⟧') ||
+        step === 'telegram_admin'
+      if (!isAdminMsg) {
+        // marca como vista pra não reprocessar depois
+        seenLiveMsgIds.value[m.id] = true
+        continue
+      }
       seenLiveMsgIds.value[m.id] = true
       const last = funnelMessages.value[funnelMessages.value.length - 1]
       if (last?.from === 'her' && last.text === text) {
-        // sincroniza id do servidor pra read receipt
         try { last.id = m.id } catch {}
         continue
       }
@@ -3935,9 +3966,14 @@ function startLiveChatPoll() {
   stopLiveChatPoll()
   startPresencePoll()
   startLeadPresenceHeartbeat()
-  if (!funnelChatUnlocked.value) return
-  try { syncCallCreditFromServer() } catch {}
-  pullLiveAdminReplies()
+  // Sempre escuta respostas do admin enquanto o chat estiver aberto
+  if (funnelChatUnlocked.value) {
+    try { syncCallCreditFromServer() } catch {}
+  }
+  // Garante conversation_id antes do primeiro pull
+  ensureFunnelConversation()
+    .then(() => pullLiveAdminReplies())
+    .catch(() => pullLiveAdminReplies())
   liveChatPollTimer = setInterval(() => {
     pullLiveAdminReplies()
   }, 3000)
@@ -4001,6 +4037,7 @@ function openWaFunnel(source = 'whatsapp') {
   try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open', source }) } catch {}
   showWaFunnel.value = true
   try { startLeadPresenceHeartbeat() } catch {}
+  try { startLiveChatPoll() } catch {}
   funnelKeyboardOpen.value = false
   lockBodyScrollForFunnel()
   startPresencePoll()
