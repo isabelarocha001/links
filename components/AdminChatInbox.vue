@@ -21,6 +21,9 @@ type ChatMsg = {
   message: string
   step?: string
   created_at?: string
+  selected_offer?: string | null
+  selected_price?: string | null
+  metadata?: Record<string, any> | null
 }
 
 const authed = ref(false)
@@ -308,6 +311,71 @@ function labelAdminMessage(raw: string): string {
   } catch {}
   return t
 }
+
+function isSystemMsg(m: ChatMsg) {
+  return m.direction === 'system' || String(m.message || '').startsWith('[botões]') || String(m.message || '').startsWith('[intent]')
+}
+
+function isOptionClick(m: ChatMsg) {
+  if (m.direction !== 'lead') return false
+  const ev = m.metadata && (m.metadata as any).event
+  if (ev === 'option_click') return true
+  const t = String(m.message || '')
+  // heurística: botões conhecidos do funil
+  return /^(← Voltar|📹 |🎬 |🔥 |💕 |💬 |\d+ min|1 hora|Pack |Combo |Sim, pode mandar|Ainda não|7 dias|15 dias|30 dias)/.test(t)
+}
+
+function systemButtonLabels(m: ChatMsg): string[] {
+  const meta = m.metadata || {}
+  if (Array.isArray((meta as any).option_labels) && (meta as any).option_labels.length) {
+    return (meta as any).option_labels.map((x: any) => String(x))
+  }
+  const msg = String(m.message || '')
+  if (msg.startsWith('[botões]')) {
+    const parts = msg.split(':')
+    if (parts.length >= 2) {
+      return parts.slice(1).join(':').split('·').map((s) => s.trim()).filter(Boolean)
+    }
+  }
+  return []
+}
+
+function labelSystemMessage(m: ChatMsg): string {
+  const msg = String(m.message || '')
+  if (msg.startsWith('[botões]')) {
+    const step = msg.replace(/^\[botões\]\s*/, '').split(':')[0].trim()
+    return `Botões na etapa "${step}"`
+  }
+  if (msg.startsWith('[intent]')) return `Sistema: ${msg}`
+  return msg
+}
+
+function bubbleClass(m: ChatMsg) {
+  if (isSystemMsg(m)) return 'system'
+  if (m.direction === 'lead') return isOptionClick(m) ? 'lead option' : 'lead'
+  return 'bot'
+}
+
+const funnelSummary = computed(() => {
+  const list = messages.value || []
+  if (!list.length) return null
+  let step = ''
+  let offer = ''
+  let price = ''
+  let lastButtons: string[] = []
+  for (let i = list.length - 1; i >= 0; i--) {
+    const m = list[i]
+    if (!step && m.step) step = String(m.step)
+    if (!offer && m.selected_offer) offer = String(m.selected_offer)
+    if (!price && m.selected_price) price = String(m.selected_price)
+    if (!lastButtons.length && isSystemMsg(m)) {
+      lastButtons = systemButtonLabels(m)
+    }
+    if (step && (offer || true) && (lastButtons.length || i < list.length - 8)) break
+  }
+  return { step, offer, price, lastButtons }
+})
+
 
 async function sendAdminAction(body: Record<string, any>) {
   if (!selectedId.value || actionBusy.value) return
@@ -632,18 +700,51 @@ if (typeof window !== 'undefined') {
             <span v-if="selectedBlockReason">· {{ selectedBlockReason }}</span>
           </div>
 
+          <div v-if="funnelSummary" class="ac-funnel-summary">
+            <div class="ac-funnel-title">Funil do lead</div>
+            <div class="ac-funnel-row">
+              <span class="ac-chip">etapa: {{ funnelSummary.step || '—' }}</span>
+              <span v-if="funnelSummary.offer" class="ac-chip offer">oferta: {{ funnelSummary.offer }}</span>
+              <span v-if="funnelSummary.price" class="ac-chip price">R$ {{ funnelSummary.price }}</span>
+              <span class="ac-chip">msgs: {{ messages.length }}</span>
+            </div>
+            <div v-if="funnelSummary.lastButtons" class="ac-funnel-buttons">
+              <span class="ac-funnel-label">Últimos botões oferecidos:</span>
+              <div class="ac-opt-row">
+                <span v-for="(b, bi) in funnelSummary.lastButtons" :key="bi" class="ac-opt-chip">{{ b }}</span>
+              </div>
+            </div>
+          </div>
+
           <div id="admin-msg-list" class="ac-msgs">
             <p v-if="messagesLoading && !messages.length" class="ac-muted pad">Carregando msgs…</p>
             <div
               v-for="(m, i) in messages"
               :key="m.id || i"
               class="ac-bubble"
-              :class="m.direction === 'lead' ? 'lead' : 'bot'"
+              :class="bubbleClass(m)"
             >
-              <p>{{ labelAdminMessage(m.message) }}</p>
+              <div v-if="m.step || m.selected_offer" class="ac-meta-row">
+                <span v-if="m.step" class="ac-chip step">{{ m.step }}</span>
+                <span v-if="m.selected_offer" class="ac-chip offer">{{ m.selected_offer }}</span>
+                <span v-if="m.selected_price" class="ac-chip price">R$ {{ m.selected_price }}</span>
+              </div>
+              <template v-if="isSystemMsg(m)">
+                <p class="ac-sys-text">{{ labelSystemMessage(m) }}</p>
+                <div v-if="systemButtonLabels(m).length" class="ac-opt-row">
+                  <span v-for="(b, bi) in systemButtonLabels(m)" :key="bi" class="ac-opt-chip">{{ b }}</span>
+                </div>
+              </template>
+              <template v-else-if="isOptionClick(m)">
+                <p class="ac-opt-click">Tocou botão: <strong>{{ m.message }}</strong></p>
+              </template>
+              <template v-else>
+                <p>{{ labelAdminMessage(m.message) }}</p>
+              </template>
               <span>
                 {{ formatTime(m.created_at) }}
-                <template v-if="m.direction !== 'lead' && isMsgReadByLead(m)"> · visualizado</template>
+                <template v-if="m.direction === 'lead' && isOptionClick(m)"> · escolha do funil</template>
+                <template v-else-if="m.direction !== 'lead' && m.direction !== 'system' && isMsgReadByLead(m)"> · visualizado</template>
               </span>
             </div>
           </div>
@@ -1113,6 +1214,81 @@ if (typeof window !== 'undefined') {
   color: #e9edef;
   border-bottom-right-radius: 4px;
 }
+.ac-bubble.system {
+  align-self: center;
+  max-width: 92%;
+  background: rgba(255,255,255,0.06);
+  color: #aebac1;
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+.ac-bubble.lead.option {
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  background: #1a3a2a;
+}
+.ac-sys-text { margin: 0 0 6px; opacity: 0.9; }
+.ac-opt-click { margin: 0; }
+.ac-opt-click strong { color: #25d366; }
+.ac-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.ac-chip {
+  display: inline-block;
+  font-size: 0.65rem;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #aebac1;
+}
+.ac-chip.step { background: rgba(99, 102, 241, 0.25); color: #c7d2fe; }
+.ac-chip.offer { background: rgba(234, 179, 8, 0.2); color: #fde68a; }
+.ac-chip.price { background: rgba(37, 211, 102, 0.2); color: #86efac; }
+.ac-opt-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.ac-opt-chip {
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(37, 211, 102, 0.15);
+  color: #d1fae5;
+  border: 1px solid rgba(37, 211, 102, 0.25);
+}
+.ac-funnel-summary {
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #111b21;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.ac-funnel-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8696a0;
+  margin-bottom: 6px;
+}
+.ac-funnel-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.ac-funnel-label {
+  display: block;
+  font-size: 0.72rem;
+  color: #8696a0;
+  margin-bottom: 4px;
+}
+.ac-funnel-buttons { margin-top: 4px; }
+
 
 .ac-composer {
   display: flex;
