@@ -2267,11 +2267,9 @@ const pixIsEmv = computed(() => /^000201/.test(pixCopyCode.value || ''))
 let pixPollTimer: ReturnType<typeof setInterval> | null = null
 
 const chatPlans = [
-  { key: 'chat_quick', title: 'Desbloquear mensagens', desc: 'paga R$ 9,90 e libera enviar mensagem', price: 9.9, priceLabel: '9,90', hot: true },
-  { key: 'chat_basic', title: 'Chat 30 min', desc: 'conversa completa só nosso', price: 19.9, priceLabel: '19,90' },
-  { key: 'chat_midia', title: 'Chat + mídias', desc: 'fotos e vídeos no momento', price: 29.9, priceLabel: '29,90' },
+  { key: 'chat_quick', title: 'Desbloquear mensagens', desc: 'R$ 9,90 libera enviar mensagem', price: 9.9, priceLabel: '9,90', hot: true },
 ]
-/** Entrada mínima pra digitar no chat (filtra lead que não paga). */
+/** Único valor pra digitar no chat (sem menu extra — zero fricção). */
 const CHAT_MSG_UNLOCK_PLAN = chatPlans[0]
 
 function openChatPlans() {
@@ -3483,8 +3481,6 @@ const funnelOptions = computed(() => {
   if (funnelStep.value === 'chat' || funnelStep.value === 'chat_unlock') {
     return [
       { key: 'chat_quick', label: 'Liberar mensagens  R$ 9,90', variant: 'wa-quick--yes' },
-      { key: 'chat_basic', label: 'Chat 30 min  R$ 19,90', variant: 'wa-quick--yes' },
-      { key: 'chat_midia', label: 'Chat + mídias  R$ 29,90', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
@@ -4991,13 +4987,9 @@ if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30' || opt.
   }
 
   if (opt.key === 'chat_quick' || opt.key === 'chat_basic' || opt.key === 'chat_midia') {
-    const map: Record<string, { label: string; price: string; desc: string }> = {
-      chat_quick: { label: 'Desbloquear mensagens', price: '9,90', desc: 'libera enviar mensagem no chat' },
-      chat_basic: { label: 'Chat 30 min', price: '19,90', desc: 'papo safado só nosso' },
-      chat_midia: { label: 'Chat + mídia', price: '29,90', desc: 'chat com fotos e vídeos no momento' },
-    }
-    const p = map[opt.key]
-    selectedPack.value = { key: opt.key, label: p.label, price: p.price }
+    // Só R$ 9,90 — sem menu de outros valores (menos fricção)
+    const p = { label: 'Desbloquear mensagens', price: '9,90', desc: 'libera enviar mensagem no chat' }
+    selectedPack.value = { key: 'chat_quick', label: p.label, price: p.price }
     track('whatsapp_funnel_select', { offer_slug: opt.key })
     await startFunnelCheckout()
     return
