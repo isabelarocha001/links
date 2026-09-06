@@ -585,7 +585,7 @@
               type="text"
               enterkeyhint="send"
               autocomplete="off"
-              :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : 'Mensagem')"
+              :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : (funnelChatUnlocked ? 'Mensagem' : 'Pague R$ 9,90 pra enviar'))"
               :disabled="funnelBlocked || funnelTyping"
               @focus="onFunnelInputFocus(); !funnelBlocked && onFunnelComposerInteract()"
               @blur="onFunnelInputBlur()"
@@ -2267,10 +2267,12 @@ const pixIsEmv = computed(() => /^000201/.test(pixCopyCode.value || ''))
 let pixPollTimer: ReturnType<typeof setInterval> | null = null
 
 const chatPlans = [
-  { key: 'chat_quick', title: 'Chat rápido', desc: '10 min de papo safado', price: 9.9, priceLabel: '9,90' },
-  { key: 'chat_basic', title: 'Chat 30 min', desc: 'conversa completa só nosso', price: 19.9, priceLabel: '19,90', hot: true },
+  { key: 'chat_quick', title: 'Desbloquear mensagens', desc: 'paga R$ 9,90 e libera enviar mensagem', price: 9.9, priceLabel: '9,90', hot: true },
+  { key: 'chat_basic', title: 'Chat 30 min', desc: 'conversa completa só nosso', price: 19.9, priceLabel: '19,90' },
   { key: 'chat_midia', title: 'Chat + mídias', desc: 'fotos e vídeos no momento', price: 29.9, priceLabel: '29,90' },
 ]
+/** Entrada mínima pra digitar no chat (filtra lead que não paga). */
+const CHAT_MSG_UNLOCK_PLAN = chatPlans[0]
 
 function openChatPlans() {
   chatPayError.value = ''
@@ -3281,10 +3283,21 @@ async function onFunnelPaid() {
     funnelChatUnlocked.value = true
     funnelBlocked.value = false
     startLiveChatPoll()
+    showPixModal.value = false
+    showChatPlans.value = false
     await funnelType(
-      'Recebi 🔥 Agora a gente pode ir mais fundo…\n\nMe conta o que você quer em especial: sexting, fotos, vídeo, videochamada… o que te deixa mais louco? Assim eu já entro no clima certo pra você 😏',
-      2200,
+      'Pronto, mensagens liberadas ✅|||Pode me mandar o que quiser agora 😏',
+      1200,
     )
+    // Se tinha texto pendente (travou no gate de R$ 9,90), processa de novo
+    try {
+      const pending = String((window as any).__pendingLeadText || '').trim()
+      if (pending) {
+        ;(window as any).__pendingLeadText = ''
+        funnelInput.value = pending
+        await sendFunnelFreeText()
+      }
+    } catch {}
     funnelStep.value = 'other'
     return
   }
@@ -3467,10 +3480,11 @@ const funnelOptions = computed(() => {
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
-  if (funnelStep.value === 'chat') {
+  if (funnelStep.value === 'chat' || funnelStep.value === 'chat_unlock') {
     return [
-      { key: 'chat_basic', label: 'Chat 30-40 min  R$ 49,90', variant: 'wa-quick--yes' },
-      { key: 'chat_midia', label: 'Chat + fotos/vídeos  R$ 79,90', variant: 'wa-quick--yes' },
+      { key: 'chat_quick', label: 'Liberar mensagens  R$ 9,90', variant: 'wa-quick--yes' },
+      { key: 'chat_basic', label: 'Chat 30 min  R$ 19,90', variant: 'wa-quick--yes' },
+      { key: 'chat_midia', label: 'Chat + mídias  R$ 29,90', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
@@ -4385,10 +4399,32 @@ function deleteFunnelMsg() {
 }
 
 async function sendFunnelFreeText() {
-  // Digitar mensagens é sempre livre. Cobra só por packs / vídeo / mídia / etc.
+  // Mensagem digitada é PAGA (R$ 9,90). Filtra lead que não gasta.
   if (funnelBlocked.value) return
   const text = (funnelInput.value || '').trim()
   if (!text || funnelTyping.value) return
+
+  if (!funnelChatUnlocked.value) {
+    // Guarda o texto e cobra o unlock
+    try { (window as any).__pendingLeadText = text } catch {}
+    funnelInput.value = ''
+    pushFunnel('me', text)
+    try { logFunnelMessage('lead', text, { event: 'paid_chat_gate', pending_unlock: true }) } catch {}
+    await funnelType(
+      'Pra eu te responder aqui no chat é R$ 9,90 💚|||É só o valor de entrada — filtra quem é sério.|||Gero o PIX agora?',
+      1200,
+    )
+    funnelStep.value = 'chat_unlock'
+    selectedPack.value = {
+      key: CHAT_MSG_UNLOCK_PLAN.key,
+      label: CHAT_MSG_UNLOCK_PLAN.title,
+      price: CHAT_MSG_UNLOCK_PLAN.priceLabel,
+    }
+    selectedChatPlan.value = CHAT_MSG_UNLOCK_PLAN
+    try { await buyChatPlan(CHAT_MSG_UNLOCK_PLAN) } catch {}
+    return
+  }
+
   funnelInput.value = ''
   pushFunnel('me', text)
   try { saveFunnelState() } catch {}
@@ -4946,18 +4982,19 @@ if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30' || opt.
 
   if (opt.key === 'conversar') {
     track('whatsapp_funnel_intent', { offer_slug: 'conversar' })
-    funnelStep.value = 'chat'
+    funnelStep.value = 'chat_unlock'
     await funnelType(
-      'Chat comigo também tem valor, amor 😘\n\n• R$ 49,90 chat safado 30-40 min\n• R$ 79,90 chat + fotos e vídeos no momento\n\nO que você prefere?',
+      'Pra conversar comigo aqui o valor de entrada é R$ 9,90 💚|||Assim eu sei que você é sério.|||Quer liberar as mensagens agora?',
       1200,
     )
     return
   }
 
-  if (opt.key === 'chat_basic' || opt.key === 'chat_midia') {
+  if (opt.key === 'chat_quick' || opt.key === 'chat_basic' || opt.key === 'chat_midia') {
     const map: Record<string, { label: string; price: string; desc: string }> = {
-      chat_basic: { label: 'Chat 30-40 min', price: '49,90', desc: 'papo safado só nosso' },
-      chat_midia: { label: 'Chat + mídia', price: '79,90', desc: 'chat com fotos e vídeos no momento' },
+      chat_quick: { label: 'Desbloquear mensagens', price: '9,90', desc: 'libera enviar mensagem no chat' },
+      chat_basic: { label: 'Chat 30 min', price: '19,90', desc: 'papo safado só nosso' },
+      chat_midia: { label: 'Chat + mídia', price: '29,90', desc: 'chat com fotos e vídeos no momento' },
     }
     const p = map[opt.key]
     selectedPack.value = { key: opt.key, label: p.label, price: p.price }
