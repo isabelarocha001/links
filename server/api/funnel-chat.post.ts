@@ -1,4 +1,5 @@
 import { useServiceSupabase, getClientIp } from '../utils/supabase'
+import { notifyTelegramLeadMessage } from '../utils/telegram'
 
 type LeadClass = {
   verdict: 'GOOD' | 'BAD' | 'UNKNOWN'
@@ -94,106 +95,6 @@ ${message.slice(0, 1200)}
   } catch (e: any) {
     console.warn('[funnel-chat] gemini classify', e?.message || e)
     return { verdict: 'UNKNOWN', reason: e?.message || 'erro ao classificar' }
-  }
-}
-
-async function notifyTelegramLeadMessage(opts: {
-  conversationId: string
-  visitorId: string
-  message: string
-  step?: string | null
-  unlocked?: boolean
-}) {
-  if (!opts.unlocked) return
-  const env = process.env as Record<string, string | undefined>
-  let botToken = String(env.TELEGRAM_BOT_TOKEN || env.NUXT_TELEGRAM_BOT_TOKEN || '').trim()
-  let ownerChatId = String(
-    env.TELEGRAM_OWNER_CHAT_ID || env.NUXT_TELEGRAM_OWNER_CHAT_ID || env.TELEGRAM_ADMIN_CHAT_ID || '',
-  ).trim()
-  const supabase = useServiceSupabase()
-  if (!botToken || !ownerChatId) {
-    try {
-      const { data } = await supabase
-        .from('app_secrets')
-        .select('key, value')
-        .in('key', ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_OWNER_CHAT_ID', 'TELEGRAM_ADMIN_CHAT_ID'])
-      for (const row of data || []) {
-        const k = String(row.key || '')
-        const v = row.value ? String(row.value).trim() : ''
-        if (!v) continue
-        if (!botToken && k === 'TELEGRAM_BOT_TOKEN') botToken = v
-        if (!ownerChatId && (k === 'TELEGRAM_OWNER_CHAT_ID' || k === 'TELEGRAM_ADMIN_CHAT_ID')) ownerChatId = v
-      }
-    } catch {}
-  }
-  if (!botToken || !ownerChatId) {
-    console.warn('[funnel-chat] telegram notify skipped: missing bot token or owner chat id')
-    return
-  }
-
-  // Classifica com Gemini — sempre notifica, mas deixa claro o veredito
-  const classification = await classifyLeadWithGemini(opts.message, opts.step)
-  const badge =
-    classification.verdict === 'GOOD'
-      ? '✅ LEAD BOM (Gemini)'
-      : classification.verdict === 'BAD'
-        ? '⚠️ LEAD RUIM (Gemini) — avalie manualmente'
-        : '❔ LEAD (Gemini não classificou)'
-
-  const text =
-    `${badge}\n` +
-    `💬 Lead no chat do site (desbloqueado)\n` +
-    `Conv: ${opts.conversationId}\n` +
-    `Visitor: ${opts.visitorId.slice(0, 12)}\n` +
-    (opts.step ? `Step: ${opts.step}\n` : '') +
-    `\n📝 Mensagem do lead:\n${opts.message.slice(0, 1200)}\n\n` +
-    `🤖 Motivo Gemini (${classification.verdict}): ${classification.reason}\n\n` +
-    `↩️ Responda esta mensagem (reply) pra falar com o lead no site.`
-
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: ownerChatId,
-        text,
-        disable_web_page_preview: true,
-      }),
-    })
-    const data = await res.json().catch(() => ({} as any))
-    if (data?.result?.message_id) {
-      try {
-        const { data: conv } = await supabase
-          .from('wa_funnel_conversations')
-          .select('metadata')
-          .eq('id', opts.conversationId)
-          .maybeSingle()
-        const prev = (conv?.metadata && typeof conv.metadata === 'object') ? conv.metadata : {}
-        await supabase
-          .from('wa_funnel_conversations')
-          .update({
-            telegram_last_notify_id: data.result.message_id,
-            metadata: {
-              ...prev,
-              last_gemini_verdict: classification.verdict,
-              last_gemini_reason: classification.reason,
-              last_gemini_at: new Date().toISOString(),
-            },
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', opts.conversationId)
-      } catch {
-        await supabase
-          .from('wa_funnel_conversations')
-          .update({
-            telegram_last_notify_id: data.result.message_id,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', opts.conversationId)
-      }
-    }
-  } catch (e: any) {
-    console.error('[funnel-chat] telegram notify', e?.message || e)
   }
 }
 
@@ -370,10 +271,9 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Se o chat está desbloqueado, avisa o admin no Telegram pra responder
+    // Sempre avisa o admin no Telegram quando o lead manda mensagem
     const unlocked = body?.chat_unlocked === true || body?.unlocked === true || step === 'other' || step === 'live_admin'
     if (direction === 'lead' && conversation_id) {
-      // fire-and-forget
       notifyTelegramLeadMessage({
         conversationId: conversation_id,
         visitorId: visitor_id,
