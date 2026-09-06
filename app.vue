@@ -626,12 +626,11 @@
               :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : (funnelChatUnlocked ? 'Mensagem' : 'Toque para liberar o chat'))"
               :readonly="!funnelChatUnlocked"
               :disabled="funnelBlocked || funnelTyping || leadBlockedWanessa"
-              @pointerdown="onComposerPointer($event)"
-              @click="onComposerPointer($event)"
+              @click.stop="onComposerPointer($event)"
               @focus="onComposerFocus($event)"
               @blur="onFunnelInputBlur()"
               @keydown="onFunnelComposerKey"
-              @keydown.enter.prevent="sendFunnelFreeText"
+              @keydown.enter.prevent="onSendOrUnlock"
             />
             <button type="button" class="wa-composer-icon" aria-label="Anexar" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : (closeFunnelEmojiPicker(), onFunnelAttach())">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -656,7 +655,7 @@
               class="wa-send"
               aria-label="Enviar"
               :disabled="funnelTyping || (funnelChatUnlocked && !funnelInput.trim())"
-              @click="sendFunnelFreeText"
+              @click.stop.prevent="onSendOrUnlock"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
@@ -1315,8 +1314,8 @@ function openChatUnlockInfo(reason: 'chat' | 'call' | 'media' = 'chat') {
 /** Toque no campo de digitação bloqueado → popup de benefícios */
 function onLockedComposerTap(e?: Event) {
   if (funnelChatUnlocked.value) return
-  if (funnelBlocked.value || leadBlockedWanessa.value) return
-  try { e?.preventDefault?.(); e?.stopPropagation?.(); (e?.target as any)?.blur?.() } catch {}
+  if (leadBlockedWanessa.value) return
+  try { (e?.target as any)?.blur?.() } catch {}
   openChatUnlockInfo('chat')
 }
 
@@ -1332,6 +1331,17 @@ function onComposerFocus(e: Event) {
   }
   onFunnelInputFocus()
   if (!funnelBlocked.value) onFunnelComposerInteract()
+}
+
+/** Clique simples no enviar — abre popup se bloqueado (sem segurar) */
+function onSendOrUnlock(e?: Event) {
+  try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
+  if (leadBlockedWanessa.value || funnelTyping.value) return
+  if (!funnelChatUnlocked.value) {
+    openChatUnlockInfo('chat')
+    return
+  }
+  sendFunnelFreeText()
 }
 
 function closeChatUnlockInfo() {
