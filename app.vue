@@ -954,9 +954,9 @@
             <div class="chat-plans-handle" aria-hidden="true"></div>
             <div class="chat-plans-head">
               <div>
-                <p class="chat-plans-kicker">Chat privado</p>
-                <h3>Chat liberado por R$ 9,90</h3>
-                <p class="chat-plans-sub">Valor único de entrada — sem mensalidade</p>
+                <p class="chat-plans-kicker">{{ chatUnlockReason === 'call' ? 'Videochamada' : 'Chat privado' }}</p>
+                <h3>{{ chatUnlockReason === 'call' ? 'Chamada só com chat liberado' : 'Chat liberado por R$ 9,90' }}</h3>
+                <p class="chat-plans-sub">{{ chatUnlockReason === 'call' ? 'Pra eu te ligar, desbloqueia o chat por R$ 9,90' : 'Valor único de entrada — sem mensalidade' }}</p>
               </div>
               <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeChatUnlockInfo">✕</button>
             </div>
@@ -1290,11 +1290,14 @@ function requireFunnelChatOrPay(): boolean {
   return false
 }
 
-function openChatUnlockInfo() {
+const chatUnlockReason = ref<'chat' | 'call' | 'media'>('chat')
+
+function openChatUnlockInfo(reason: 'chat' | 'call' | 'media' = 'chat') {
   if (funnelChatUnlocked.value) return
   if (funnelBlocked.value || funnelPermBlocked.value || leadBlockedWanessa.value) return
+  chatUnlockReason.value = reason
   showChatUnlockInfo.value = true
-  try { track('chat_unlock_info_open', { offer_slug: 'chat_quick' }) } catch {}
+  try { track('chat_unlock_info_open', { offer_slug: 'chat_quick', reason }) } catch {}
 }
 
 /** Toque no campo de digitação bloqueado → popup de benefícios */
@@ -1374,6 +1377,11 @@ function closeFunnelEmojiPicker() {
 function onFunnelVideoCall() {
   showFunnelMoreMenu.value = false
   if (funnelPermBlocked.value || leadBlockedWanessa.value) return
+  // Chat bloqueado → popup de desbloquear (não abre chamada)
+  if (!funnelChatUnlocked.value && !isAdmin.value) {
+    openChatUnlockInfo('call')
+    return
+  }
   if (videoCallUnlocked.value || isAdmin.value) {
     openVideoCallPlayer()
     return
@@ -2989,6 +2997,11 @@ function playIncomingRingtone() {
 }
 
 function startIncomingVideoCall() {
+  // Lead sem chat liberado não recebe tela de chamada (exceto admin em teste)
+  if (!funnelChatUnlocked.value && !isAdmin.value) {
+    openChatUnlockInfo('call')
+    return
+  }
   showDeclineWhy.value = false
   declineWhyText.value = ''
   videoCallEndedUpsell.value = false
@@ -3002,6 +3015,10 @@ function startIncomingVideoCall() {
 async function acceptIncomingCall() {
   stopIncomingRingtone()
   showIncomingCall.value = false
+  if (!funnelChatUnlocked.value && !isAdmin.value) {
+    openChatUnlockInfo('call')
+    return
+  }
   let credit = loadCallCredit()
   try {
     const synced = await syncCallCreditFromServer()
@@ -3980,6 +3997,11 @@ function applyAdminLivePayload(raw: string, msgId?: string) {
         // Se o lead já recusou ESTE convite, não reabre e não manda nada
         if (msgId && declinedCallMsgIds.value[msgId]) return
         if (msgId) lastIncomingCallMsgId.value = msgId
+        if (!funnelChatUnlocked.value && !isAdmin.value) {
+          pushFunnel('her', 'Quero te ligar… libera o chat por R$ 9,90 pra atender 💚', undefined, { skipLog: true })
+          openChatUnlockInfo('call')
+          return
+        }
         // Só texto + UI de chamada — nunca foto/mídia junto do convite
         pushFunnel('her', 'Wanessa está te ligando…', undefined, { skipLog: true })
         try { startIncomingVideoCall() } catch {}
