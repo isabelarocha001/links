@@ -183,9 +183,10 @@
             <button type="button" class="cu-x" aria-label="Fechar" @click="closeChatUnlockInfo">✕</button>
             <p class="cu-title">{{ chatUnlockReason === 'call' ? 'Oi amor… a chamada tá bloqueada 🔒' : 'Oi amor… o chat tá bloqueado 🔒' }}</p>
             <div class="cu-body">
-              <p>{{ chatUnlockReason === 'call' ? 'A videochamada só libera depois que o chat está desbloqueado.' : 'O envio de mensagens fica bloqueado de propósito.' }}</p>
-              <p>É só um filtro pra separar quem realmente quer falar comigo.</p>
-              <p>Por <strong>R$ 3,00</strong> você desbloqueia e pode falar comigo por aqui 🔥</p>
+              <p v-if="chatUnlockReason === 'call'">A videochamada só libera depois que o chat está desbloqueado.</p>
+              <p>Eu recebo muita mensagem por aqui, então deixo o chat bloqueado pra quem realmente quer falar comigo.</p>
+              <p>São só <strong>R$ 3,00</strong> pra liberar — assim eu consigo dar atenção pra quem realmente veio conversar comigo 😏</p>
+              <p>Desbloqueou? Aí pode me chamar por aqui… 🔥</p>
             </div>
             <div class="cu-actions">
               <button type="button" class="cu-btn cu-btn--no" @click="refuseChatUnlock">Agora não</button>
