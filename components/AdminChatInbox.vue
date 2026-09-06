@@ -237,6 +237,110 @@ function scrollMsgs() {
 
 const replyError = ref('')
 
+
+const showAdminPoll = ref(false)
+const adminPollQ = ref('')
+const adminPollOpts = ref(['', ''])
+const adminPollErr = ref('')
+const adminMediaInput = ref<HTMLInputElement | null>(null)
+const adminMediaKind = ref<'photo' | 'video' | 'audio' | null>(null)
+const actionBusy = ref(false)
+
+function labelAdminMessage(raw: string): string {
+  const t = String(raw || '')
+  if (!t.startsWith('⟦ADMIN⟧')) return t
+  try {
+    const p = JSON.parse(t.slice('⟦ADMIN⟧'.length))
+    if (p.k === 'call') return '📞 Convite de videochamada'
+    if (p.k === 'photo') return '📷 Foto'
+    if (p.k === 'video') return '🎬 Vídeo'
+    if (p.k === 'audio') return '🎤 Áudio'
+    if (p.k === 'poll') return '📊 Enquete: ' + (p.q || '')
+  } catch {}
+  return t
+}
+
+async function sendAdminAction(body: Record<string, any>) {
+  if (!selectedId.value || actionBusy.value) return
+  actionBusy.value = true
+  replyError.value = ''
+  try {
+    await $fetch('/api/admin/conversation-reply', {
+      method: 'POST',
+      body: { id: selectedId.value, ...body },
+    })
+    await loadMessages()
+    await loadConversations()
+    await nextTick()
+    scrollMsgs()
+  } catch (e: any) {
+    replyError.value = e?.data?.statusMessage || e?.message || 'Falha ao enviar'
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+function inviteCall() {
+  sendAdminAction({ kind: 'call', message: 'call' })
+}
+
+function pickMedia(kind: 'photo' | 'video' | 'audio') {
+  adminMediaKind.value = kind
+  nextTick(() => adminMediaInput.value?.click())
+}
+
+function onAdminMediaPicked(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  const kind = adminMediaKind.value
+  adminMediaKind.value = null
+  if (!file || !kind) return
+  const max = kind === 'photo' ? 3.5 * 1024 * 1024 : 8 * 1024 * 1024
+  if (file.size > max) {
+    replyError.value = `Arquivo grande demais (máx. ${kind === 'photo' ? '3,5' : '8'} MB). Comprime ou manda link.`
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = () => {
+    const url = String(reader.result || '')
+    if (!url) return
+    sendAdminAction({ kind, url, message: kind })
+  }
+  reader.onerror = () => {
+    replyError.value = 'Não deu pra ler o arquivo'
+  }
+  reader.readAsDataURL(file)
+}
+
+function openAdminPoll() {
+  adminPollQ.value = ''
+  adminPollOpts.value = ['', '']
+  adminPollErr.value = ''
+  showAdminPoll.value = true
+}
+
+function addAdminPollOpt() {
+  if (adminPollOpts.value.length >= 5) return
+  adminPollOpts.value.push('')
+}
+
+function submitAdminPoll() {
+  const q = adminPollQ.value.trim()
+  const opts = adminPollOpts.value.map((o) => o.trim()).filter(Boolean)
+  if (q.length < 2) {
+    adminPollErr.value = 'Escreva a pergunta'
+    return
+  }
+  if (opts.length < 2) {
+    adminPollErr.value = 'Mínimo 2 opções'
+    return
+  }
+  showAdminPoll.value = false
+  sendAdminAction({ kind: 'poll', poll_question: q, poll_options: opts, message: 'poll' })
+}
+
+
 async function sendReply() {
   const text = replyText.value.trim()
   if (!text || !selectedId.value || replySending.value) return
@@ -474,9 +578,47 @@ if (typeof window !== 'undefined') {
               class="ac-bubble"
               :class="m.direction === 'lead' ? 'lead' : 'bot'"
             >
-              <p>{{ m.message }}</p>
+              <p>{{ labelAdminMessage(m.message) }}</p>
               <span>{{ formatTime(m.created_at) }}</span>
             </div>
+          </div>
+
+          <input
+            ref="adminMediaInput"
+            type="file"
+            class="ac-file-hidden"
+            accept="image/*,video/*,audio/*"
+            @change="onAdminMediaPicked"
+          />
+
+          <div v-if="showAdminPoll" class="ac-poll-modal" @click.self="showAdminPoll = false">
+            <div class="ac-poll-card" @click.stop>
+              <h3>Criar enquete</h3>
+              <input v-model="adminPollQ" class="ac-composer-input" type="text" placeholder="Pergunta" maxlength="120" />
+              <input
+                v-for="(opt, i) in adminPollOpts"
+                :key="i"
+                v-model="adminPollOpts[i]"
+                class="ac-composer-input"
+                type="text"
+                :placeholder="'Opção ' + (i + 1)"
+                maxlength="80"
+              />
+              <button v-if="adminPollOpts.length < 5" type="button" class="ac-link-btn" @click="addAdminPollOpt">+ opção</button>
+              <p v-if="adminPollErr" class="ac-err">{{ adminPollErr }}</p>
+              <div class="ac-poll-actions">
+                <button type="button" class="ac-link-btn" @click="showAdminPoll = false">Cancelar</button>
+                <button type="button" class="ac-btn-primary" @click="submitAdminPoll">Enviar enquete</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ac-actions" v-if="!selectedIsBlocked">
+            <button type="button" class="ac-action" title="Videochamada" :disabled="actionBusy" @click="inviteCall">📞</button>
+            <button type="button" class="ac-action" title="Foto" :disabled="actionBusy" @click="pickMedia('photo')">📷</button>
+            <button type="button" class="ac-action" title="Vídeo" :disabled="actionBusy" @click="pickMedia('video')">🎬</button>
+            <button type="button" class="ac-action" title="Áudio" :disabled="actionBusy" @click="pickMedia('audio')">🎤</button>
+            <button type="button" class="ac-action" title="Enquete" :disabled="actionBusy" @click="openAdminPoll">📊</button>
           </div>
 
           <p v-if="replyError" class="ac-reply-err">{{ replyError }}</p>
@@ -953,4 +1095,58 @@ if (typeof window !== 'undefined') {
   .ac-main--thread .ac-thread { display: flex; }
   .ac-shell { max-height: 100dvh; }
 }
+
+.ac-file-hidden { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+.ac-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 0;
+  flex-shrink: 0;
+  background: #1f2c34;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.ac-action {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: #2a3942;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ac-action:disabled { opacity: 0.45; cursor: wait; }
+.ac-action:not(:disabled):active { transform: scale(0.95); background: #334651; }
+.ac-poll-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.ac-poll-card {
+  width: 100%;
+  max-width: 380px;
+  background: #1f2c34;
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.ac-poll-card h3 { margin: 0; font-size: 1rem; color: #e9edef; }
+.ac-poll-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+
 </style>
