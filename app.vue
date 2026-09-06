@@ -3593,6 +3593,67 @@ function stopLiveChatPoll() {
   stopPresencePoll()
 }
 
+function applyAdminLivePayload(raw: string) {
+  const text = String(raw || '').trim()
+  if (!text) return
+  // Payload especial do admin: ⟦ADMIN⟧{...}
+  if (text.startsWith('⟦ADMIN⟧')) {
+    try {
+      const payload = JSON.parse(text.slice('⟦ADMIN⟧'.length))
+      const k = String(payload?.k || '')
+      if (k === 'call') {
+        pushFunnel('her', 'Wanessa está te ligando…', undefined, { skipLog: true })
+        try { startIncomingVideoCall() } catch {}
+        return
+      }
+      if (k === 'photo' && payload?.u) {
+        const u = String(payload.u)
+        pushFunnel(
+          'her',
+          'Foto',
+          `<img class="wa-media-img" src="${u.replace(/"/g, '&quot;')}" alt="foto" />`,
+          { skipLog: true, mediaKind: 'photo' },
+        )
+        return
+      }
+      if (k === 'video' && payload?.u) {
+        const u = String(payload.u)
+        pushFunnel(
+          'her',
+          'Vídeo',
+          `<div class="wa-video-modern" data-src="${u.replace(/"/g, '&quot;')}">
+            <video class="wa-media-video" src="${u.replace(/"/g, '&quot;')}" playsinline preload="metadata" controlslist="nodownload" disablepictureinpicture></video>
+            <button type="button" class="wa-video-play">▶</button>
+          </div>`,
+          { skipLog: true, mediaKind: 'video' },
+        )
+        return
+      }
+      if (k === 'audio' && payload?.u) {
+        const u = String(payload.u)
+        pushFunnel(
+          'her',
+          'Áudio',
+          `<div class="wa-audio-modern wa-audio-modern--bubble" data-src="${u.replace(/"/g, '&quot;')}"><button type="button" class="wa-audio-play">▶</button><div class="wa-audio-wave"><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span></div><span class="wa-audio-time">áudio</span><audio src="${u.replace(/"/g, '&quot;')}" preload="metadata"></audio></div>`,
+          { skipLog: true, mediaKind: 'audio' },
+        )
+        return
+      }
+      if (k === 'poll' && payload?.q && Array.isArray(payload?.o)) {
+        const q = String(payload.q)
+        const opts = payload.o.map((o: any) => String(o || '').trim()).filter(Boolean).slice(0, 5)
+        const lines = opts.map((o: string, i: number) => `${i + 1}. ${o}`).join('\n')
+        const html = `<div class="wa-poll-card"><p class="wa-poll-q">📊 ${q.replace(/</g, '&lt;')}</p><ul class="wa-poll-opts">${opts.map((o: string, i: number) => `<li><span>${i + 1}</span>${String(o).replace(/</g, '&lt;')}</li>`).join('')}</ul></div>`
+        pushFunnel('her', `📊 Enquete: ${q}\n${lines}`, html, { skipLog: true })
+        return
+      }
+    } catch (e) {
+      console.warn('[admin-live] parse', e)
+    }
+  }
+  pushFunnel('her', text, undefined, { skipLog: true })
+}
+
 async function pullLiveAdminReplies() {
   if (!funnelChatUnlocked.value) return
   if (!funnelConversationId.value || !funnelAccessToken.value) return
@@ -3612,14 +3673,12 @@ async function pullLiveAdminReplies() {
     for (const m of list) {
       if (m.direction !== 'bot') continue
       if (!m.id || seenLiveMsgIds.value[m.id]) continue
-      // evita duplicar mensagens automáticas antigas do funil: só live_admin ou novas após unlock
       const text = String(m.message || '').trim()
       if (!text) continue
       seenLiveMsgIds.value[m.id] = true
-      // se já existe texto idêntico no final, pula
       const last = funnelMessages.value[funnelMessages.value.length - 1]
       if (last?.from === 'her' && last.text === text) continue
-      pushFunnel('her', text, undefined, { skipLog: true })
+      applyAdminLivePayload(text)
     }
   } catch {}
 }
