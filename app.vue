@@ -559,15 +559,20 @@
             <button type="button" class="wa-audio-preview-btn wa-audio-preview-btn--send" @click="sendFunnelAudioPreview">Enviar</button>
           </div>
 
+          <!-- Contato bloqueado pelo lead: histórico continua visível; desbloqueio na conversa -->
+          <div v-if="leadBlockedWanessa && !showFunnelProfile" class="wa-lead-blocked-bar">
+            <p class="wa-lead-blocked-bar-text">Você bloqueou esta pessoa</p>
+            <button type="button" class="wa-lead-blocked-bar-btn" @click="unblockLeadBlock">Desbloquear</button>
+          </div>
           <div
             v-if="!showFunnelProfile"
             class="wa-composer wa-funnel-composer"
-            :class="{ 'wa-composer--blocked': funnelBlocked }"
-            @click.capture="funnelBlocked && onFunnelComposerInteract($event)"
+            :class="{ 'wa-composer--blocked': funnelBlocked, 'wa-composer--lead-blocked': leadBlockedWanessa }"
+            @click.capture="funnelBlocked && !leadBlockedWanessa && onFunnelComposerInteract($event)"
           >
             <!-- overlay: 1 toque abre o popup (mobile não precisa segurar) -->
             <button
-              v-if="funnelBlocked"
+              v-if="funnelBlocked && !leadBlockedWanessa"
               type="button"
               class="wa-composer-block-hit"
               aria-label="Desbloquear chat"
@@ -582,7 +587,7 @@
               type="text"
               enterkeyhint="send"
               autocomplete="off"
-              :placeholder="funnelBlocked ? 'Toque para desbloquear' : 'Mensagem'"
+              :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : 'Mensagem')"
               :disabled="funnelBlocked || funnelTyping"
               @focus="onFunnelInputFocus(); !funnelBlocked && onFunnelComposerInteract()"
               @blur="onFunnelInputBlur()"
@@ -876,21 +881,7 @@
         </div>
       </div>
 
-      <!-- Lead bloqueou Wanessa (tela do lead) — SEM segunda chance / mimo -->
-      <div
-        v-if="leadBlockedWanessa && showWaFunnel"
-        class="wa-perm-block-overlay wa-perm-block-overlay--lead"
-        @click.stop
-      >
-        <div class="wa-perm-block-card" @click.stop>
-          <p class="wa-perm-block-title">Você bloqueou esta pessoa</p>
-          <p class="wa-perm-block-sub">Você não poderá mais mandar mensagem pra ela nem ela pra você.</p>
-          <button type="button" class="wa-perm-block-btn wa-perm-block-btn--unblock" @click="unblockLeadBlock">
-            Desbloquear
-          </button>
-          <p class="wa-perm-block-hint">Ou use os ⋮ no canto e toque em Desbloquear</p>
-        </div>
-      </div>
+      <!-- Lead bloqueou Wanessa: SEM overlay — aviso + desbloquear ficam NA CONVERSA (histórico visível) -->
 
       <!-- Só quando WANESSA/sistema bloqueia o lead → segunda chance com mimo -->
       <!-- Esconde enquanto o PIX está aberto (evita botão sobreposto no modal) -->
@@ -1620,6 +1611,14 @@ function onFsVideoSeek(ev: Event) {
 function onFunnelMediaHtmlClick(e: Event) {
   const t = e.target as HTMLElement | null
   if (!t) return
+  // Desbloquear contato (banner de sistema no chat)
+  const unblockBtn = t.closest?.('[data-action="unblock-lead"]') as HTMLElement | null
+  if (unblockBtn) {
+    e.preventDefault()
+    e.stopPropagation()
+    try { unblockLeadBlock() } catch {}
+    return
+  }
   // Documento → abrir / baixar
   const doc = t.closest?.('.wa-media-doc') as HTMLAnchorElement | null
   if (doc) {
@@ -1787,7 +1786,7 @@ function confirmLeadBlock() {
     pushFunnel(
       'me',
       'Você bloqueou esta pessoa',
-      `<div class="wa-system-banner"><span>Você bloqueou esta pessoa</span></div>`,
+      `<div class="wa-system-banner wa-system-banner--block"><span>Você bloqueou esta pessoa</span><button type="button" class="wa-system-unblock" data-action="unblock-lead">Desbloquear</button></div>`,
       { skipLog: true },
     )
   } catch {}
