@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * Rota /admin/chat — exige sessão admin (middleware admin-chat → 404 se não logado).
- * UI em components/AdminChatInbox.vue via app.vue.
+ * Rota /admin/chat — login na própria página (AdminChatInbox).
+ * Sem cadeado na home; acesso direto por esta URL.
  */
 definePageMeta({
   middleware: ['admin-chat'],
