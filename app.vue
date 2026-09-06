@@ -82,6 +82,11 @@
             <div class="photo-dots" aria-hidden="true">
               <span v-for="(_, i) in gallery" :key="i" class="dot" :class="{ active: i === photoIndex }" />
             </div>
+            <!-- Presença por IP: mesma região do lead, distância plausível -->
+            <div v-if="nearPresenceReady" class="near-presence" :class="{ 'near-presence--show': nearPresenceReady }">
+              <span class="near-presence-dot" aria-hidden="true"></span>
+              <span class="near-presence-text">{{ nearPresenceText }}</span>
+            </div>
           </div>
           <!-- identity title removed -->
         </header>
@@ -4606,6 +4611,68 @@ const gallery = ['/model.jpg', '/hero-1.jpg', '/hero-2.jpg', '/hero-3.jpg']
 const photoIndex = ref(0)
 let photoTimer: ReturnType<typeof setInterval> | null = null
 
+/** Presença regional (IP): mostra km plausíveis na mesma cidade/região do lead */
+const nearPresenceReady = ref(false)
+const nearPresenceText = ref('')
+function hashSeed(s: string): number {
+  let h = 2166136261
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+async function loadNearPresence() {
+  try {
+    // IP geo leve (sem chave). Fallback silencioso se falhar.
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null
+    const t = ctrl ? setTimeout(() => ctrl.abort(), 3500) : null
+    const res = await fetch('https://ipapi.co/json/', {
+      signal: ctrl?.signal,
+      headers: { Accept: 'application/json' },
+    })
+    if (t) clearTimeout(t)
+    if (!res.ok) throw new Error('geo fail')
+    const data = await res.json()
+    if (data?.error) throw new Error(String(data.reason || 'geo'))
+    const city = String(data.city || '').trim()
+    const region = String(data.region || data.region_code || '').trim()
+    const country = String(data.country_name || data.country || '').trim()
+    const place = city || region || country
+    let seed = 'anon'
+    try { seed = getOrCreateVisitorId() || seed } catch {}
+    seed += '|' + place
+    const h = hashSeed(seed)
+    // 3–27 km na mesma região (parece real, estável por visitante)
+    const km = 3 + (h % 25)
+    const online = (h % 10) !== 0 // ~90% "online agora"
+    if (isPt.value) {
+      if (place) {
+        nearPresenceText.value = online
+          ? `Online · a ~${km} km de você · ${place}`
+          : `Visto por último perto de você · ${place}`
+      } else {
+        nearPresenceText.value = online ? 'Online perto de você' : 'Esteve online perto de você'
+      }
+    } else {
+      if (place) {
+        nearPresenceText.value = online
+          ? `Online · ~${km} km from you · ${place}`
+          : `Last seen near you · ${place}`
+      } else {
+        nearPresenceText.value = online ? 'Online near you' : 'Last seen near you'
+      }
+    }
+    nearPresenceReady.value = true
+  } catch {
+    // fallback mínimo (sem vazar erro)
+    try {
+      nearPresenceText.value = isPt.value ? 'Online agora' : 'Online now'
+      nearPresenceReady.value = true
+    } catch {}
+  }
+}
+
 const gate = ref<1 | 2 | 3 | 4 | 'pass' | 'reject' | null>(null)
 const quizAnswers = ref<Record<string, string>>({})
 const gateReady = ref(false)
@@ -4998,6 +5065,8 @@ onMounted(async () => {
   }
 
   photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 5500)
+  // presença regional sob a foto (não bloqueia UI)
+  loadNearPresence()
 })
 onUnmounted(() => {
   if (photoTimer) clearInterval(photoTimer)
