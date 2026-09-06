@@ -5625,7 +5625,21 @@ function addLink() { edit.links.push({ label: '', icon: '🔗', url: '', desc: '
 function removeLink(i: number) { edit.links.splice(i, 1) }
 
 
-function loadVideoCallVideos() {
+async function loadVideoCallVideos() {
+  // 1) fonte principal: Supabase via /api/call-videos (painel /moderador)
+  try {
+    const res = await $fetch<{ videos?: { url?: string; is_active?: boolean }[] }>('/api/call-videos')
+    const urls = (res?.videos || [])
+      .filter((v) => v && v.url && v.is_active !== false)
+      .map((v) => String(v.url).trim())
+      .filter(Boolean)
+    if (urls.length) {
+      videoCallVideos.value = urls
+      try { localStorage.setItem('wanessa_video_call_urls', JSON.stringify(urls)) } catch {}
+      return
+    }
+  } catch {}
+  // 2) fallback local
   try {
     const raw = localStorage.getItem('wanessa_video_call_urls')
     if (raw) {
@@ -5641,6 +5655,12 @@ function saveVideoCallVideos() {
     .filter(Boolean)
   videoCallVideos.value = urls
   try { localStorage.setItem('wanessa_video_call_urls', JSON.stringify(urls)) } catch {}
+  // espelha no moderador (se admin logado)
+  try {
+    for (const url of urls) {
+      $fetch('/api/call-videos', { method: 'POST', body: { action: 'add', url } }).catch(() => {})
+    }
+  } catch {}
 }
 
 async function restoreAdminSession() {
