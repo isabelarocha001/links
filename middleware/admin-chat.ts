@@ -1,19 +1,8 @@
 /**
- * Protege /admin/chat: sem cookie admin_token válido → 404 (não revela a rota).
- * Login só pela home (cadeado); depois acesse /admin/chat com a sessão ativa.
+ * /admin/chat — página sempre acessível.
+ * Auth fica no formulário de login do AdminChatInbox (cookie admin_token).
+ * Não retorna 404: esconde a existência da rota só por URL pouco óbvia.
  */
-export default defineNuxtRouteMiddleware(async (to) => {
-  const path = String(to.path || '').replace(/\/+$/, '').toLowerCase()
-  if (path !== '/admin/chat') return
-
-  try {
-    const headers = import.meta.server ? useRequestHeaders(['cookie']) : undefined
-    await $fetch('/api/admin/session', { headers })
-  } catch {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Page not found',
-      fatal: true,
-    })
-  }
+export default defineNuxtRouteMiddleware(async () => {
+  // noop — login na própria página
 })
