@@ -3610,9 +3610,7 @@ function humanDelay(text: string, base = 0): number {
 function funnelType(text: string, delay = 0, html?: string) {
   const raw = String(text || '')
   // Quebra ||| em bolhas separadas (evita texto colado e reenvio estranho)
-  if (!html && (raw.includes('|||') || raw.includes('
-
-'))) {
+  if (!html && (raw.includes('|||') || /\n\n/.test(raw))) {
     return funnelTypeParts(raw, delay || 900)
   }
   markLastLeadMessage('read')
