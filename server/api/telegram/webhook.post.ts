@@ -1,43 +1,10 @@
 import { useServiceSupabase } from '../../utils/supabase'
-
-async function getTelegramConfig() {
-  const env = process.env as Record<string, string | undefined>
-  let botToken = String(env.TELEGRAM_BOT_TOKEN || env.NUXT_TELEGRAM_BOT_TOKEN || '').trim()
-  let ownerChatId = String(
-    env.TELEGRAM_OWNER_CHAT_ID ||
-      env.NUXT_TELEGRAM_OWNER_CHAT_ID ||
-      env.TELEGRAM_ADMIN_CHAT_ID ||
-      '',
-  ).trim()
-
-  if (!botToken || !ownerChatId) {
-    try {
-      const supabase = useServiceSupabase()
-      const { data } = await supabase
-        .from('app_secrets')
-        .select('key, value')
-        .in('key', [
-          'TELEGRAM_BOT_TOKEN',
-          'TELEGRAM_OWNER_CHAT_ID',
-          'TELEGRAM_ADMIN_CHAT_ID',
-        ])
-      for (const row of data || []) {
-        const k = String(row.key || '')
-        const v = row.value ? String(row.value).trim() : ''
-        if (!v) continue
-        if (!botToken && k === 'TELEGRAM_BOT_TOKEN') botToken = v
-        if (!ownerChatId && (k === 'TELEGRAM_OWNER_CHAT_ID' || k === 'TELEGRAM_ADMIN_CHAT_ID'))
-          ownerChatId = v
-      }
-    } catch {}
-  }
-  return { botToken, ownerChatId }
-}
+import { getTelegramConfig, ensureOwnerChatId } from '../../utils/telegram'
 
 /**
- * Webhook do bot Telegram.
- * Quando o admin RESPONDE (reply) a notificação de um lead do chat desbloqueado,
- * a mensagem entra em wa_funnel_messages como direction=bot e o lead vê no site.
+ * Webhook do bot Telegram (@wanessabsxbot).
+ * - Qualquer msg privada grava TELEGRAM_OWNER_CHAT_ID se ainda não existir
+ * - Reply na notificação (ou /r <uuid> texto) → mensagem no chat do lead no site
  */
 export default defineEventHandler(async (event) => {
   const { botToken, ownerChatId } = await getTelegramConfig()
@@ -56,13 +23,39 @@ export default defineEventHandler(async (event) => {
   if (!msg) return { ok: true, ignored: true }
 
   const chatId = String(msg.chat?.id || '')
-  // só aceita resposta do chat do dono (admin)
-  if (ownerChatId && chatId !== String(ownerChatId)) {
+  const chatType = String(msg.chat?.type || '')
+
+  // Aprende o chat do admin na primeira DM
+  if (chatType === 'private' && chatId) {
+    await ensureOwnerChatId(chatId)
+  }
+
+  // Só processa reply se for o owner (ou se owner ainda não configurado e for private)
+  const effectiveOwner = ownerChatId || (chatType === 'private' ? chatId : '')
+  if (effectiveOwner && chatId !== String(effectiveOwner)) {
     return { ok: true, ignored: 'not_owner' }
   }
 
   const text = String(msg.text || msg.caption || '').trim()
   if (!text) return { ok: true, ignored: 'empty' }
+
+  // Comandos simples
+  if (/^\/start/i.test(text)) {
+    try {
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text:
+            '✅ Bot conectado ao chat do site.\n\n' +
+            'Quando um lead falar no site, você recebe aqui.\n' +
+            'Responda a notificação (reply) ou use:\n/r <id-da-conversa> sua mensagem',
+        }),
+      })
+    } catch {}
+    return { ok: true, started: true }
+  }
 
   // 1) Reply à notificação
   const reply = msg.reply_to_message
@@ -72,27 +65,25 @@ export default defineEventHandler(async (event) => {
     if (m) conversationId = m[1]
   }
   // 2) Comando /r <uuid> texto
+  let replyBody = text
   if (!conversationId) {
     const m = text.match(/^\/r(?:eply)?\s+([0-9a-f-]{36})\s+([\s\S]+)/i)
     if (m) {
       conversationId = m[1]
-      // body is m[2]
+      replyBody = m[2].trim()
     }
   }
 
-  let replyBody = text
-  const mCmd = text.match(/^\/r(?:eply)?\s+[0-9a-f-]{36}\s+([\s\S]+)/i)
-  if (mCmd) replyBody = mCmd[1].trim()
-
   if (!conversationId) {
-    // dica pro admin
     try {
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
-          text: 'Pra responder o lead do site: responda a mensagem da notificação (swipe reply) ou use:\n/r <id-da-conversa> sua mensagem',
+          text:
+            'Pra responder o lead do site: responda a notificação (swipe reply) ou use:\n' +
+            '/r <id-da-conversa> sua mensagem',
         }),
       })
     } catch {}
