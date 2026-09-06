@@ -181,16 +181,15 @@
         <div v-if="showChatUnlockInfo" class="cu-overlay" style="z-index:2147483000" @click.self="closeChatUnlockInfo">
           <div class="cu-card" role="dialog" aria-modal="true" @click.stop>
             <button type="button" class="cu-x" aria-label="Fechar" @click="closeChatUnlockInfo">✕</button>
-            <p class="cu-title">{{ chatUnlockReason === 'call' ? 'Oi amor… a chamada tá bloqueada' : 'Oi amor… o chat tá bloqueado' }}</p>
+            <p class="cu-title">{{ chatUnlockReason === 'call' ? 'Oi amor… a chamada tá bloqueada 🔒' : 'Oi amor… o chat tá bloqueado 🔒' }}</p>
             <div class="cu-body">
-              <p>O envio de mensagens fica trancado de propósito.</p>
-              <p>Serve de <strong>filtro</strong> — pra evitar gente que não valoriza meu tempo.</p>
-              <p>É só um valor simbólico de <strong>R$ 3,00</strong> pra liberar o chat.</p>
-              <p>Aí você conversa comigo, pede o que quiser… e tem <strong>muito mais coisa boa e quente</strong> te esperando depois de desbloquear 🔥</p>
+              <p>{{ chatUnlockReason === 'call' ? 'A videochamada só libera depois que o chat está desbloqueado.' : 'O envio de mensagens fica bloqueado de propósito.' }}</p>
+              <p>É só um filtro pra separar quem realmente quer falar comigo.</p>
+              <p>Por <strong>R$ 3,00</strong> você desbloqueia e pode falar comigo por aqui 🔥</p>
             </div>
             <div class="cu-actions">
-              <button type="button" class="cu-btn cu-btn--no" @click="refuseChatUnlock">Não quero, sou viado</button>
-              <button type="button" class="cu-btn cu-btn--yes" @click="acceptChatUnlock">Desbloquear chat</button>
+              <button type="button" class="cu-btn cu-btn--no" @click="refuseChatUnlock">Agora não</button>
+              <button type="button" class="cu-btn cu-btn--yes" @click="acceptChatUnlock">Desbloquear por R$ 3</button>
             </div>
           </div>
         </div>
@@ -209,7 +208,7 @@
             <button type="button" class="cu-btn cu-btn--yes cu-btn--wide" :disabled="!!chatPayLoading" @click="confirmChatUnlockPix">
               {{ chatPayLoading ? 'Gerando PIX…' : 'Sim amor' }}
             </button>
-            <button type="button" class="cu-btn-link" @click="refuseChatUnlock">Não quero, sou viado</button>
+            <button type="button" class="cu-btn-link" @click="refuseChatUnlock">Agora não</button>
           </div>
         </div>
 
@@ -1347,14 +1346,15 @@ async function refuseChatUnlock() {
   showChatUnlockInfo.value = false
   showChatUnlockPix.value = false
   try { track('chat_unlock_info_refuse', { offer_slug: 'chat_quick' }) } catch {}
-  const insults = [
-    'Aff… mais um viado que não gasta nem R$ 3 🙄|||Vaza, boiola. Meu tempo não é de graça.',
-    'Não quer pagar R$ 3? Então some, viado 😂|||Aqui não é caridade pra boiola curioso.',
-    'R$ 3 e ainda recusa? Só pode ser viado mesmo 🗑️|||Fora. Quem não valoriza, não fica.',
+  // Recusa no 1º passo: leve, sem atacar identidade — deixa porta aberta pro remarketing
+  const msgs = [
+    'Beleza… fica pra depois então 😌|||Quando quiser desbloquear é só R$ 3,00.',
+    'Ok. Se mudar de ideia, o chat continua aqui por R$ 3,00 💬',
+    'Tudo bem. Quem é sério acaba voltando… o desbloqueio é só R$ 3,00 🔥',
   ]
-  const msg = insults[Math.floor(Math.random() * insults.length)]
+  const msg = msgs[Math.floor(Math.random() * msgs.length)]
   try {
-    await funnelType(msg, 1100)
+    await funnelType(msg, 1000)
   } catch {}
 }
 
