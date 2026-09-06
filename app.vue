@@ -3519,10 +3519,28 @@ function markLastLeadMessage(status: 'delivered' | 'read') {
 }
 
 function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; mediaUrl?: string; logExtra?: Record<string, any> }) {
+  const cleanText = String(text || '').trim()
+  // Evita repetir a mesma bolha (clique duplo / poll / restore)
+  if (cleanText && !(opts as any)?.mediaUrl) {
+    const last = funnelMessages.value[funnelMessages.value.length - 1]
+    if (last && last.from === from && String(last.text || '').trim() === cleanText) {
+      return last
+    }
+    // mesma mensagem há poucos segundos (não só a última)
+    const now = Date.now()
+    for (let i = funnelMessages.value.length - 1; i >= Math.max(0, funnelMessages.value.length - 8); i--) {
+      const m = funnelMessages.value[i]
+      if (m.from === from && String(m.text || '').trim() === cleanText) {
+        const mid = String(m.id || '')
+        // ids locais m_timestamp — se muito recente, pula
+        if (mid.startsWith('m_')) return m
+      }
+    }
+  }
   const row: { id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; edited?: boolean; deleted?: boolean } = {
     id: `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     from,
-    text,
+    text: cleanText || text,
     html,
     time: nowTime(),
     mediaKind: (opts as any)?.mediaKind || null,
@@ -3566,15 +3584,22 @@ function humanDelay(text: string, base = 0): number {
 }
 
 function funnelType(text: string, delay = 0, html?: string) {
+  const raw = String(text || '')
+  // Quebra ||| em bolhas separadas (evita texto colado e reenvio estranho)
+  if (!html && (raw.includes('|||') || raw.includes('
+
+'))) {
+    return funnelTypeParts(raw, delay || 900)
+  }
   markLastLeadMessage('read')
   return new Promise<void>((resolve) => {
     funnelTyping.value = true
     scrollFunnel()
     if (funnelTimer) clearTimeout(funnelTimer)
-    const wait = humanDelay(text, delay)
+    const wait = humanDelay(raw, delay)
     funnelTimer = setTimeout(() => {
       funnelTyping.value = false
-      pushFunnel('her', text, html)
+      pushFunnel('her', raw, html)
       saveFunnelState()
       resolve()
     }, wait)
@@ -4152,8 +4177,12 @@ async function pullLiveAdminReplies() {
       }
       seenLiveMsgIds.value[m.id] = true
       const last = funnelMessages.value[funnelMessages.value.length - 1]
-      if (last?.from === 'her' && last.text === text) {
+      if (last?.from === 'her' && String(last.text || '').trim() === text) {
         try { last.id = m.id } catch {}
+        continue
+      }
+      // já existe essa bolha no chat (evita eco do poll)
+      if (funnelMessages.value.some((x) => x.from === 'her' && String(x.text || '').trim() === text)) {
         continue
       }
       applyAdminLivePayload(text, m.id)
@@ -4573,7 +4602,7 @@ function deleteFunnelMsg() {
 
 async function sendFunnelFreeText() {
   if (leadBlockedWanessa.value) return
-  if (funnelTyping.value) return
+  if (funnelTyping.value || funnelActionLock.value) return
   if (!funnelChatUnlocked.value) {
     const pending = (funnelInput.value || '').trim()
     if (pending) {
@@ -4588,6 +4617,8 @@ async function sendFunnelFreeText() {
   const text = (funnelInput.value || '').trim()
   if (!text) return
 
+  funnelActionLock.value = true
+  setTimeout(() => { funnelActionLock.value = false }, 1500)
   funnelInput.value = ''
   pushFunnel('me', text)
   try { saveFunnelState() } catch {}
@@ -4919,8 +4950,12 @@ async function sendFunnelFreeText() {
   }
 }
 
+const funnelActionLock = ref(false)
+
 async function answerFunnel(opt: { key: string; label: string }) {
-  if (funnelTyping.value) return
+  if (funnelTyping.value || funnelActionLock.value) return
+  funnelActionLock.value = true
+  setTimeout(() => { funnelActionLock.value = false }, 1800)
   pushFunnel('me', opt.label, undefined, {
     logExtra: { event: 'option_click', option_key: opt.key, option_label: opt.label, funnel_step: funnelStep.value },
   })
