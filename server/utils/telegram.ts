@@ -1,5 +1,6 @@
 import { useServiceSupabase } from './supabase'
 import { deleteTempMediaByUrl } from './media'
+import { leadDisplayName } from './lead-name'
 
 export async function getTelegramConfig(): Promise<{ botToken: string; ownerChatId: string }> {
   const env = process.env as Record<string, string | undefined>
@@ -135,9 +136,11 @@ export async function notifyTelegramLeadMessage(opts: {
   media_url?: string | null
   media_kind?: string | null
 }) {
+  const name = leadDisplayName(opts.visitorId)
   const badge = opts.unlocked ? '💬 Lead no chat (desbloqueado)' : '💬 Lead no chat'
   const text =
     `${badge}\n` +
+    `👤 ${name}\n` +
     `Conv: ${opts.conversationId}\n` +
     `Visitor: ${String(opts.visitorId).slice(0, 12)}\n` +
     (opts.step ? `Step: ${opts.step}\n` : '') +
