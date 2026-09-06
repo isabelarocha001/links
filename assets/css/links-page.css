@@ -840,7 +840,7 @@ button.direct-btn {
 .chat-plans-overlay {
   position: fixed;
   inset: 0;
-  z-index: 12000;
+  z-index: 40120;
   display: flex;
   align-items: center;
   justify-content: center;
