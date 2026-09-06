@@ -3348,7 +3348,7 @@ function markLastLeadMessage(status: 'delivered' | 'read') {
   }
 }
 
-function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; mediaUrl?: string }) {
+function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; mediaUrl?: string; logExtra?: Record<string, any> }) {
   const row: { id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; edited?: boolean; deleted?: boolean } = {
     id: `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     from,
@@ -3373,7 +3373,7 @@ function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { sk
   scrollFunnel()
   // grava no Supabase (lead = me, bot = her)
   if (!opts?.skipLog) {
-    const extra: Record<string, any> = { has_html: !!html }
+    const extra: Record<string, any> = { has_html: !!html, ...(opts?.logExtra || {}) }
     if ((opts as any)?.mediaKind) extra.media_kind = (opts as any).mediaKind
     if ((opts as any)?.mediaUrl) extra.media_url = (opts as any).mediaUrl
     // lead mídia: sobe temp pro Telegram e apaga depois do envio
@@ -3535,6 +3535,25 @@ const funnelOptions = computed(() => {
   return []
 })
 
+// Espelha no admin quais botões o lead está vendo em cada etapa do funil
+watch(
+  () => [funnelStep.value, funnelOptions.value.map((o) => o.key).join('|')] as const,
+  ([step, keys]) => {
+    try {
+      if (!showWaFunnel.value) return
+      const opts = funnelOptions.value
+      if (!opts.length) return
+      const labels = opts.map((o) => o.label).join(' · ')
+      logFunnelMessage('system', `[botões] ${step}: ${labels}`, {
+        event: 'options_shown',
+        step,
+        option_keys: opts.map((o) => o.key),
+        option_labels: opts.map((o) => o.label),
+      })
+    } catch {}
+  },
+)
+
 
 const FUNNEL_STORAGE_KEY = 'wanessa_wa_funnel_v1'
 const FUNNEL_SESSION_KEY = 'wanessa_wa_funnel_session'
@@ -3658,7 +3677,7 @@ async function uploadLeadMediaAndNotify(label: string, kind: string, blobUrl: st
   }
 }
 
-function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Record<string, any> = {}) {
+function logFunnelMessage(direction: 'lead' | 'bot' | 'system', message: string, extra: Record<string, any> = {}) {
   try {
     const visitor_id = getOrCreateVisitorId()
     if (!funnelConversationId.value) loadFunnelConversationLocal()
@@ -4703,7 +4722,9 @@ async function sendFunnelFreeText() {
 
 async function answerFunnel(opt: { key: string; label: string }) {
   if (funnelTyping.value) return
-  pushFunnel('me', opt.label)
+  pushFunnel('me', opt.label, undefined, {
+    logExtra: { event: 'option_click', option_key: opt.key, option_label: opt.label, funnel_step: funnelStep.value },
+  })
   saveFunnelState()
 
   if (opt.key === 'back' || opt.key === 'back_menu') {
