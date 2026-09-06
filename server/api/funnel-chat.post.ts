@@ -1,4 +1,5 @@
 import { useServiceSupabase, getClientIp } from '../utils/supabase'
+import { leadConversationTitle } from '../utils/lead-name'
 import { notifyTelegramLeadMessage } from '../utils/telegram'
 
 type LeadClass = {
@@ -187,7 +188,7 @@ export default defineEventHandler(async (event) => {
             visitor_id,
             creator_slug,
             status: 'open',
-            title: `Lead ${visitor_id.slice(0, 8)} × ${creator_slug}`,
+            title: leadConversationTitle(visitor_id, creator_slug),
             metadata: { session_id, source: 'wanessa_links_funnel' },
             last_message_at: now,
             updated_at: now,
