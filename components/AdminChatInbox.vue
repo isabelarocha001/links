@@ -34,6 +34,7 @@ const newCount = ref(0)
 const listLoading = ref(false)
 const listError = ref('')
 const filter = ref<'all' | 'new' | 'open'>('all')
+const searchQuery = ref('')
 
 const selectedId = ref<string | null>(null)
 const messages = ref<ChatMsg[]>([])
@@ -50,6 +51,15 @@ const filteredConversations = computed(() => {
   let list = conversations.value
   if (filter.value === 'new') list = list.filter((c) => c.is_new)
   if (filter.value === 'open') list = list.filter((c) => c.status === 'open')
+  const q = searchQuery.value.trim().toLowerCase()
+  if (q) {
+    list = list.filter((c) => {
+      const title = String(c.title || '').toLowerCase()
+      const vid = String(c.visitor_id || '').toLowerCase()
+      const last = String(c.last_message?.message || '').toLowerCase()
+      return title.includes(q) || vid.includes(q) || last.includes(q)
+    })
+  }
   return list
 })
 
@@ -292,310 +302,592 @@ if (typeof window !== 'undefined') {
 
 <template>
   <div class="ac">
-    <div v-if="authChecking" class="ac-center">Verificando sessão…</div>
-
-    <div v-else-if="!authed" class="ac-login">
-      <h1>Admin · Conversas</h1>
-      <p class="ac-hint">Digite a senha para entrar. Esta página não aparece na home.</p>
-      <input
-        v-model="password"
-        class="ac-input"
-        type="password"
-        autocomplete="current-password"
-        placeholder="Senha"
-        @keydown.enter.prevent="doLogin"
-      />
-      <p v-if="loginError" class="ac-err">{{ loginError }}</p>
-      <button type="button" class="ac-btn" :disabled="loginLoading || !password.trim()" @click="doLogin">
-        {{ loginLoading ? 'Entrando…' : 'Entrar' }}
-      </button>
+    <div v-if="authChecking" class="ac-shell ac-shell--center">
+      <p class="ac-muted">Verificando sessão…</p>
     </div>
 
-    <template v-else>
-      <header class="ac-top">
-        <div>
-          <h1>Conversas</h1>
-          <p class="ac-sub">
-            <span class="ac-dot" :class="{ on: presenceOk }"></span>
-            {{ presenceOk ? 'Você está online (lead vê online)' : 'Presença: falhou (crie a tabela admin_presence)' }}
-            · {{ newCount }} nova(s)
-          </p>
+    <div v-else-if="!authed" class="ac-shell ac-shell--center">
+      <form class="ac-login-card" @submit.prevent="doLogin">
+        <div class="ac-brand">Conversas</div>
+        <p class="ac-hint">Acesso admin · esta URL não aparece na home</p>
+        <input
+          v-model="password"
+          class="ac-search"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Senha"
+        />
+        <p v-if="loginError" class="ac-err">{{ loginError }}</p>
+        <button type="submit" class="ac-btn-primary" :disabled="loginLoading || !password.trim()">
+          {{ loginLoading ? 'Entrando…' : 'Entrar' }}
+        </button>
+      </form>
+    </div>
+
+    <div v-else class="ac-shell">
+      <!-- Top bar estilo FatalFans -->
+      <header class="ac-header">
+        <div class="ac-brand-row">
+          <span class="ac-logo-mark" aria-hidden="true">✦</span>
+          <span class="ac-brand">Conversas</span>
         </div>
-        <div class="ac-top-actions">
-          <button type="button" class="ac-btn ghost" @click="loadConversations">Atualizar</button>
-          <button type="button" class="ac-btn ghost" @click="doLogout">Sair</button>
+        <div class="ac-header-actions">
+          <span class="ac-presence-pill" :class="{ on: presenceOk }">
+            <span class="ac-presence-dot"></span>
+            {{ presenceOk ? 'Online' : 'Offline' }}
+          </span>
+          <button type="button" class="ac-link-btn" @click="loadConversations">Atualizar</button>
+          <button type="button" class="ac-link-btn" @click="doLogout">Sair</button>
         </div>
       </header>
 
-      <div class="ac-filters">
-        <button type="button" :class="{ active: filter === 'all' }" @click="filter = 'all'">Todas</button>
-        <button type="button" :class="{ active: filter === 'new' }" @click="filter = 'new'">Novas</button>
-        <button type="button" :class="{ active: filter === 'open' }" @click="filter = 'open'">Abertas</button>
-      </div>
-
-      <div class="ac-body">
-        <aside class="ac-list">
-          <p v-if="listLoading && !conversations.length" class="ac-muted">Carregando…</p>
-          <p v-if="listError" class="ac-err">{{ listError }}</p>
-          <button
-            v-for="c in filteredConversations"
-            :key="c.id"
-            type="button"
-            class="ac-item"
-            :class="{ active: selectedId === c.id, new: c.is_new }"
-            @click="openConversation(c.id)"
-          >
-            <div class="ac-item-top">
-              <strong>{{ c.title || c.visitor_id?.slice(0, 8) }}</strong>
-              <span v-if="c.is_new" class="ac-badge">nova</span>
-            </div>
-            <p class="ac-preview">
-              {{ c.last_message?.direction === 'lead' ? 'Lead: ' : 'Você: ' }}
-              {{ c.last_message?.message || '—' }}
-            </p>
-            <span class="ac-time">{{ formatTime(c.last_message_at || c.last_message?.created_at) }}</span>
-          </button>
-          <p v-if="!listLoading && !filteredConversations.length" class="ac-muted">Nenhuma conversa.</p>
-        </aside>
-
-        <section class="ac-thread">
-          <div v-if="!selectedId" class="ac-center muted">Selecione uma conversa</div>
-          <template v-else>
-            <header class="ac-thread-head">
-              <h2>{{ selectedTitle }}</h2>
-              <span class="ac-muted">{{ selectedId.slice(0, 8) }}…</span>
-            </header>
-            <div id="admin-msg-list" class="ac-msgs">
-              <div
-                v-for="(m, i) in messages"
-                :key="m.id || i"
-                class="ac-bubble"
-                :class="m.direction === 'lead' ? 'lead' : 'bot'"
-              >
-                <p>{{ m.message }}</p>
-                <span>{{ formatTime(m.created_at) }} · {{ m.direction }}{{ m.step ? ` · ${m.step}` : '' }}</span>
-              </div>
-              <p v-if="messagesLoading && !messages.length" class="ac-muted">Carregando msgs…</p>
-            </div>
-            <form class="ac-composer" @submit.prevent="sendReply">
+      <div class="ac-main" :class="{ 'ac-main--thread': !!selectedId }">
+        <!-- Lista (mobile: some quando thread aberta) -->
+        <section class="ac-inbox">
+          <div class="ac-inbox-inner">
+            <div class="ac-search-wrap">
+              <span class="ac-search-ico" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+              </span>
               <input
-                v-model="replyText"
-                class="ac-input"
-                type="text"
-                placeholder="Responder como Wanessa…"
-                :disabled="replySending"
+                v-model="searchQuery"
+                class="ac-search"
+                type="search"
+                placeholder="Pesquisar por nome"
+                autocomplete="off"
               />
-              <button type="submit" class="ac-btn" :disabled="replySending || !replyText.trim()">
-                Enviar
+            </div>
+
+            <div class="ac-tabs">
+              <button type="button" class="ac-tab" :class="{ active: filter === 'all' }" @click="filter = 'all'">Todas</button>
+              <button type="button" class="ac-tab" :class="{ active: filter === 'new' }" @click="filter = 'new'">
+                Não lidas
+                <span v-if="newCount" class="ac-tab-count">{{ newCount }}</span>
               </button>
-            </form>
-          </template>
+              <button type="button" class="ac-tab" :class="{ active: filter === 'open' }" @click="filter = 'open'">Abertas</button>
+            </div>
+
+            <div class="ac-list">
+              <p v-if="listLoading && !conversations.length" class="ac-muted pad">Carregando…</p>
+              <p v-if="listError" class="ac-err pad">{{ listError }}</p>
+
+              <button
+                v-for="c in filteredConversations"
+                :key="c.id"
+                type="button"
+                class="ac-item"
+                :class="{ active: selectedId === c.id, new: c.is_new }"
+                @click="openConversation(c.id)"
+              >
+                <div class="ac-avatar" aria-hidden="true">
+                  {{ (c.title || c.visitor_id || '?').slice(0, 1).toUpperCase() }}
+                </div>
+                <div class="ac-item-body">
+                  <div class="ac-item-top">
+                    <strong>{{ c.title || ('Lead ' + (c.visitor_id || '').slice(0, 8)) }}</strong>
+                    <span class="ac-time">{{ formatTime(c.last_message_at || c.last_message?.created_at) }}</span>
+                  </div>
+                  <p class="ac-preview" :class="{ 'ac-preview--blocked': c.lead_blocked || c.status === 'blocked' }">
+                    <template v-if="c.lead_blocked || c.status === 'blocked'">🚫 Bloqueou o contato</template>
+                    <template v-else>
+                      {{ c.last_message?.direction === 'lead' ? '' : 'Você: ' }}{{ c.last_message?.message || '—' }}
+                    </template>
+                  </p>
+                </div>
+                <span v-if="c.is_new" class="ac-unread-dot" aria-label="nova"></span>
+              </button>
+
+              <!-- Empty state estilo FatalFans -->
+              <div v-if="!listLoading && !filteredConversations.length" class="ac-empty">
+                <div class="ac-empty-ico" aria-hidden="true">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
+                    <circle cx="12" cy="11" r="1.2" fill="currentColor" stroke="none"/>
+                  </svg>
+                </div>
+                <h2>Nenhuma conversa ainda</h2>
+                <p>Quando um lead falar no chat da home, a conversa aparece aqui.</p>
+                <button type="button" class="ac-btn-primary" @click="loadConversations">Atualizar lista</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Thread -->
+        <section class="ac-thread" v-if="selectedId">
+          <header class="ac-thread-head">
+            <button type="button" class="ac-back" aria-label="Voltar" @click="selectedId = null; stopPolling()">‹</button>
+            <div class="ac-thread-who">
+              <div class="ac-avatar ac-avatar--sm">{{ selectedTitle.slice(0, 1).toUpperCase() }}</div>
+              <div>
+                <h2>{{ selectedTitle }}</h2>
+                <p class="ac-muted tight">{{ selectedId.slice(0, 10) }}…</p>
+              </div>
+            </div>
+          </header>
+
+          <div v-if="selectedIsBlocked" class="ac-blocked-banner">
+            Lead bloqueou o contato
+            <span v-if="selectedBlockReason">· {{ selectedBlockReason }}</span>
+          </div>
+
+          <div id="admin-msg-list" class="ac-msgs">
+            <p v-if="messagesLoading && !messages.length" class="ac-muted pad">Carregando msgs…</p>
+            <div
+              v-for="(m, i) in messages"
+              :key="m.id || i"
+              class="ac-bubble"
+              :class="m.direction === 'lead' ? 'lead' : 'bot'"
+            >
+              <p>{{ m.message }}</p>
+              <span>{{ formatTime(m.created_at) }}</span>
+            </div>
+          </div>
+
+          <form class="ac-composer" @submit.prevent="sendReply">
+            <input
+              v-model="replyText"
+              class="ac-composer-input"
+              type="text"
+              placeholder="Responder como Wanessa…"
+              :disabled="replySending || selectedIsBlocked"
+            />
+            <button type="submit" class="ac-send" :disabled="replySending || !replyText.trim() || selectedIsBlocked" aria-label="Enviar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </form>
+        </section>
+
+        <section v-else class="ac-thread ac-thread--placeholder">
+          <div class="ac-empty">
+            <div class="ac-empty-ico" aria-hidden="true">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
+              </svg>
+            </div>
+            <h2>Selecione uma conversa</h2>
+            <p>Escolha um lead à esquerda para ver o histórico e responder.</p>
+          </div>
         </section>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .ac {
   min-height: 100dvh;
-  background: #0b141a;
-  color: #e9edef;
-  font-family: Inter, system-ui, sans-serif;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+.ac-shell {
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  background: #fff;
 }
-.ac-center {
-  margin: auto;
-  padding: 48px;
-  text-align: center;
-  opacity: 0.8;
-}
-.ac-center.muted { opacity: 0.45; }
-.ac-login {
-  max-width: 360px;
-  margin: 12vh auto;
+.ac-shell--center {
+  align-items: center;
+  justify-content: center;
   padding: 24px;
-  background: #1f2c34;
-  border-radius: 16px;
+  background: #fafafa;
+}
+.ac-login-card {
+  width: 100%;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 28px 24px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #eee;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.06);
 }
-.ac-login h1 { margin: 0; font-size: 1.25rem; }
-.ac-hint { margin: 0; font-size: 0.8rem; opacity: 0.65; }
-.ac-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: #0b141a;
-  color: #e9edef;
-  font-size: 0.95rem;
-}
-.ac-btn {
-  border: none;
-  border-radius: 10px;
-  padding: 12px 16px;
-  background: #25d366;
-  color: #053b1c;
-  font-weight: 700;
-  cursor: pointer;
-}
-.ac-btn:disabled { opacity: 0.5; cursor: wait; }
-.ac-btn.ghost {
-  background: transparent;
-  color: #aebac1;
-  border: 1px solid rgba(255,255,255,0.12);
-}
-.ac-err { color: #f87171; font-size: 0.85rem; margin: 0; }
-.ac-top {
+.ac-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
   gap: 12px;
-  padding: 14px 16px;
-  background: #1f2c34;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
-.ac-top h1 { margin: 0; font-size: 1.1rem; }
-.ac-sub { margin: 4px 0 0; font-size: 0.75rem; color: #8696a0; display: flex; align-items: center; gap: 6px; }
-.ac-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #8696a0;
-  display: inline-block;
-}
-.ac-dot.on { background: #25d366; box-shadow: 0 0 8px rgba(37,211,102,0.5); }
-.ac-top-actions { display: flex; gap: 8px; }
-.ac-filters {
+.ac-brand-row {
   display: flex;
+  align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  background: #111b21;
 }
-.ac-filters button {
-  border: 1px solid rgba(255,255,255,0.1);
+.ac-logo-mark {
+  color: #c45c6a;
+  font-size: 1.1rem;
+}
+.ac-brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  color: #c45c6a;
+}
+.ac-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ac-link-btn {
+  border: none;
   background: transparent;
-  color: #aebac1;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 0.8rem;
+  color: #666;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
+  padding: 6px 8px;
 }
-.ac-filters button.active {
-  background: rgba(37,211,102,0.15);
-  border-color: rgba(37,211,102,0.4);
-  color: #e9edef;
+.ac-presence-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #888;
+  background: #f3f3f3;
+  padding: 4px 10px;
+  border-radius: 999px;
 }
-.ac-body {
+.ac-presence-pill.on { color: #1a7f4b; background: #e8f8ef; }
+.ac-presence-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #bbb;
+}
+.ac-presence-pill.on .ac-presence-dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
+}
+
+.ac-main {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(260px, 340px) 1fr;
+  grid-template-columns: 1fr;
   min-height: 0;
-  height: calc(100dvh - 110px);
 }
+@media (min-width: 860px) {
+  .ac-main {
+    grid-template-columns: minmax(320px, 400px) 1fr;
+  }
+  .ac-thread--placeholder { display: flex; }
+}
+.ac-inbox {
+  border-right: 1px solid #eee;
+  background: #fff;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ac-inbox-inner {
+  padding: 12px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 560px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ac-search-wrap {
+  position: relative;
+}
+.ac-search-ico {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  display: flex;
+}
+.ac-search {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  background: #f2f2f4;
+  border-radius: 999px;
+  padding: 12px 16px 12px 42px;
+  font-size: 0.92rem;
+  color: #222;
+  outline: none;
+}
+.ac-search::placeholder { color: #999; }
+.ac-search:focus { background: #ececf0; }
+
+.ac-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ac-tab {
+  border: none;
+  background: #f2f2f4;
+  color: #555;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ac-tab.active {
+  background: #c45c6a;
+  color: #fff;
+}
+.ac-tab-count {
+  background: rgba(255,255,255,0.25);
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+}
+
 .ac-list {
-  overflow-y: auto;
-  border-right: 1px solid rgba(255,255,255,0.06);
-  background: #111b21;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 280px;
 }
 .ac-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
   text-align: left;
   border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
   background: transparent;
-  color: inherit;
-  padding: 12px 14px;
+  padding: 12px 10px;
+  border-radius: 14px;
   cursor: pointer;
+  position: relative;
 }
-.ac-item:hover { background: rgba(255,255,255,0.03); }
-.ac-item.active { background: #1f2c34; }
-.ac-item.new { box-shadow: inset 3px 0 0 #25d366; }
-.ac-item-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-.ac-badge {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: #25d366;
-  color: #053b1c;
-  border-radius: 999px;
-  padding: 2px 7px;
+.ac-item:hover { background: #f7f7f8; }
+.ac-item.active { background: #f3eef0; }
+.ac-item.new { background: #faf6f7; }
+.ac-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e8a0aa, #c45c6a);
+  color: #fff;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1rem;
 }
-.ac-preview--blocked { color: #f87171; font-weight: 600; }
-.ac-blocked-banner {
-  padding: 10px 14px;
-  background: rgba(239, 68, 68, 0.12);
-  color: #fca5a5;
-  font-size: 0.82rem;
-  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+.ac-avatar--sm { width: 36px; height: 36px; font-size: 0.85rem; }
+.ac-item-body { flex: 1; min-width: 0; }
+.ac-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
 }
-.ac-composer--blocked { justify-content: center; padding: 14px; }
-.ac-preview {
-  margin: 4px 0 0;
-  font-size: 0.8rem;
-  color: #8696a0;
+.ac-item-top strong {
+  font-size: 0.95rem;
+  color: #1a1a1a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ac-time { font-size: 0.68rem; color: #667781; }
-.ac-muted { color: #667781; font-size: 0.85rem; padding: 16px; }
+.ac-time { font-size: 0.72rem; color: #999; flex-shrink: 0; }
+.ac-preview {
+  margin: 3px 0 0;
+  font-size: 0.82rem;
+  color: #777;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-preview--blocked { color: #c45c6a; font-weight: 600; }
+.ac-unread-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #c45c6a;
+  flex-shrink: 0;
+}
+
+.ac-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 20px;
+  gap: 8px;
+  color: #666;
+}
+.ac-empty-ico {
+  color: #bbb;
+  margin-bottom: 8px;
+}
+.ac-empty h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #1a1a1a;
+  font-weight: 700;
+}
+.ac-empty p {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  max-width: 280px;
+  line-height: 1.45;
+  color: #777;
+}
+.ac-btn-primary {
+  border: none;
+  background: #c45c6a;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 12px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ac-btn-primary:disabled { opacity: 0.55; cursor: wait; }
+.ac-btn-primary:active { transform: scale(0.98); }
+
 .ac-thread {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: #0b141a;
+  background: #f7f7f8;
+  height: 100dvh;
+  max-height: 100dvh;
+}
+@media (min-width: 860px) {
+  .ac-thread { height: auto; max-height: none; min-height: calc(100dvh - 57px); }
+  .ac-inbox .ac-list { max-height: calc(100dvh - 180px); overflow-y: auto; }
+}
+.ac-thread--placeholder {
+  display: none;
+  align-items: center;
+  justify-content: center;
 }
 .ac-thread-head {
-  padding: 12px 16px;
-  background: #1f2c34;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
 }
-.ac-thread-head h2 { margin: 0; font-size: 1rem; }
+.ac-back {
+  border: none;
+  background: transparent;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: #333;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.ac-thread-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ac-thread-who h2 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+.ac-muted { color: #999; font-size: 0.8rem; }
+.ac-muted.tight { margin: 0; }
+.ac-muted.pad { padding: 16px; }
+.ac-err { color: #c45c6a; font-size: 0.85rem; margin: 0; }
+.ac-err.pad { padding: 12px 16px; }
+.ac-hint { margin: 0; font-size: 0.82rem; color: #888; }
+
+.ac-blocked-banner {
+  background: #fde8eb;
+  color: #9b2c3a;
+  font-size: 0.8rem;
+  padding: 8px 14px;
+  text-align: center;
+}
+
 .ac-msgs {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 16px 14px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 .ac-bubble {
   max-width: 78%;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-size: 0.92rem;
+  padding: 10px 12px;
+  border-radius: 16px;
+  font-size: 0.9rem;
   line-height: 1.35;
 }
 .ac-bubble p { margin: 0; white-space: pre-wrap; word-break: break-word; }
-.ac-bubble span { display: block; margin-top: 4px; font-size: 0.65rem; opacity: 0.55; }
+.ac-bubble span {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.68rem;
+  opacity: 0.65;
+}
 .ac-bubble.lead {
   align-self: flex-start;
-  background: #202c33;
-  border-top-left-radius: 2px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-bottom-left-radius: 4px;
 }
 .ac-bubble.bot {
   align-self: flex-end;
-  background: #005c4b;
-  border-top-right-radius: 2px;
+  background: #c45c6a;
+  color: #fff;
+  border-bottom-right-radius: 4px;
 }
+.ac-bubble.bot span { color: rgba(255,255,255,0.8); }
+
 .ac-composer {
   display: flex;
   gap: 8px;
-  padding: 10px 12px;
-  background: #1f2c34;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1px solid #eee;
 }
-.ac-composer .ac-input { flex: 1; }
-@media (max-width: 720px) {
-  .ac-body { grid-template-columns: 1fr; height: auto; }
-  .ac-list { max-height: 40vh; }
-  .ac-thread { min-height: 55vh; }
+.ac-composer-input {
+  flex: 1;
+  border: none;
+  background: #f2f2f4;
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-size: 0.92rem;
+  outline: none;
+}
+.ac-send {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: #c45c6a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ac-send:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Mobile: lista full; thread full screen */
+@media (max-width: 859px) {
+  .ac-main--thread .ac-inbox { display: none; }
+  .ac-main:not(.ac-main--thread) .ac-thread { display: none; }
+  .ac-main--thread .ac-thread { display: flex; }
 }
 </style>
