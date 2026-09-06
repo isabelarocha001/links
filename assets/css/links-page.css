@@ -3241,3 +3241,54 @@ html, body {
   color: #8696a0;
   font-size: 0.82rem;
 }
+
+
+/* Banner de bloqueio/desbloqueio no chat (sem overlay) */
+.wa-system-banner--block {
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+}
+.wa-system-unblock {
+  border: none;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #25d366;
+  color: #053b1c;
+}
+.wa-system-unblock:active { transform: scale(0.98); }
+
+.wa-lead-blocked-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(17, 27, 33, 0.96);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.wa-lead-blocked-bar-text {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #8696a0;
+  font-weight: 500;
+}
+.wa-lead-blocked-bar-btn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #25d366;
+  color: #053b1c;
+}
+.wa-lead-blocked-bar-btn:active { transform: scale(0.98); }
+.wa-composer--lead-blocked {
+  opacity: 0.55;
+  pointer-events: none;
+}
