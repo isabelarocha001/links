@@ -1,8 +1,10 @@
 import { useServiceSupabase, verifyAdminToken } from '~~/server/utils/supabase'
 
 /**
- * Admin responde numa conversa.
- * POST /api/admin/conversation-reply  { id, message }
+ * Admin responde numa conversa (texto, mídia, chamada, enquete).
+ * POST /api/admin/conversation-reply
+ * body: { id, message?, kind?, url?, poll_question?, poll_options? }
+ * kind: text | call | photo | video | audio | poll
  */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
@@ -13,9 +15,35 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event).catch(() => ({} as any))
   const id = String(body?.id || body?.conversation_id || '').trim()
-  const message = String(body?.message || '').trim().slice(0, 2000)
   if (!id) throw createError({ statusCode: 400, statusMessage: 'id required' })
-  if (!message) throw createError({ statusCode: 400, statusMessage: 'message required' })
+
+  const kind = String(body?.kind || 'text').toLowerCase().trim() || 'text'
+  let message = String(body?.message || '').trim().slice(0, 8000)
+  const url = String(body?.url || '').trim().slice(0, 2_000_000)
+  const pollQ = String(body?.poll_question || '').trim().slice(0, 200)
+  const pollOpts = Array.isArray(body?.poll_options)
+    ? body.poll_options.map((o: any) => String(o || '').trim()).filter(Boolean).slice(0, 5)
+    : []
+
+  if (kind === 'call') {
+    message = '⟦ADMIN⟧' + JSON.stringify({ k: 'call' })
+  } else if (kind === 'photo') {
+    if (!url) throw createError({ statusCode: 400, statusMessage: 'url da foto obrigatória' })
+    message = '⟦ADMIN⟧' + JSON.stringify({ k: 'photo', u: url })
+  } else if (kind === 'video') {
+    if (!url) throw createError({ statusCode: 400, statusMessage: 'url do vídeo obrigatória' })
+    message = '⟦ADMIN⟧' + JSON.stringify({ k: 'video', u: url })
+  } else if (kind === 'audio') {
+    if (!url) throw createError({ statusCode: 400, statusMessage: 'url do áudio obrigatória' })
+    message = '⟦ADMIN⟧' + JSON.stringify({ k: 'audio', u: url })
+  } else if (kind === 'poll') {
+    if (pollQ.length < 2 || pollOpts.length < 2) {
+      throw createError({ statusCode: 400, statusMessage: 'Enquete precisa de pergunta e 2+ opções' })
+    }
+    message = '⟦ADMIN⟧' + JSON.stringify({ k: 'poll', q: pollQ, o: pollOpts })
+  } else {
+    if (!message) throw createError({ statusCode: 400, statusMessage: 'message required' })
+  }
 
   const supabase = useServiceSupabase()
 
@@ -34,13 +62,18 @@ export default defineEventHandler(async (event) => {
     direction: 'bot',
     message,
     step: 'live_admin',
-    metadata: { source: 'admin_chat', admin_reply: true },
+    metadata: {
+      source: 'admin_chat',
+      admin_reply: true,
+      kind,
+      has_url: !!url,
+    },
   }
 
   const { data: inserted, error } = await supabase
     .from('wa_funnel_messages')
     .insert(row)
-    .select('id, direction, message, step, created_at')
+    .select('id, direction, message, step, created_at, metadata')
     .single()
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
