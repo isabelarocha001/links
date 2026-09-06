@@ -721,6 +721,20 @@
         </div>
       </div>
 
+      <div v-if="showCallSalesBalloon" class="call-sales-balloon-overlay" @click.self="closeCallSalesBalloon">
+        <div class="call-sales-balloon" role="dialog" aria-modal="true" @click.stop>
+          <div class="call-sales-balloon-glow" aria-hidden="true"></div>
+          <img src="/model.jpg" alt="" class="call-sales-avatar" draggable="false" />
+          <p class="call-sales-kicker">✦ Ao vivo comigo</p>
+          <h3 class="call-sales-title">Você atendeu… agora escolhe o clima</h3>
+          <p class="call-sales-sub">Videochamada real, no seu ritmo. Escolhe quanto tempo quer ficar comigo e a gente libera o PIX.</p>
+          <div class="call-sales-actions">
+            <button type="button" class="call-sales-btn call-sales-btn--primary" @click="onCallSalesWantLive">Quero te ver ao vivo 🔥</button>
+            <button type="button" class="call-sales-btn call-sales-btn--ghost" @click="closeCallSalesBalloon">Agora não</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Videochamada ao vivo (após pagamento) -->
       <div v-if="showVideoCallPlayer" class="vc-live" style="position:fixed;inset:0;z-index:40000;background:#0a0a0c;display:flex;flex-direction:column">
         <div style="position:absolute;top:0;left:0;right:0;padding:16px 16px 8px;display:flex;justify-content:space-between;align-items:center;z-index:2;background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent)">
@@ -2895,15 +2909,23 @@ function startIncomingVideoCall() {
   } catch {}
 }
 
-function acceptIncomingCall() {
+async function acceptIncomingCall() {
   stopIncomingRingtone()
   showIncomingCall.value = false
-  funnelStep.value = 'video_consult'
-  // Não joga preço. Primeiro cria desejo e pergunta como o lead quer a chamada.
-  funnelType(
-    'Que bom que atendeu, amor 🔥\n\nImagina a gente ao vivo: eu do outro lado da tela, olhando pra você, falando baixo, fazendo o que você pedir no momento… sem pressa, sem roteiro engessado.\n\nDepois que pagar, a chamada libera aqui mesmo no chat e a gente entra na hora.\n\nMe conta como você quer essa chamada: mais safada, mais carinhosa, só te olhar, te mandar fazer algo… o que te deixa mais louco?',
-    2200,
-  )
+  let credit = loadCallCredit()
+  try {
+    const synced = await syncCallCreditFromServer()
+    if (synced) credit = synced
+  } catch {}
+  if (credit && credit.secondsLeft > 0) {
+    videoCallUnlocked.value = true
+    videoCallPurchasedMin.value = Math.max(1, Math.ceil(credit.secondsLeft / 60))
+    beginLiveVideoCall()
+    return
+  }
+  showCallSalesBalloon.value = true
+  funnelStep.value = 'video_sales_balloon'
+  try { track('call_sales_balloon_open', { offer_slug: 'videochamada' }) } catch {}
 }
 
 function declineIncomingCall() {
@@ -2956,43 +2978,95 @@ function formatCallClock(totalSec: number) {
 }
 
 function beginLiveVideoCall() {
+  const playlist = buildCallPlaylist()
+  if (!playlist.length && !isAdmin.value) {
+    funnelType('Ainda não tem vídeo novo pra essa chamada… tenta de novo em instantes 😘', 1200)
+    return
+  }
+  callPlaylist.value = playlist.length ? playlist : videoCallVideos.value.slice()
+  callPlaylistIndex.value = 0
   showVideoCallPlayer.value = true
   videoCallActive.value = true
   videoCallEndedUpsell.value = false
   videoCallIndex.value = 0
-  const mins = videoCallPurchasedMin.value || 10
-  videoCallSecondsLeft.value = mins * 60
+  if (callPlaylist.value.length) {
+    const first = callPlaylist.value[0]
+    const idx = videoCallVideos.value.indexOf(first)
+    videoCallIndex.value = idx >= 0 ? idx : 0
+  }
+  const credit = loadCallCredit()
+  const totalSeconds = credit && credit.secondsLeft > 0
+    ? credit.secondsLeft
+    : (videoCallPurchasedMin.value || 10) * 60
+  videoCallSecondsLeft.value = totalSeconds
   videoCallSecondsUsed.value = 0
+  callSessionStartedAt.value = Date.now()
   stopVideoCallTimer()
   videoCallTimer = setInterval(() => {
     videoCallSecondsUsed.value += 1
-    videoCallSecondsLeft.value = Math.max(0, mins * 60 - videoCallSecondsUsed.value)
+    videoCallSecondsLeft.value = Math.max(0, totalSeconds - videoCallSecondsUsed.value)
     if (videoCallSecondsLeft.value <= 0) {
       endLiveVideoCall('timer')
     }
   }, 1000)
+  try { track('call_live_start', { seconds: totalSeconds }) } catch {}
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    $fetch('/api/call-credit', {
+      method: 'POST',
+      body: {
+        action: 'start_session',
+        visitor_id,
+        conversation_id: funnelConversationId.value || undefined,
+      },
+    }).catch(() => {})
+  } catch {}
 }
 
 function endLiveVideoCall(reason: 'timer' | 'video_end' | 'hangup' = 'hangup') {
   stopVideoCallTimer()
+  const usedSec = videoCallSecondsUsed.value || 0
+  try {
+    consumeCallCredit(usedSec)
+    markCurrentCallVideosWatched()
+  } catch {}
   videoCallActive.value = false
   showVideoCallPlayer.value = false
   videoCallEndedUpsell.value = true
   funnelStep.value = 'video_upsell'
-  const used = formatCallClock(videoCallSecondsUsed.value)
-  funnelType(
-    reason === 'timer' || reason === 'video_end'
-      ? `Seu tempo de chamada acabou, amor ⏱ (${used})\n\nSe quiser continuar comigo, assina mais minutos:\n\n• +10 min  R$ 99,90\n• +20 min  R$ 149,90\n• +30 min  R$ 229,90\n\nBora prorrogar?`
-      : `Chamada encerrada (${used}). Se quiser voltar pra mim, é só assinar mais minutos 🔥`,
-    1600,
-  )
+  const used = formatCallClock(usedSec)
+  const credit = loadCallCredit()
+  const leftMin = credit ? Math.ceil(credit.secondsLeft / 60) : 0
+  if (credit && credit.secondsLeft > 0) {
+    funnelType(
+      `Chamada pausada (${used}). Ainda restam ~${leftMin} min do seu pacote.\n\nQuando quiser continuar, toque em Iniciar videochamada ou atenda quando eu te ligar 🔥`,
+      1600,
+    )
+  } else {
+    videoCallUnlocked.value = false
+    funnelType(
+      reason === 'timer' || reason === 'video_end'
+        ? `Seu tempo de chamada acabou, amor ⏱ (${used})\n\nSe quiser continuar comigo, assina mais minutos:\n\n• +10 min  R$ 99,90\n• +20 min  R$ 149,90\n• +30 min  R$ 229,90\n\nBora prorrogar?`
+        : `Chamada encerrada (${used}). Seu pacote foi consumido — pra me ver de novo é só assinar mais minutos 🔥`,
+      1600,
+    )
+  }
+  try { track('call_live_end', { reason, used_sec: usedSec, left_sec: credit?.secondsLeft || 0 }) } catch {}
 }
 
 function onVideoCallMediaEnded() {
-  // acabou o arquivo de vídeo: tenta próximo; se não houver, encerra
-  if (videoCallIndex.value < videoCallVideos.value.length - 1) {
-    videoCallIndex.value += 1
-    return
+  try {
+    const url = videoCallVideos.value[videoCallIndex.value]
+    if (url) markVideosWatched([url])
+  } catch {}
+  callPlaylistIndex.value += 1
+  if (callPlaylistIndex.value < callPlaylist.value.length) {
+    const nextUrl = callPlaylist.value[callPlaylistIndex.value]
+    const idx = videoCallVideos.value.indexOf(nextUrl)
+    if (idx >= 0) {
+      videoCallIndex.value = idx
+      return
+    }
   }
   endLiveVideoCall('video_end')
 }
@@ -3199,11 +3273,16 @@ async function onFunnelPaid() {
 
     if (isVideo) {
     videoCallUnlocked.value = true
+    const minutes = videoCallPurchasedMin.value || Number(String(selectedPack.value?.key || '').replace('vid_', '')) || 10
+    grantCallCredit(Number(minutes) || 10, selectedPack.value?.key || 'vid_10')
     await funnelType(
-      `Recebi o PIX, amor 🔥\n\nSua videochamada (${pack?.label || 'ao vivo'}) tá liberada aqui no chat.\n\nToque em Iniciar videochamada pra me ver agora 😈`,
-      1800,
+      `Recebi o PIX, amor 🔥\n\nSua videochamada (${pack?.label || 'ao vivo'}) tá liberada.\n\nVou te ligar agora — atende pra gente começar 😈`,
+      1600,
     )
     funnelStep.value = 'video_call_ready'
+    setTimeout(() => {
+      try { startIncomingVideoCall() } catch {}
+    }, 1800)
   } else if (isPack) {
     await funnelType(
       'Recebi o PIX aqui meu amor 🔥 Me chama no WhatsApp que eu já vou te mandar os meus conteúdos. Garanto que você vai amar 😋',
@@ -3687,6 +3766,7 @@ function startLiveChatPoll() {
   stopLiveChatPoll()
   startPresencePoll()
   if (!funnelChatUnlocked.value) return
+  try { syncCallCreditFromServer() } catch {}
   pullLiveAdminReplies()
   liveChatPollTimer = setInterval(() => {
     pullLiveAdminReplies()
@@ -4874,6 +4954,7 @@ const CALL_CREDIT_KEY = 'wanessa_call_credit_v1'
 const CALL_WATCHED_KEY = 'wanessa_call_watched_v1'
 
 type CallCredit = {
+  id?: string
   secondsLeft: number
   secondsBought: number
   planKey: string
@@ -4882,46 +4963,69 @@ type CallCredit = {
 }
 
 function callCreditStorageKey() {
-  try {
-    return CALL_CREDIT_KEY + '_' + (getOrCreateVisitorId() || 'anon')
-  } catch {
-    return CALL_CREDIT_KEY + '_anon'
-  }
+  try { return CALL_CREDIT_KEY + '_' + (getOrCreateVisitorId() || 'anon') } catch { return CALL_CREDIT_KEY + '_anon' }
 }
 function callWatchedStorageKey() {
-  try {
-    return CALL_WATCHED_KEY + '_' + (getOrCreateVisitorId() || 'anon')
-  } catch {
-    return CALL_WATCHED_KEY + '_anon'
-  }
+  try { return CALL_WATCHED_KEY + '_' + (getOrCreateVisitorId() || 'anon') } catch { return CALL_WATCHED_KEY + '_anon' }
 }
 
-function loadCallCredit(): CallCredit | null {
+function loadCallCreditLocal(): CallCredit | null {
   try {
     const raw = localStorage.getItem(callCreditStorageKey())
     if (!raw) return null
     const data = JSON.parse(raw)
-    if (!data || typeof data.secondsLeft !== 'number') return null
-    if (data.secondsLeft <= 0) return null
+    if (!data || typeof data.secondsLeft !== 'number' || data.secondsLeft <= 0) return null
     return data as CallCredit
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
-function saveCallCredit(credit: CallCredit | null) {
+function saveCallCreditLocal(credit: CallCredit | null) {
   try {
-    if (!credit || credit.secondsLeft <= 0) {
-      localStorage.removeItem(callCreditStorageKey())
-      return
-    }
+    if (!credit || credit.secondsLeft <= 0) { localStorage.removeItem(callCreditStorageKey()); return }
     localStorage.setItem(callCreditStorageKey(), JSON.stringify(credit))
   } catch {}
 }
 
+function loadCallCredit(): CallCredit | null {
+  return loadCallCreditLocal()
+}
+
+async function syncCallCreditFromServer() {
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    if (!visitor_id) return null
+    const res = await $fetch<{
+      ok?: boolean
+      credit?: { id?: string; seconds_left?: number; seconds_bought?: number; plan_key?: string; last_payment_at?: string } | null
+      watched?: string[]
+    }>('/api/call-credit', { query: { visitor_id } })
+    if (Array.isArray(res?.watched)) {
+      try { localStorage.setItem(callWatchedStorageKey(), JSON.stringify(res.watched)) } catch {}
+    }
+    if (res?.credit && (res.credit.seconds_left || 0) > 0) {
+      const credit: CallCredit = {
+        id: res.credit.id,
+        secondsLeft: Number(res.credit.seconds_left) || 0,
+        secondsBought: Number(res.credit.seconds_bought) || 0,
+        planKey: String(res.credit.plan_key || 'vid_10'),
+        paymentAt: res.credit.last_payment_at ? Date.parse(res.credit.last_payment_at) : Date.now(),
+        visitor_id,
+      }
+      saveCallCreditLocal(credit)
+      videoCallUnlocked.value = true
+      videoCallPurchasedMin.value = Math.max(1, Math.ceil(credit.secondsLeft / 60))
+      return credit
+    }
+    if (!res?.credit || (res.credit.seconds_left || 0) <= 0) saveCallCreditLocal(null)
+    return loadCallCreditLocal()
+  } catch {
+    return loadCallCreditLocal()
+  }
+}
+
 function grantCallCredit(minutes: number, planKey: string) {
   const secs = Math.max(1, Math.floor(Number(minutes) || 10)) * 60
-  const prev = loadCallCredit()
+  const prev = loadCallCreditLocal()
   const credit: CallCredit = {
     secondsLeft: (prev?.secondsLeft || 0) + secs,
     secondsBought: (prev?.secondsBought || 0) + secs,
@@ -4929,42 +5033,66 @@ function grantCallCredit(minutes: number, planKey: string) {
     paymentAt: Date.now(),
   }
   try { credit.visitor_id = getOrCreateVisitorId() } catch {}
-  saveCallCredit(credit)
+  saveCallCreditLocal(credit)
   videoCallUnlocked.value = true
   videoCallPurchasedMin.value = Math.ceil(credit.secondsLeft / 60)
-  try {
-    track('call_credit_grant', { minutes, plan_key: planKey, seconds_left: credit.secondsLeft })
-  } catch {}
-  // log no funil (admin vê no histórico)
+  try { track('call_credit_grant', { minutes, plan_key: planKey, seconds_left: credit.secondsLeft }) } catch {}
   try {
     logFunnelMessage('bot', `Crédito de chamada: +${minutes} min (${planKey})`, {
-      event: 'call_credit_grant',
-      minutes,
-      plan_key: planKey,
-      seconds_left: credit.secondsLeft,
+      event: 'call_credit_grant', minutes, plan_key: planKey, seconds_left: credit.secondsLeft,
     })
+  } catch {}
+  try {
+    $fetch('/api/call-credit', {
+      method: 'POST',
+      body: {
+        action: 'grant',
+        visitor_id: getOrCreateVisitorId(),
+        minutes,
+        plan_key: planKey,
+        conversation_id: funnelConversationId.value || undefined,
+      },
+    }).catch(() => {})
   } catch {}
 }
 
 function consumeCallCredit(usedSeconds: number) {
   const used = Math.max(0, Math.floor(usedSeconds || 0))
-  const credit = loadCallCredit()
+  const credit = loadCallCreditLocal()
+  let left = 0
   if (!credit) {
     videoCallUnlocked.value = false
-    return
+  } else {
+    credit.secondsLeft = Math.max(0, credit.secondsLeft - used)
+    left = credit.secondsLeft
+    saveCallCreditLocal(credit.secondsLeft > 0 ? credit : null)
+    if (credit.secondsLeft <= 0) videoCallUnlocked.value = false
+    try {
+      logFunnelMessage('bot', `Chamada consumida: ${used}s · restam ${credit.secondsLeft}s`, {
+        event: 'call_credit_consume', used_sec: used, seconds_left: credit.secondsLeft,
+      })
+    } catch {}
+    try { track('call_credit_consume', { used_sec: used, seconds_left: credit.secondsLeft }) } catch {}
   }
-  credit.secondsLeft = Math.max(0, credit.secondsLeft - used)
-  saveCallCredit(credit.secondsLeft > 0 ? credit : null)
-  if (credit.secondsLeft <= 0) videoCallUnlocked.value = false
+  const watchedUrls: string[] = []
   try {
-    logFunnelMessage('bot', `Chamada consumida: ${used}s · restam ${credit.secondsLeft}s`, {
-      event: 'call_credit_consume',
-      used_sec: used,
-      seconds_left: credit.secondsLeft,
-    })
+    for (let i = 0; i <= callPlaylistIndex.value && i < callPlaylist.value.length; i++) watchedUrls.push(callPlaylist.value[i])
+    const cur = videoCallVideos.value[videoCallIndex.value]
+    if (cur) watchedUrls.push(cur)
   } catch {}
   try {
-    track('call_credit_consume', { used_sec: used, seconds_left: credit.secondsLeft })
+    $fetch('/api/call-credit', {
+      method: 'POST',
+      body: {
+        action: 'consume',
+        visitor_id: getOrCreateVisitorId(),
+        seconds_used: used,
+        end_reason: 'session',
+        conversation_id: funnelConversationId.value || undefined,
+        video_urls: watchedUrls,
+        started_at: callSessionStartedAt.value ? new Date(callSessionStartedAt.value).toISOString() : undefined,
+      },
+    }).catch(() => {})
   } catch {}
 }
 
@@ -4974,27 +5102,27 @@ function loadWatchedVideos(): string[] {
     if (!raw) return []
     const arr = JSON.parse(raw)
     return Array.isArray(arr) ? arr.map(String) : []
-  } catch {
-    return []
-  }
+  } catch { return [] }
 }
 
 function markVideosWatched(urls: string[]) {
   const set = new Set(loadWatchedVideos())
-  for (const u of urls) {
-    if (u) set.add(u)
-  }
+  for (const u of urls) if (u) set.add(u)
+  try { localStorage.setItem(callWatchedStorageKey(), JSON.stringify([...set])) } catch {}
   try {
-    localStorage.setItem(callWatchedStorageKey(), JSON.stringify([...set]))
+    const list = urls.filter(Boolean)
+    if (list.length) {
+      $fetch('/api/call-credit', {
+        method: 'POST',
+        body: { action: 'mark_watched', visitor_id: getOrCreateVisitorId(), video_urls: list, fully: true },
+      }).catch(() => {})
+    }
   } catch {}
 }
 
 function markCurrentCallVideosWatched() {
-  // marca todos os clips já tocados nesta sessão (até o index atual)
   const watched: string[] = []
-  for (let i = 0; i <= callPlaylistIndex.value && i < callPlaylist.value.length; i++) {
-    watched.push(callPlaylist.value[i])
-  }
+  for (let i = 0; i <= callPlaylistIndex.value && i < callPlaylist.value.length; i++) watched.push(callPlaylist.value[i])
   const cur = videoCallVideos.value[videoCallIndex.value]
   if (cur) watched.push(cur)
   markVideosWatched(watched)
@@ -5002,10 +5130,7 @@ function markCurrentCallVideosWatched() {
 
 function buildCallPlaylist(): string[] {
   const watched = new Set(loadWatchedVideos())
-  const all = videoCallVideos.value.filter(Boolean)
-  const fresh = all.filter((u) => !watched.has(u))
-  // se todos já foram vistos, não repete — lista vazia (força compra/nova leva de vídeos)
-  return fresh
+  return videoCallVideos.value.filter(Boolean).filter((u) => !watched.has(u))
 }
 
 function closeCallSalesBalloon() {
@@ -5020,6 +5145,7 @@ async function onCallSalesWantLive() {
     1200,
   )
 }
+
 const editVideoCallUrls = ref('')
 const AVATAR_FOCUS_KEY = 'wanessa_avatar_focus_v1'
 const avatarFocusX = ref(50)
