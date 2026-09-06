@@ -948,30 +948,39 @@
       </div>
 
       
-        <!-- Popup 1: benefícios do chat pago -->
-        <div v-if="showChatUnlockInfo" class="chat-plans-overlay" style="z-index:40130" @click.self="closeChatUnlockInfo">
-          <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
-            <div class="chat-plans-handle" aria-hidden="true"></div>
-            <div class="chat-plans-head">
-              <div>
-                <p class="chat-plans-kicker">{{ chatUnlockReason === 'call' ? 'Videochamada' : 'Chat privado' }}</p>
-                <h3>{{ chatUnlockReason === 'call' ? 'Chamada só com chat liberado' : 'Chat liberado por R$ 9,90' }}</h3>
-                <p class="chat-plans-sub">{{ chatUnlockReason === 'call' ? 'Pra eu te ligar, desbloqueia o chat por R$ 9,90' : 'Valor único de entrada — sem mensalidade' }}</p>
-              </div>
-              <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeChatUnlockInfo">✕</button>
+        <!-- Popup 1: explicação simples do chat bloqueado -->
+        <div v-if="showChatUnlockInfo" class="cu-overlay" style="z-index:40130" @click.self="closeChatUnlockInfo">
+          <div class="cu-card" role="dialog" aria-modal="true" @click.stop>
+            <button type="button" class="cu-x" aria-label="Fechar" @click="closeChatUnlockInfo">✕</button>
+            <p class="cu-title">{{ chatUnlockReason === 'call' ? 'Oi amor… a chamada tá bloqueada' : 'Oi amor… o chat tá bloqueado' }}</p>
+            <div class="cu-body">
+              <p>O envio de mensagens fica trancado de propósito.</p>
+              <p>Serve de <strong>filtro</strong> — pra evitar gente que não valoriza meu tempo.</p>
+              <p>É só um valor simbólico de <strong>R$ 3,00</strong> pra liberar o chat.</p>
+              <p>Aí você conversa comigo, pede o que quiser… e tem <strong>muito mais coisa boa e quente</strong> te esperando depois de desbloquear 🔥</p>
             </div>
-            <ul class="chat-unlock-benefits">
-              <li>💬 Digite e receba resposta pessoal</li>
-              <li>🔥 Papo safado no seu ritmo</li>
-              <li>📸 Peça foto, áudio e vídeo no chat</li>
-              <li>⚡ Liberação na hora após o PIX</li>
-              <li>🔒 Só quem paga entra — sem curioso</li>
-            </ul>
-            <p class="chat-unlock-price">R$ 9,90 <span>só agora</span></p>
-            <button type="button" class="chat-unlock-cta" :disabled="!!chatPayLoading" @click="acceptChatUnlock">
-              {{ chatPayLoading ? 'Gerando PIX…' : 'Quero liberar o chat' }}
+            <div class="cu-actions">
+              <button type="button" class="cu-btn cu-btn--no" @click="refuseChatUnlock">Não quero, sou viado</button>
+              <button type="button" class="cu-btn cu-btn--yes" @click="acceptChatUnlock">Desbloquear chat</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Popup 2: balão gamificado + Sim amor → PIX R$ 3 -->
+        <div v-if="showChatUnlockPix" class="cu-overlay" style="z-index:40140" @click.self="closeChatUnlockPix">
+          <div class="cu-pix-wrap" role="dialog" aria-modal="true" @click.stop>
+            <div class="cu-avatar-ring">
+              <img src="/model.jpg" alt="" class="cu-avatar" draggable="false" />
+            </div>
+            <div class="cu-balloon">
+              <p class="cu-balloon-text">Posso te mandar a chave PIX pra liberar o chat? 💚</p>
+              <span class="cu-balloon-tail" aria-hidden="true"></span>
+            </div>
+            <p class="cu-pix-hint">R$ 3,00 · libera na hora</p>
+            <button type="button" class="cu-btn cu-btn--yes cu-btn--wide" :disabled="!!chatPayLoading" @click="confirmChatUnlockPix">
+              {{ chatPayLoading ? 'Gerando PIX…' : 'Sim amor' }}
             </button>
-            <button type="button" class="chat-unlock-later" @click="closeChatUnlockInfo">Agora não</button>
+            <button type="button" class="cu-btn-link" @click="refuseChatUnlock">Não quero, sou viado</button>
           </div>
         </div>
 <div v-if="showChatPlans" class="chat-plans-overlay" @click.self="closeChatPlans">
@@ -1312,9 +1321,36 @@ function closeChatUnlockInfo() {
   showChatUnlockInfo.value = false
 }
 
-async function acceptChatUnlock() {
-  // Popup 1 aceito → fecha benefícios e abre PIX (popup 2)
+function closeChatUnlockPix() {
+  showChatUnlockPix.value = false
+}
+
+/** Recusou desbloquear → xinga e fecha */
+async function refuseChatUnlock() {
   showChatUnlockInfo.value = false
+  showChatUnlockPix.value = false
+  try { track('chat_unlock_info_refuse', { offer_slug: 'chat_quick' }) } catch {}
+  const insults = [
+    'Aff… mais um viado que não gasta nem R$ 3 🙄|||Vaza, boiola. Meu tempo não é de graça.',
+    'Não quer pagar R$ 3? Então some, viado 😂|||Aqui não é caridade pra boiola curioso.',
+    'R$ 3 e ainda recusa? Só pode ser viado mesmo 🗑️|||Fora. Quem não valoriza, não fica.',
+  ]
+  const msg = insults[Math.floor(Math.random() * insults.length)]
+  try {
+    await funnelType(msg, 1100)
+  } catch {}
+}
+
+/** Popup 1 aceito → popup 2 (balão + sim amor) */
+function acceptChatUnlock() {
+  showChatUnlockInfo.value = false
+  showChatUnlockPix.value = true
+  try { track('chat_unlock_info_accept', { offer_slug: 'chat_quick' }) } catch {}
+}
+
+/** Popup 2: Sim amor → gera PIX R$ 3 na conversa */
+async function confirmChatUnlockPix() {
+  showChatUnlockPix.value = false
   funnelStep.value = 'chat_unlock'
   selectedPack.value = {
     key: CHAT_MSG_UNLOCK_PLAN.key,
@@ -1322,13 +1358,16 @@ async function acceptChatUnlock() {
     price: CHAT_MSG_UNLOCK_PLAN.priceLabel,
   }
   selectedChatPlan.value = CHAT_MSG_UNLOCK_PLAN
-  try { track('chat_unlock_info_accept', { offer_slug: 'chat_quick' }) } catch {}
+  try { track('chat_unlock_pix_confirm', { offer_slug: 'chat_quick', amount: 3 }) } catch {}
+  try {
+    await funnelType('Fechou, amor 💚|||Vou te mandar o PIX de R$ 3,00 pra liberar o chat…', 900)
+  } catch {}
   try {
     await buyChatPlan(CHAT_MSG_UNLOCK_PLAN)
   } catch (e) {
     console.warn('[chat-unlock] pix', e)
     try {
-      await funnelType('Não deu pra gerar o PIX agora. Tenta de novo em instantes 💚', 900)
+      await funnelType('Não deu pra gerar o PIX agora. Toca de novo em desbloquear 💚', 900)
     } catch {}
   }
 }
@@ -2318,6 +2357,7 @@ function sendFunnelAudioPreview() {
 // Chat bloqueado + planos low-ticket (SyncPay)
 const showChatPlans = ref(false)
 const showChatUnlockInfo = ref(false)
+const showChatUnlockPix = ref(false)
 const showPixModal = ref(false)
 const chatPayLoading = ref<string | null>(null)
 const chatPayError = ref('')
@@ -2347,9 +2387,9 @@ const pixIsEmv = computed(() => /^000201/.test(pixCopyCode.value || ''))
 let pixPollTimer: ReturnType<typeof setInterval> | null = null
 
 const chatPlans = [
-  { key: 'chat_quick', title: 'Desbloquear mensagens', desc: 'R$ 9,90 libera enviar mensagem', price: 9.9, priceLabel: '9,90', hot: true },
+  { key: 'chat_quick', title: 'Desbloquear chat', desc: 'R$ 3,00 libera enviar mensagem', price: 3.0, priceLabel: '3,00', hot: true },
 ]
-/** Único valor pra digitar no chat (sem menu extra — zero fricção). */
+/** Valor simbólico pra filtrar lead que não valoriza tempo. */
 const CHAT_MSG_UNLOCK_PLAN = chatPlans[0]
 
 function openChatPlans() {
@@ -3582,7 +3622,7 @@ const funnelOptions = computed(() => {
   }
   if (funnelStep.value === 'chat' || funnelStep.value === 'chat_unlock') {
     return [
-      { key: 'chat_quick', label: 'Liberar mensagens  R$ 9,90', variant: 'wa-quick--yes' },
+      { key: 'chat_quick', label: 'Liberar chat  R$ 3,00', variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
@@ -3998,7 +4038,7 @@ function applyAdminLivePayload(raw: string, msgId?: string) {
         if (msgId && declinedCallMsgIds.value[msgId]) return
         if (msgId) lastIncomingCallMsgId.value = msgId
         if (!funnelChatUnlocked.value && !isAdmin.value) {
-          pushFunnel('her', 'Quero te ligar… libera o chat por R$ 9,90 pra atender 💚', undefined, { skipLog: true })
+          pushFunnel('her', 'Quero te ligar… libera o chat por R$ 3,00 pra atender 💚', undefined, { skipLog: true })
           openChatUnlockInfo('call')
           return
         }
@@ -5901,3 +5941,165 @@ useHead({
   meta: [{ name: 'description', content: 'Acesso restrito — privacidade e alto nível.' }, { name: 'theme-color', content: '#12081a' }],
 })
 </script>
+.cu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40130;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.cu-card {
+  position: relative;
+  width: min(100%, 360px);
+  border-radius: 20px;
+  padding: 22px 18px 16px;
+  background: linear-gradient(165deg, #1a1524 0%, #121018 100%);
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  animation: cuPop .28s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes cuPop {
+  from { opacity: 0; transform: translateY(12px) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+.cu-x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  color: #aaa;
+  font-size: 14px;
+  cursor: pointer;
+}
+.cu-title {
+  margin: 0 28px 12px 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+.cu-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.cu-body p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #c8c5d0;
+}
+.cu-body strong { color: #fff; font-weight: 700; }
+.cu-actions {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.cu-btn {
+  flex: 1;
+  border: 0;
+  border-radius: 14px;
+  padding: 13px 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1.25;
+}
+.cu-btn--yes {
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(37,211,102,.28);
+}
+.cu-btn--no {
+  background: rgba(255,255,255,.06);
+  color: #b0a8b8;
+  border: 1px solid rgba(255,255,255,.1);
+}
+.cu-btn--wide { width: 100%; flex: none; padding: 14px 16px; font-size: 1rem; }
+.cu-btn:disabled { opacity: .65; cursor: wait; }
+.cu-btn-link {
+  margin-top: 10px;
+  border: 0;
+  background: transparent;
+  color: #7a7385;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.cu-pix-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 320px);
+  animation: cuPop .32s cubic-bezier(.2,.9,.3,1);
+}
+.cu-avatar-ring {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, #25d366, #a855f7, #ec4899);
+  box-shadow: 0 0 0 6px rgba(37,211,102,.12), 0 12px 40px rgba(0,0,0,.45);
+  margin-bottom: 14px;
+  animation: cuPulse 2s ease-in-out infinite;
+}
+@keyframes cuPulse {
+  0%, 100% { box-shadow: 0 0 0 6px rgba(37,211,102,.12), 0 12px 40px rgba(0,0,0,.45); }
+  50% { box-shadow: 0 0 0 10px rgba(37,211,102,.2), 0 12px 40px rgba(0,0,0,.45); }
+}
+.cu-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.cu-balloon {
+  position: relative;
+  background: #1f2c34;
+  border-radius: 18px 18px 18px 4px;
+  padding: 14px 16px;
+  max-width: 100%;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  animation: cuFloat 2.4s ease-in-out infinite;
+}
+@keyframes cuFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.cu-balloon-text {
+  margin: 0;
+  color: #e9edef;
+  font-size: 0.98rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+.cu-balloon-tail {
+  position: absolute;
+  left: 18px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  background: #1f2c34;
+  transform: rotate(45deg);
+  border-right: 1px solid rgba(255,255,255,.08);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.cu-pix-hint {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: #8696a0;
+}
+
