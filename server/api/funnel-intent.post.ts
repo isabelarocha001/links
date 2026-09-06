@@ -11,7 +11,6 @@ type IntentResult = {
 async function getGeminiKey(): Promise<{ key: string; model: string }> {
   const env = process.env as Record<string, string | undefined>
   let key = String(env.GEMINI_API_KEY || env.NUXT_GEMINI_API_KEY || '').trim()
-  // Prefer model estável e atual; fallback para 3.5-flash se configurado no banco
   let model = String(env.GEMINI_MODEL || env.NUXT_GEMINI_MODEL || 'gemini-3.5-flash').trim()
   if (!key) {
     try {
@@ -32,10 +31,10 @@ async function getGeminiKey(): Promise<{ key: string; model: string }> {
   return { key, model }
 }
 
-function localIntent(message: string): IntentResult {
+/** Só bloqueio offline/presencial — o resto é 100% Gemini. Sem resposta genérica. */
+function localOfflineBlock(message: string): IntentResult | null {
   const t = message.toLowerCase().trim()
 
-  // NUNCA tratar preço de oferta online como "programa"
   const isOnlineOfferAsk = /chamada|videochamad|v[ií]deo\s*call|\bcall\b|\bpack\b|webnamoro|\bchat\b|\bmin\b|minuto|\bhora\b|pix|assinatura|conte[uú]do|ao vivo|online/.test(t)
 
   if (!isOnlineOfferAsk && /encont[rro] presencial|te encontrar pessoal|sair junto|sair comigo|sa[ií]r com (voc[eê]|vc)|presencial|na vida real|fazer programa|(^|[^a-z])programa([^a-z]|$)|(^|[^a-z])gp([^a-z]|$)|acompanhante|cobra pra (sair|transar|fazer)|quanto (voc[eê] )?cobra pra (sair|transar)|te pagar pra (sair|te ver|transar)|pagar pra (sair|te ver)|me encontra|vir (aqui|a[ií]) te|ir (a[ií]|ai) te ver|hotel|motel|airbnb|transar pessoal|sexo presencial|te ver pessoalmente|ficar comigo (pessoal|de verdade)|vem pra c[aá]/.test(t)) {
@@ -47,130 +46,15 @@ function localIntent(message: string): IntentResult {
       suggest_step: 'closed_offline',
     }
   }
-
-  // confirmação de tempo já discutido
-  if (/(quero|vou|fecha|s[oó]|mesmo|pode ser|esse|manda).{0,40}\b10\b|\b10\b.{0,20}(min|mesmo|s[oó])/.test(t)) {
-    return {
-      intent: 'video',
-      confidence: 0.92,
-      reply: 'Fechado: videochamada de 10 min por R$ 99,90.|||Quer que eu gere o PIX agora?',
-      show_menu: false,
-      suggest_step: 'video',
-    }
-  }
-
-  // "quanto cobra chamada de 10 min" etc. = oferta online
-  if (/quanto (voc[eê] )?(cobra|custa|é)|pre[cç]o|valor/.test(t) && /(chamada|call|video|v[ií]deo|pack|chat|webnamoro|\bmin\b|minuto|hora)/.test(t)) {
-    if (/chamada|call|videochamad|v[ií]deo/.test(t)) {
-      return {
-        intent: 'video',
-        confidence: 0.9,
-        reply: 'A videochamada de 10 min fica R$ 99,90.|||Tem também 20 min, 30 min e 1 hora.|||Qual tempo você prefere?',
-        show_menu: false,
-        suggest_step: 'video',
-      }
-    }
-  }
-
-  if (/v[ií]deo\s*chamad|videochamad|chamada de v[ií]deo|call ao vivo|ao vivo/.test(t)) {
-    return {
-      intent: 'video',
-      confidence: 0.9,
-      reply: 'Videochamada comigo fica bem intenso 🔥 Me conta o clima que você quer e eu te mostro os tempos e valores.',
-      show_menu: false,
-      suggest_step: 'video_consult',
-    }
-  }
-
-  if (/v[ií]deo avulso|v[ií]deo personaliz|me grava|grava pra mim|v[ií]deo sob demanda/.test(t)) {
-    return {
-      intent: 'video_avulso',
-      confidence: 0.88,
-      reply: 'Vídeo só pra você. me descreve o que você quer que eu faça nele 😈',
-      show_menu: false,
-      suggest_step: 'video_avulso',
-    }
-  }
-
-  if (/pack|conte[uú]do|fotos? e v[ií]deos|pacote|assinatura|vip|only/.test(t)) {
-    return {
-      intent: 'pack',
-      confidence: 0.85,
-      reply: 'Tenho packs deliciosos pra você me conhecer melhor 🔥 Quer que eu te mostre as opções e preços?',
-      show_menu: false,
-      suggest_step: 'packs',
-    }
-  }
-
-  if (/webnamoro|namoro virtual|namoradinha|namorar/.test(t)) {
-    return {
-      intent: 'webnamoro',
-      confidence: 0.85,
-      reply: 'Webnamoro comigo é bem especial 💕 Quer ver os planos?',
-      show_menu: false,
-      suggest_step: 'webnamoro',
-    }
-  }
-
-  // Desejo / flerte curto ("quero vc", "quero você", "te quero", "quero te ver", etc.)
-  // NÃO cair em genérico — engaja e direciona pro online
-  if (
-    /quero\s*(vc|você|voce|te|tu)|te\s*quero|quero\s*te\s*(ver|comer|pegar|foder|fuder)|quero\s*(muito\s*)?(vc|você)|me\s*quer|quero\s*você\s*agora|quero\s*vc\s*agora|só\s*quero\s*(vc|você)/i.test(t) ||
-    /^(quero vc|quero você|quero voce|te quero|quero te|me quer)$/i.test(t)
-  ) {
-    return {
-      intent: 'papo',
-      confidence: 0.82,
-      reply: 'Hmm que delícia ouvir isso 😏|||Aqui é tudo online, amor. Videochamada, chat safado, packs…|||O que você mais quer fazer comigo agora?',
-      show_menu: true,
-      suggest_step: 'menu',
-    }
-  }
-
-  // Saudações e papo leve
-  if (/s[oó] conversar|s[oó] papo|bater papo|conversar sem|s[oó] falar|\boi\b|\bol[aá]\b|oie|oii+|bom dia|boa tarde|boa noite|tudo bem|td bem|e a[ií]|blz|beleza|oi amor|ola amor/.test(t)) {
-    return {
-      intent: 'papo',
-      confidence: 0.75,
-      reply: 'Oi amor 😘|||Tudo bem sim. E você?',
-      show_menu: false,
-      suggest_step: null,
-    }
-  }
-
-  if (/chat|conversa safad|papo quente|sexting/.test(t)) {
-    return {
-      intent: 'chat',
-      confidence: 0.8,
-      reply: 'Chat comigo pode ser bem safado 😏 Quer que eu te mostre os planos de chat?',
-      show_menu: false,
-      suggest_step: 'chat',
-    }
-  }
-
-  if (/pre[cç]o|valor|quanto custa|quanto [eé]|pix|pagar|assin/.test(t)) {
-    return {
-      intent: 'unknown',
-      confidence: 0.6,
-      reply: 'Depende do que você quer, amor 💚 Videochamada, pack, chat ou webnamoro. Me fala o que te interessa que eu te passo o valor certinho.',
-      show_menu: true,
-      suggest_step: 'menu',
-    }
-  }
-
-  // Fallback NÃO genérico: engaja de forma natural e convida a falar o desejo
-  return {
-    intent: 'papo',
-    confidence: 0.45,
-    reply: 'Conta mais, amor 😏 O que você tá pensando agora?',
-    show_menu: false,
-    suggest_step: null,
-  }
+  return null
 }
 
 async function geminiIntent(message: string, history: string[]): Promise<IntentResult | null> {
   const { key, model } = await getGeminiKey()
-  if (!key) return null
+  if (!key) {
+    console.warn('[funnel-intent] GEMINI_API_KEY ausente')
+    return null
+  }
 
   const hist = (history || []).slice(-8).join('\n')
   const prompt = `Você é a Wanessa Borges, criadora de conteúdo adulto, falando no chat do seu site de links (estilo WhatsApp).
@@ -201,21 +85,21 @@ Intenções:
 - video | video_avulso | pack | webnamoro | chat | papo | encontros | unknown
 
 Regras OBRIGATÓRIAS:
-1. A "reply" DEVE responder o conteúdo da mensagem do lead E o histórico. Se vocês já falaram de videochamada de 10 min e o lead diz "quero só o de 10", confirme o fechamento (R$ 99,90) e pergunte se gera o PIX. Proibido "me conta mais" quando a intenção já está clara no histórico.
+1. A "reply" DEVE responder o conteúdo da mensagem do lead E o histórico. Se vocês já falaram de videochamada de 10 min e o lead diz "quero só o de 10", confirme o fechamento (R$ 99,90) e pergunte se gera o PIX.
 1b. Nunca diga que ouviu áudio se não há transcrição no histórico.
-1c. Mensagens curtas de desejo tipo "quero vc", "quero você", "te quero", "quero te ver": responda de forma safadinha e acolhedora, deixe claro que é ONLINE e pergunte o que ele mais quer fazer (videochamada, chat, pack…). NUNCA peça pra repetir com outras palavras.
-2. Se for oi / bom dia / boa tarde / tudo bem / oi amor: responda A SAUDAÇÃO de verdade (ex: "Oi amor" + "Tudo bem sim, e você?"). Nunca ignore a saudação. Nunca pule pro menu de vendas nessa hora. Conexão primeiro.
+1c. Mensagens curtas de desejo tipo "quero vc", "quero você", "te quero", "quero te ver": responda de forma safadinha e acolhedora, deixe claro que é ONLINE e pergunte o que ele mais quer fazer (videochamada, chat, pack…).
+2. Se for oi / bom dia / boa tarde / tudo bem / oi amor: responda A SAUDAÇÃO de verdade. Conexão primeiro.
 3. Se perguntar preço/como funciona de algo online: explique de forma direta e ofereça o caminho.
-4. Se pedir encontro PRESENCIAL / programa / sair / hotel / "quanto cobra pra SAIR": intent=encontros, closed_offline. NÃO confundir com preço de videochamada, pack, chat ou "quanto cobra uma chamada de 10 min" — isso é oferta ONLINE (intent video/pack/chat).
+4. Se pedir encontro PRESENCIAL / programa / sair / hotel / "quanto cobra pra SAIR": intent=encontros, closed_offline. NÃO confundir com preço de videochamada/pack/chat.
 5. NÃO invente que faz encontro presencial.
 6. NÃO jogue lista enorme de preços sem o lead pedir.
-7. ESTILO DE MENSAGEM (obrigatório):
+7. ESTILO DE MENSAGEM:
    - Respostas CURTAS, como WhatsApp real (1 a 2 frases por bolha).
-   - Se precisar falar mais, separe em várias falas usando o caractere ||| entre elas (ex: "frase um|||frase dois").
-   - NÃO use reticências (...) nem travessão/hífen de lista (-) — isso denuncia IA.
+   - Se precisar falar mais, separe em várias falas usando ||| entre elas.
+   - NÃO use reticências (...) nem travessão/hífen de lista (-).
    - NÃO monte textão. NÃO use bullet points. NÃO use markdown.
    - Pode usar emoji com moderação (no máximo 1 por fala).
-8. PROIBIDO respostas genéricas de "não entendi" / "pode repetir com outras palavras" / "quero te entender certinho". Sempre engaje de forma natural. Se a mensagem for ambígua, pergunte o desejo de forma safada (ex: "Conta o que você tá pensando agora 😏").
+8. PROIBIDO respostas genéricas de "não entendi" / "pode repetir com outras palavras" / "quero te entender certinho" / "me conta mais" vazio. Sempre engaje de forma natural e contextual.
 
 Responda APENAS JSON válido:
 {"intent":"video|video_avulso|pack|webnamoro|chat|papo|encontros|unknown","confidence":0.0-1.0,"reply":"...","show_menu":true|false,"suggest_step":"menu|video_consult|video_avulso|packs|webnamoro|chat|closed_offline|null"}
@@ -265,13 +149,14 @@ ${message.slice(0, 800)}
     const intent = String(parsed.intent || 'unknown')
     const allowed = new Set(['video', 'video_avulso', 'pack', 'webnamoro', 'chat', 'papo', 'encontros', 'unknown'])
 
-    let reply = String(parsed.reply || '').slice(0, 500)
-    // Bloqueia respostas genéricas ruins mesmo se o modelo gerar
-    if (
-      !reply ||
-      /pode repetir com outras palavras|quero te entender certinho|não entendi|me explica melhor|pode reformular/i.test(reply)
-    ) {
-      reply = 'Conta mais, amor 😏 O que você tá pensando agora?'
+    const reply = String(parsed.reply || '').trim().slice(0, 500)
+    // Sem reply do modelo = falha (front deixa no vácuo)
+    if (!reply) return null
+
+    // Se o modelo ainda gerar genérico proibido, trata como falha (vácuo)
+    if (/pode repetir com outras palavras|quero te entender certinho|não entendi bem|pode reformular|me explica melhor com outras/i.test(reply)) {
+      console.warn('[funnel-intent] gemini gerou resposta genérica proibida, descartando')
+      return null
     }
 
     return {
@@ -301,27 +186,35 @@ export default defineEventHandler(async (event) => {
     ? body.history.map((h: any) => String(h).slice(0, 300)).slice(-10)
     : []
 
-  // Filtro offline/programa SEMPRE local primeiro (não confia só no Gemini)
-  const local = localIntent(message)
-  if (local.intent === 'encontros') {
-    return { ok: true, ...local }
+  // Bloqueio offline local (único caso com reply fixa)
+  const offline = localOfflineBlock(message)
+  if (offline) {
+    return { ok: true, ...offline }
   }
 
-  // Gemini para o resto; se Gemini marcar encontros, respeita
+  // Tudo o mais: só Gemini. Se falhar → ok:false e reply vazia (front não manda nada)
   const ai = await geminiIntent(message, history)
-  let result = ai || local
-  if (ai && ai.intent === 'encontros') {
-    result = {
+  if (!ai) {
+    return {
+      ok: false,
+      intent: 'unknown',
+      confidence: 0,
+      reply: '',
+      show_menu: false,
+      suggest_step: null,
+    }
+  }
+
+  // Gemini marcou encontros → normaliza reply de recusa
+  if (ai.intent === 'encontros') {
+    return {
+      ok: true,
       intent: 'encontros',
       confidence: Math.max(ai.confidence, 0.9),
       reply: 'Ok, não tenho interesse no que você está me oferecendo.',
       show_menu: false,
       suggest_step: 'closed_offline',
     }
-  } else if (ai) {
-    // ainda assim: se o texto localmente grita offline e o AI errou, sobrescreve
-    const again = localIntent(message)
-    if (again.intent === 'encontros') result = again
   }
 
   // log leve
@@ -332,13 +225,13 @@ export default defineEventHandler(async (event) => {
       await supabase.from('wa_funnel_messages').insert({
         visitor_id,
         direction: 'system',
-        message: `[intent] ${result.intent} conf=${result.confidence}`,
+        message: `[intent] ${ai.intent} conf=${ai.confidence}`,
         step: 'intent',
         metadata: {
-          intent: result.intent,
-          confidence: result.confidence,
-          show_menu: result.show_menu,
-          suggest_step: result.suggest_step,
+          intent: ai.intent,
+          confidence: ai.confidence,
+          show_menu: ai.show_menu,
+          suggest_step: ai.suggest_step,
           ip: getClientIp(event),
           source: 'funnel-intent',
         },
@@ -346,5 +239,5 @@ export default defineEventHandler(async (event) => {
     }
   } catch {}
 
-  return { ok: true, ...result }
+  return { ok: true, ...ai }
 })
