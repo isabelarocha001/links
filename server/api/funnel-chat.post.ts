@@ -274,12 +274,16 @@ export default defineEventHandler(async (event) => {
     // Sempre avisa o admin no Telegram quando o lead manda mensagem
     const unlocked = body?.chat_unlocked === true || body?.unlocked === true || step === 'other' || step === 'live_admin'
     if (direction === 'lead' && conversation_id) {
+      const media_url = (metadata as any)?.media_url || (metadata as any)?.mediaUrl || null
+      const media_kind = (metadata as any)?.media_kind || (metadata as any)?.mediaKind || null
       notifyTelegramLeadMessage({
         conversationId: conversation_id,
         visitorId: visitor_id,
         message,
         step,
         unlocked,
+        media_url,
+        media_kind,
       }).catch(() => {})
     }
 
