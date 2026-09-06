@@ -886,7 +886,12 @@
       </div>
 
       <!-- Só quando WANESSA/sistema bloqueia o lead → segunda chance com mimo -->
-      <div v-if="funnelPermBlocked && !leadBlockedWanessa && showWaFunnel" class="wa-perm-block-overlay" @click.stop>
+      <!-- Esconde enquanto o PIX está aberto (evita botão sobreposto no modal) -->
+      <div
+        v-if="funnelPermBlocked && !leadBlockedWanessa && showWaFunnel && !showPixModal && !showPixStatusChecking"
+        class="wa-perm-block-overlay"
+        @click.stop
+      >
         <div class="wa-perm-block-card">
           <p class="wa-perm-block-title">Wanessa te bloqueou permanentemente</p>
           <p class="wa-perm-block-sub">Você não pode digitar, enviar áudio, emoji, mídia nem fazer chamadas.</p>
@@ -897,7 +902,7 @@
         </div>
       </div>
 
-      <div v-if="showBlockedUnlock" class="chat-plans-overlay" style="z-index:40050" @click.self="showBlockedUnlock = false">
+      <div v-if="showBlockedUnlock && !showPixModal && !showPixStatusChecking" class="chat-plans-overlay" style="z-index:40050" @click.self="showBlockedUnlock = false">
         <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
           <div class="chat-plans-handle" aria-hidden="true"></div>
           <div class="chat-plans-head">
@@ -984,7 +989,7 @@
       </div>
 
       <!-- Modal PIX gerado -->
-      <div v-if="showPixModal" class="chat-plans-overlay" @click.self="closePixModal">
+      <div v-if="showPixModal" class="chat-plans-overlay" style="z-index:40120" @click.self="closePixModal">
         <div class="chat-plans-sheet chat-pix-sheet" role="dialog" aria-modal="true" @click.stop>
           <div class="chat-plans-handle" aria-hidden="true"></div>
           <div class="chat-plans-head">
