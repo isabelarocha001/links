@@ -585,9 +585,12 @@
               type="text"
               enterkeyhint="send"
               autocomplete="off"
-              :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : (funnelChatUnlocked ? 'Mensagem' : 'Pague R$ 9,90 pra enviar'))"
-              :disabled="funnelBlocked || funnelTyping"
-              @focus="onFunnelInputFocus(); !funnelBlocked && onFunnelComposerInteract()"
+              :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : (funnelChatUnlocked ? 'Mensagem' : 'Toque para liberar o chat'))"
+              :readonly="!funnelChatUnlocked && !funnelBlocked && !leadBlockedWanessa"
+              :disabled="funnelBlocked || funnelTyping || leadBlockedWanessa"
+              @mousedown.prevent="!funnelChatUnlocked && onLockedComposerTap($event)"
+              @touchstart.prevent="!funnelChatUnlocked && onLockedComposerTap($event)"
+              @focus="funnelChatUnlocked ? (onFunnelInputFocus(), !funnelBlocked && onFunnelComposerInteract()) : onLockedComposerTap($event)"
               @blur="onFunnelInputBlur()"
               @click="!funnelBlocked && onFunnelComposerInteract()"
               @keydown="onFunnelComposerKey"
@@ -944,7 +947,34 @@
         </div>
       </div>
 
-      <div v-if="showChatPlans" class="chat-plans-overlay" @click.self="closeChatPlans">
+      
+        <!-- Popup 1: benefícios do chat pago -->
+        <div v-if="showChatUnlockInfo" class="chat-plans-overlay" style="z-index:40130" @click.self="closeChatUnlockInfo">
+          <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
+            <div class="chat-plans-handle" aria-hidden="true"></div>
+            <div class="chat-plans-head">
+              <div>
+                <p class="chat-plans-kicker">Chat privado</p>
+                <h3>Chat liberado por R$ 9,90</h3>
+                <p class="chat-plans-sub">Valor único de entrada — sem mensalidade</p>
+              </div>
+              <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeChatUnlockInfo">✕</button>
+            </div>
+            <ul class="chat-unlock-benefits">
+              <li>💬 Digite e receba resposta pessoal</li>
+              <li>🔥 Papo safado no seu ritmo</li>
+              <li>📸 Peça foto, áudio e vídeo no chat</li>
+              <li>⚡ Liberação na hora após o PIX</li>
+              <li>🔒 Só quem paga entra — sem curioso</li>
+            </ul>
+            <p class="chat-unlock-price">R$ 9,90 <span>só agora</span></p>
+            <button type="button" class="chat-unlock-cta" :disabled="!!chatPayLoading" @click="acceptChatUnlock">
+              {{ chatPayLoading ? 'Gerando PIX…' : 'Quero liberar o chat' }}
+            </button>
+            <button type="button" class="chat-unlock-later" @click="closeChatUnlockInfo">Agora não</button>
+          </div>
+        </div>
+<div v-if="showChatPlans" class="chat-plans-overlay" @click.self="closeChatPlans">
         <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
           <div class="chat-plans-handle" aria-hidden="true"></div>
           <div class="chat-plans-head">
@@ -1255,22 +1285,49 @@ let funnelMediaRecorder: MediaRecorder | null = null
 let funnelAudioChunks: BlobPart[] = []
 
 function requireFunnelChatOrPay(): boolean {
-  // Mensagem / mídia só depois de pagar R$ 9,90
   if (funnelChatUnlocked.value) return true
-  try {
-    funnelStep.value = 'chat_unlock'
-    selectedPack.value = {
-      key: CHAT_MSG_UNLOCK_PLAN.key,
-      label: CHAT_MSG_UNLOCK_PLAN.title,
-      price: CHAT_MSG_UNLOCK_PLAN.priceLabel,
-    }
-    selectedChatPlan.value = CHAT_MSG_UNLOCK_PLAN
-    funnelType(
-      'Pra mandar mensagem aqui é R$ 9,90 💚|||Gero o PIX agora?',
-      1000,
-    ).then(() => buyChatPlan(CHAT_MSG_UNLOCK_PLAN)).catch(() => {})
-  } catch {}
+  openChatUnlockInfo()
   return false
+}
+
+function openChatUnlockInfo() {
+  if (funnelChatUnlocked.value) return
+  if (funnelBlocked.value || funnelPermBlocked.value || leadBlockedWanessa.value) return
+  showChatUnlockInfo.value = true
+  try { track('chat_unlock_info_open', { offer_slug: 'chat_quick' }) } catch {}
+}
+
+/** Toque no campo de digitação bloqueado → popup de benefícios */
+function onLockedComposerTap(e?: Event) {
+  if (funnelChatUnlocked.value) return
+  if (funnelBlocked.value || leadBlockedWanessa.value) return
+  try { e?.preventDefault?.(); (e?.target as any)?.blur?.() } catch {}
+  openChatUnlockInfo()
+}
+
+function closeChatUnlockInfo() {
+  showChatUnlockInfo.value = false
+}
+
+async function acceptChatUnlock() {
+  // Popup 1 aceito → fecha benefícios e abre PIX (popup 2)
+  showChatUnlockInfo.value = false
+  funnelStep.value = 'chat_unlock'
+  selectedPack.value = {
+    key: CHAT_MSG_UNLOCK_PLAN.key,
+    label: CHAT_MSG_UNLOCK_PLAN.title,
+    price: CHAT_MSG_UNLOCK_PLAN.priceLabel,
+  }
+  selectedChatPlan.value = CHAT_MSG_UNLOCK_PLAN
+  try { track('chat_unlock_info_accept', { offer_slug: 'chat_quick' }) } catch {}
+  try {
+    await buyChatPlan(CHAT_MSG_UNLOCK_PLAN)
+  } catch (e) {
+    console.warn('[chat-unlock] pix', e)
+    try {
+      await funnelType('Não deu pra gerar o PIX agora. Tenta de novo em instantes 💚', 900)
+    } catch {}
+  }
 }
 function onFunnelComposerInteract(e?: Event) {
   if (funnelPermBlocked.value || leadBlockedWanessa.value) {
@@ -2252,6 +2309,7 @@ function sendFunnelAudioPreview() {
 
 // Chat bloqueado + planos low-ticket (SyncPay)
 const showChatPlans = ref(false)
+const showChatUnlockInfo = ref(false)
 const showPixModal = ref(false)
 const chatPayLoading = ref<string | null>(null)
 const chatPayError = ref('')
@@ -4418,33 +4476,12 @@ async function sendFunnelFreeText() {
   const text = (funnelInput.value || '').trim()
   if (!text || funnelTyping.value) return
 
-  // GATE OBRIGATÓRIO: sem pagamento não processa resposta (Gemini/script)
+  // GATE: sem pagar → popup de benefícios (não envia, não Gemini)
   if (!funnelChatUnlocked.value) {
     try { (window as any).__pendingLeadText = text } catch {}
     funnelInput.value = ''
-    // mostra a tentativa do lead + cobrança
-    pushFunnel('me', text, undefined, { logExtra: { event: 'paid_chat_gate', pending_unlock: true } })
-    funnelStep.value = 'chat_unlock'
-    selectedPack.value = {
-      key: CHAT_MSG_UNLOCK_PLAN.key,
-      label: CHAT_MSG_UNLOCK_PLAN.title,
-      price: CHAT_MSG_UNLOCK_PLAN.priceLabel,
-    }
-    selectedChatPlan.value = CHAT_MSG_UNLOCK_PLAN
-    try { saveFunnelState() } catch {}
-    await funnelType(
-      'Pra eu te responder aqui no chat é R$ 9,90 💚|||É o valor de entrada.|||Gero o PIX agora?',
-      1100,
-    )
-    try {
-      await buyChatPlan(CHAT_MSG_UNLOCK_PLAN)
-    } catch (e) {
-      console.warn('[chat-gate] buyChatPlan', e)
-      try {
-        await funnelType('Toca em Liberar mensagens R$ 9,90 pra eu gerar o PIX 💚', 900)
-      } catch {}
-    }
-    return // NUNCA cai no Gemini sem pagar
+    openChatUnlockInfo()
+    return
   }
 
   funnelInput.value = ''
@@ -5005,19 +5042,13 @@ if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30' || opt.
   if (opt.key === 'conversar') {
     track('whatsapp_funnel_intent', { offer_slug: 'conversar' })
     funnelStep.value = 'chat_unlock'
-    await funnelType(
-      'Pra conversar comigo aqui o valor de entrada é R$ 9,90 💚|||Assim eu sei que você é sério.|||Quer liberar as mensagens agora?',
-      1200,
-    )
+    openChatUnlockInfo()
     return
   }
 
   if (opt.key === 'chat_quick' || opt.key === 'chat_basic' || opt.key === 'chat_midia') {
-    // Só R$ 9,90 — sem menu de outros valores (menos fricção)
-    const p = { label: 'Desbloquear mensagens', price: '9,90', desc: 'libera enviar mensagem no chat' }
-    selectedPack.value = { key: 'chat_quick', label: p.label, price: p.price }
-    track('whatsapp_funnel_select', { offer_slug: opt.key })
-    await startFunnelCheckout()
+    track('whatsapp_funnel_select', { offer_slug: 'chat_quick' })
+    openChatUnlockInfo()
     return
   }
 
