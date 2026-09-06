@@ -3019,14 +3019,27 @@ async function acceptIncomingCall() {
 }
 
 function declineIncomingCall() {
+  // Evita spam se o lead ficar apertando recusar
+  if (declineIncomingLock) return
+  declineIncomingLock = true
+  setTimeout(() => { declineIncomingLock = false }, 2500)
+
   stopIncomingRingtone()
   showIncomingCall.value = false
+  try { showCallSalesBalloon.value = false } catch {}
+  try { showVideoCallPlayer.value = false } catch {}
+
+  // Marca este convite como recusado — poll não reabre a chamada nem reprocessa
+  const cid = lastIncomingCallMsgId.value
+  if (cid) declinedCallMsgIds.value[cid] = true
+
   showDeclineWhy.value = true
   funnelStep.value = 'video_declined'
+  // Só texto — nunca mídia / foto ao recusar
   funnelType(
-    'Poxa… você recusou minha chamada 🥺\n\nFica tranquilo, sem pressão. Me conta o que te segurou? Às vezes é só o horário ou o valor — a gente ajeita.',
-    1400,
-  )
+    'Poxa… você recusou minha chamada 🥺|||Fica tranquilo, sem pressão. Me conta o que te segurou?',
+    1200,
+  ).catch(() => {})
 }
 
 async function submitDeclineWhy() {
@@ -3909,6 +3922,10 @@ function stopPresencePoll() {
 
 let liveChatPollTimer: ReturnType<typeof setInterval> | null = null
 const seenLiveMsgIds = ref<Record<string, true>>({})
+/** IDs de convite de chamada que o lead já recusou — não reabre nem manda mídia */
+const declinedCallMsgIds = ref<Record<string, true>>({})
+const lastIncomingCallMsgId = ref<string | null>(null)
+let declineIncomingLock = false
 
 function stopLiveChatPoll() {
   if (liveChatPollTimer) {
@@ -3951,7 +3968,7 @@ async function persistAndAckTempMedia(url: string, payload?: any) {
   } catch {}
 }
 
-function applyAdminLivePayload(raw: string) {
+function applyAdminLivePayload(raw: string, msgId?: string) {
   const text = String(raw || '').trim()
   if (!text) return
   // Payload especial do admin: ⟦ADMIN⟧{...}
@@ -3960,10 +3977,16 @@ function applyAdminLivePayload(raw: string) {
       const payload = JSON.parse(text.slice('⟦ADMIN⟧'.length))
       const k = String(payload?.k || '')
       if (k === 'call') {
+        // Se o lead já recusou ESTE convite, não reabre e não manda nada
+        if (msgId && declinedCallMsgIds.value[msgId]) return
+        if (msgId) lastIncomingCallMsgId.value = msgId
+        // Só texto + UI de chamada — nunca foto/mídia junto do convite
         pushFunnel('her', 'Wanessa está te ligando…', undefined, { skipLog: true })
         try { startIncomingVideoCall() } catch {}
         return
       }
+      // Foto/vídeo/áudio só se NÃO for “lixo” de tela de WhatsApp amarrado a recusa de call
+      // (continua permitindo mídia normal do admin)
       if (k === 'photo' && payload?.u) {
         const u = String(payload.u)
         pushFunnel(
@@ -4054,7 +4077,7 @@ async function pullLiveAdminReplies() {
         try { last.id = m.id } catch {}
         continue
       }
-      applyAdminLivePayload(text)
+      applyAdminLivePayload(text, m.id)
       try {
         const created = funnelMessages.value[funnelMessages.value.length - 1]
         if (created?.from === 'her') created.id = m.id
