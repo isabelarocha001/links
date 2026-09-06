@@ -345,9 +345,9 @@ function onAdminMediaPicked(ev: Event) {
   const kind = adminMediaKind.value
   adminMediaKind.value = null
   if (!file || !kind) return
-  const max = kind === 'photo' ? 3.5 * 1024 * 1024 : 8 * 1024 * 1024
+  const max = kind === 'photo' ? 100 * 1024 * 1024 : 100 * 1024 * 1024
   if (file.size > max) {
-    replyError.value = `Arquivo grande demais (máx. ${kind === 'photo' ? '3,5' : '8'} MB). Comprime ou manda link.`
+    replyError.value = `Arquivo grande demais (máx. 100 MB). Comprime ou manda link.`
     return
   }
   const reader = new FileReader()
