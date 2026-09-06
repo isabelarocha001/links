@@ -3300,7 +3300,7 @@ async function onFunnelPaid() {
     return
   }
 
-    if (isVideo) {
+  if (isVideo) {
     videoCallUnlocked.value = true
     const minutes = videoCallPurchasedMin.value || Number(String(selectedPack.value?.key || '').replace('vid_', '')) || 10
     grantCallCredit(Number(minutes) || 10, selectedPack.value?.key || 'vid_10')
@@ -3644,7 +3644,7 @@ async function ensureFunnelConversation(): Promise<boolean> {
     console.warn('[ensureFunnelConversation]', e)
   }
   return !!(funnelConversationId.value && funnelAccessToken.value)
-
+}
 
 async function uploadLeadMediaAndNotify(label: string, kind: string, blobUrl: string, html?: string) {
   try {
