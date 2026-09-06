@@ -3292,3 +3292,104 @@ html, body {
   opacity: 0.55;
   pointer-events: none;
 }
+
+
+/* Balão gamificado pós-atender (venda de chamada) */
+.call-sales-balloon-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(6, 8, 12, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.call-sales-balloon {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  padding: 28px 22px 22px;
+  border-radius: 24px;
+  background: linear-gradient(165deg, #1a1228 0%, #0f0a18 100%);
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 40px rgba(168, 85, 247, 0.2);
+  text-align: center;
+  animation: callBalloonIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes callBalloonIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.call-sales-balloon-glow {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(circle at 50% 20%, rgba(168,85,247,0.25), transparent 55%);
+  pointer-events: none;
+}
+.call-sales-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255,255,255,0.35);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  margin: 0 auto 12px;
+  position: relative;
+  z-index: 1;
+}
+.call-sales-kicker {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #c084fc;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+.call-sales-title {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #f5f0ff;
+  line-height: 1.25;
+  position: relative;
+  z-index: 1;
+}
+.call-sales-sub {
+  margin: 0 0 18px;
+  font-size: 0.88rem;
+  color: rgba(245,240,255,0.7);
+  line-height: 1.4;
+  position: relative;
+  z-index: 1;
+}
+.call-sales-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+.call-sales-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 13px 16px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.call-sales-btn--primary {
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+}
+.call-sales-btn--ghost {
+  background: transparent;
+  color: rgba(245,240,255,0.65);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.call-sales-btn:active { transform: scale(0.98); }
