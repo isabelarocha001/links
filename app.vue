@@ -4650,7 +4650,7 @@ async function sendFunnelFreeText() {
     try { saveFunnelState() } catch {}
   } catch (e) {
     console.warn('[funnel gemini fallback]', e)
-    await funnelType('Pode escrever de novo o que você quer? Assim eu te respondo certinho.', 1000)
+    await funnelType('Conta mais, amor 😏 O que você tá pensando agora?', 1000)
   }
 }
 
