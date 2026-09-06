@@ -1196,6 +1196,22 @@ function closeFunnelPhoto() {
 }
 
 const funnelInput = ref('')
+
+let typingIdleTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => funnelInput.value,
+  (v) => {
+    if (!showWaFunnel.value) return
+    if (String(v || '').trim()) {
+      try { setLeadActivity('typing') } catch {}
+      if (typingIdleTimer) clearTimeout(typingIdleTimer)
+      typingIdleTimer = setTimeout(() => {
+        try { setLeadActivity(showWaFunnel.value ? 'viewing' : 'idle') } catch {}
+      }, 2500)
+    }
+  },
+)
+
 const funnelShellStyle = ref<Record<string, string>>({})
 const funnelKeyboardOpen = ref(false)
 let funnelKbdPoll: ReturnType<typeof setInterval> | null = null
@@ -2180,6 +2196,7 @@ async function onFunnelAudio() {
     rec.onstop = () => {
       stream.getTracks().forEach((t) => t.stop())
       funnelRecording.value = false
+      try { setLeadActivity('idle') } catch {}
       const blob = new Blob(funnelAudioChunks, { type: 'audio/webm' })
       if (!blob.size) return
       try {
@@ -2189,6 +2206,7 @@ async function onFunnelAudio() {
     }
     rec.start()
     funnelRecording.value = true
+    try { setLeadActivity('recording') } catch {}
   } catch {
     funnelAudioInput.value?.click()
   }
@@ -3571,6 +3589,7 @@ function saveFunnelConversationLocal(conversation_id: string, access_token: stri
 
 async function uploadLeadMediaAndNotify(label: string, kind: string, blobUrl: string, html?: string) {
   try {
+    try { setLeadActivity('uploading') } catch {}
     const res = await fetch(blobUrl)
     const blob = await res.blob()
     const buf = await blob.arrayBuffer()
@@ -3600,7 +3619,9 @@ async function uploadLeadMediaAndNotify(label: string, kind: string, blobUrl: st
       has_html: !!html,
       temp_path: up.path,
     })
+    try { setLeadActivity('viewing') } catch {}
   } catch (e) {
+    try { setLeadActivity('viewing') } catch {}
     try {
       logFunnelMessage('lead', label || kind, { media_kind: kind, has_html: !!html, media_upload_failed: true })
     } catch {}
@@ -3696,6 +3717,63 @@ async function pullAdminPresence() {
     adminPresenceLabel.value = fallbackLastSeenLabel()
   }
 }
+
+let leadPresenceTimer: ReturnType<typeof setInterval> | null = null
+let leadPresenceActivity = 'idle'
+let leadPresenceOfflineSent = false
+
+function setLeadActivity(activity: 'idle' | 'typing' | 'recording' | 'uploading' | 'viewing') {
+  leadPresenceActivity = activity
+  try { sendLeadPresence(true) } catch {}
+}
+
+async function sendLeadPresence(online = true) {
+  try {
+    if (!funnelChatUnlocked.value && !showWaFunnel.value) return
+    const visitor_id = getOrCreateVisitorId()
+    if (!visitor_id) return
+    // última msg da Wanessa (bot) pra read receipt
+    let last_read_message_id: string | undefined
+    try {
+      for (let i = funnelMessages.value.length - 1; i >= 0; i--) {
+        const m = funnelMessages.value[i]
+        if (m?.from === 'her' && m.id) {
+          last_read_message_id = m.id
+          break
+        }
+      }
+    } catch {}
+    await $fetch('/api/lead-presence', {
+      method: 'POST',
+      body: {
+        visitor_id,
+        conversation_id: funnelConversationId.value || undefined,
+        online,
+        activity: online ? leadPresenceActivity : 'idle',
+        last_read_message_id,
+      },
+    })
+    leadPresenceOfflineSent = !online
+  } catch {}
+}
+
+function startLeadPresenceHeartbeat() {
+  stopLeadPresenceHeartbeat()
+  leadPresenceActivity = 'viewing'
+  sendLeadPresence(true)
+  leadPresenceTimer = setInterval(() => sendLeadPresence(true), 3000)
+}
+
+function stopLeadPresenceHeartbeat() {
+  if (leadPresenceTimer) {
+    clearInterval(leadPresenceTimer)
+    leadPresenceTimer = null
+  }
+  if (!leadPresenceOfflineSent) {
+    try { sendLeadPresence(false) } catch {}
+  }
+}
+
 function startPresencePoll() {
   stopPresencePoll()
   pullAdminPresence()
@@ -3717,6 +3795,7 @@ function stopLiveChatPoll() {
     liveChatPollTimer = null
   }
   stopPresencePoll()
+  stopLeadPresenceHeartbeat()
 }
 
 
@@ -3838,8 +3917,16 @@ async function pullLiveAdminReplies() {
       if (!text) continue
       seenLiveMsgIds.value[m.id] = true
       const last = funnelMessages.value[funnelMessages.value.length - 1]
-      if (last?.from === 'her' && last.text === text) continue
+      if (last?.from === 'her' && last.text === text) {
+        // sincroniza id do servidor pra read receipt
+        try { last.id = m.id } catch {}
+        continue
+      }
       applyAdminLivePayload(text)
+      try {
+        const created = funnelMessages.value[funnelMessages.value.length - 1]
+        if (created?.from === 'her') created.id = m.id
+      } catch {}
     }
   } catch {}
 }
@@ -3847,6 +3934,7 @@ async function pullLiveAdminReplies() {
 function startLiveChatPoll() {
   stopLiveChatPoll()
   startPresencePoll()
+  startLeadPresenceHeartbeat()
   if (!funnelChatUnlocked.value) return
   try { syncCallCreditFromServer() } catch {}
   pullLiveAdminReplies()
@@ -3912,6 +4000,7 @@ function openWaFunnel(source = 'whatsapp') {
   try { onCardClick('WhatsApp Funnel', whatsappUrl.value) } catch {}
   try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open', source }) } catch {}
   showWaFunnel.value = true
+  try { startLeadPresenceHeartbeat() } catch {}
   funnelKeyboardOpen.value = false
   lockBodyScrollForFunnel()
   startPresencePoll()
@@ -3943,6 +4032,7 @@ function openWaFunnel(source = 'whatsapp') {
 }
 
 function closeWaFunnel() {
+  try { stopLeadPresenceHeartbeat() } catch {}
   stopLiveChatPoll()
   stopFunnelPayPoll()
   if (funnelTimer) clearTimeout(funnelTimer)
