@@ -124,8 +124,8 @@ export default defineEventHandler(async (event) => {
   if (!message || message.length > 2000) {
     throw createError({ statusCode: 400, statusMessage: 'message required' })
   }
-  if (direction !== 'lead' && direction !== 'bot') {
-    throw createError({ statusCode: 400, statusMessage: 'direction must be lead|bot' })
+  if (direction !== 'lead' && direction !== 'bot' && direction !== 'system') {
+    throw createError({ statusCode: 400, statusMessage: 'direction must be lead|bot|system' })
   }
 
   const visitor_id = body?.visitor_id ? String(body.visitor_id).slice(0, 120) : null
