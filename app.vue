@@ -3330,7 +3330,7 @@ function markLastLeadMessage(status: 'delivered' | 'read') {
   }
 }
 
-function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null }) {
+function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; mediaUrl?: string }) {
   const row: { id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; edited?: boolean; deleted?: boolean } = {
     id: `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     from,
@@ -3355,7 +3355,15 @@ function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { sk
   scrollFunnel()
   // grava no Supabase (lead = me, bot = her)
   if (!opts?.skipLog) {
-    logFunnelMessage(from === 'me' ? 'lead' : 'bot', text, { has_html: !!html })
+    const extra: Record<string, any> = { has_html: !!html }
+    if ((opts as any)?.mediaKind) extra.media_kind = (opts as any).mediaKind
+    if ((opts as any)?.mediaUrl) extra.media_url = (opts as any).mediaUrl
+    // lead mídia: sobe temp pro Telegram e apaga depois do envio
+    if (from === 'me' && (opts as any)?.mediaUrl && String((opts as any).mediaUrl).startsWith('blob:')) {
+      uploadLeadMediaAndNotify(text, (opts as any).mediaKind, (opts as any).mediaUrl, html)
+    } else {
+      logFunnelMessage(from === 'me' ? 'lead' : 'bot', text, extra)
+    }
   }
 }
 
@@ -3560,6 +3568,45 @@ function saveFunnelConversationLocal(conversation_id: string, access_token: stri
   } catch {}
 }
 
+
+async function uploadLeadMediaAndNotify(label: string, kind: string, blobUrl: string, html?: string) {
+  try {
+    const res = await fetch(blobUrl)
+    const blob = await res.blob()
+    const buf = await blob.arrayBuffer()
+    // base64
+    let binary = ''
+    const bytes = new Uint8Array(buf)
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+    const b64 = btoa(binary)
+    const up = await $fetch<{ ok?: boolean; url?: string; path?: string }>('/api/media/temp-upload', {
+      method: 'POST',
+      body: {
+        base64: b64,
+        contentType: blob.type || 'application/octet-stream',
+        kind,
+        visitor_id: getOrCreateVisitorId(),
+        conversation_id: funnelConversationId.value || undefined,
+      },
+    })
+    const url = up?.url
+    if (!url) {
+      logFunnelMessage('lead', label || kind, { media_kind: kind, has_html: !!html })
+      return
+    }
+    logFunnelMessage('lead', label || kind, {
+      media_kind: kind,
+      media_url: url,
+      has_html: !!html,
+      temp_path: up.path,
+    })
+  } catch (e) {
+    try {
+      logFunnelMessage('lead', label || kind, { media_kind: kind, has_html: !!html, media_upload_failed: true })
+    } catch {}
+  }
+}
+
 function logFunnelMessage(direction: 'lead' | 'bot', message: string, extra: Record<string, any> = {}) {
   try {
     const visitor_id = getOrCreateVisitorId()
@@ -3672,6 +3719,38 @@ function stopLiveChatPoll() {
   stopPresencePoll()
 }
 
+
+async function persistAndAckTempMedia(url: string, payload?: any) {
+  // tenta espelhar no localStorage (dataURL) e pedir delete no storage temp
+  try {
+    if (url.startsWith('http') && url.includes('chat-media-temp')) {
+      // baixa e guarda dataURL no estado da última mensagem (quando possível)
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        if (blob.size && blob.size < 4.5 * 1024 * 1024) {
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const fr = new FileReader()
+            fr.onload = () => resolve(String(fr.result || ''))
+            fr.onerror = () => reject(new Error('read fail'))
+            fr.readAsDataURL(blob)
+          })
+          const last = funnelMessages.value[funnelMessages.value.length - 1]
+          if (last && last.html && dataUrl) {
+            last.html = last.html.split(url).join(dataUrl)
+            try { saveFunnelState() } catch {}
+          }
+        }
+      } catch {}
+      // apaga do Supabase (já entregue / espelhado)
+      $fetch('/api/media/ack-delivered', {
+        method: 'POST',
+        body: { url, path: payload?.path || undefined },
+      }).catch(() => {})
+    }
+  } catch {}
+}
+
 function applyAdminLivePayload(raw: string) {
   const text = String(raw || '').trim()
   if (!text) return
@@ -3693,6 +3772,7 @@ function applyAdminLivePayload(raw: string) {
           `<img class="wa-media-img" src="${u.replace(/"/g, '&quot;')}" alt="foto" />`,
           { skipLog: true, mediaKind: 'photo' },
         )
+        try { persistAndAckTempMedia(u, payload) } catch {}
         return
       }
       if (k === 'video' && payload?.u) {
@@ -3706,6 +3786,7 @@ function applyAdminLivePayload(raw: string) {
           </div>`,
           { skipLog: true, mediaKind: 'video' },
         )
+        try { persistAndAckTempMedia(u, payload) } catch {}
         return
       }
       if (k === 'audio' && payload?.u) {
@@ -3716,6 +3797,7 @@ function applyAdminLivePayload(raw: string) {
           `<div class="wa-audio-modern wa-audio-modern--bubble" data-src="${u.replace(/"/g, '&quot;')}"><button type="button" class="wa-audio-play">▶</button><div class="wa-audio-wave"><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span></div><span class="wa-audio-time">áudio</span><audio src="${u.replace(/"/g, '&quot;')}" preload="metadata"></audio></div>`,
           { skipLog: true, mediaKind: 'audio' },
         )
+        try { persistAndAckTempMedia(String(payload.u), payload) } catch {}
         return
       }
       if (k === 'poll' && payload?.q && Array.isArray(payload?.o)) {
