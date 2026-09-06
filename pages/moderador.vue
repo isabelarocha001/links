@@ -23,6 +23,9 @@ const newUrl = ref('')
 const newTitle = ref('')
 const msg = ref('')
 const err = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
+const uploadName = ref('')
+const uploading = ref(false)
 
 async function checkSession() {
   try {
@@ -75,7 +78,7 @@ async function addVideo() {
   err.value = ''
   const url = newUrl.value.trim()
   if (!url) {
-    err.value = 'Cole a URL do vídeo'
+    err.value = 'Cole a URL do vídeo (ou envie um arquivo abaixo)'
     return
   }
   loading.value = true
@@ -91,6 +94,48 @@ async function addVideo() {
   } catch (e: any) {
     err.value = e?.data?.statusMessage || 'Erro ao adicionar'
   } finally {
+    loading.value = false
+  }
+}
+
+function pickVideoFile() {
+  fileInput.value?.click()
+}
+
+async function onVideoFilePicked(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  msg.value = ''
+  err.value = ''
+  if (!file.type.startsWith('video/')) {
+    err.value = 'Escolha um arquivo de vídeo (mp4, webm…)'
+    return
+  }
+  if (file.size > 120 * 1024 * 1024) {
+    err.value = 'Vídeo muito grande (máx. 120MB)'
+    return
+  }
+  uploadName.value = file.name
+  uploading.value = true
+  loading.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('title', newTitle.value.trim() || file.name)
+    await $fetch('/api/call-videos', {
+      method: 'POST',
+      body: fd,
+    })
+    newTitle.value = ''
+    uploadName.value = ''
+    msg.value = 'Vídeo enviado do PC e adicionado à chamada'
+    await load()
+  } catch (e: any) {
+    err.value = e?.data?.statusMessage || e?.message || 'Erro no upload'
+  } finally {
+    uploading.value = false
     loading.value = false
   }
 }
@@ -162,11 +207,27 @@ onMounted(() => {
 
     <template v-else>
       <section class="mod-card">
-        <h2>Adicionar vídeo</h2>
-        <p class="mod-hint">Cole um link direto (.mp4, .webm) ou URL pública do vídeo</p>
+        <h2>Adicionar vídeo da chamada</h2>
+        <p class="mod-hint">Envie um vídeo do seu PC (mp4/webm, até 120MB). Ele entra na playlist da videochamada.</p>
         <input v-model="newTitle" type="text" placeholder="Título (opcional)" />
-        <input v-model="newUrl" type="url" placeholder="https://…/video.mp4" />
-        <button type="button" class="mod-btn" :disabled="loading" @click="addVideo">Adicionar</button>
+        <input
+          ref="fileInput"
+          type="file"
+          accept="video/mp4,video/webm,video/quicktime,video/*"
+          class="mod-file"
+          @change="onVideoFilePicked"
+        />
+        <button type="button" class="mod-btn" :disabled="loading || uploading" @click="pickVideoFile">
+          {{ uploading ? 'Enviando…' : 'Escolher vídeo do PC' }}
+        </button>
+        <p v-if="uploadName" class="mod-hint">Arquivo: {{ uploadName }}</p>
+
+        <details class="mod-advanced">
+          <summary>Ou colar link (opcional)</summary>
+          <input v-model="newUrl" type="url" placeholder="https://…/video.mp4" />
+          <button type="button" class="mod-btn ghost" :disabled="loading" @click="addVideo">Adicionar por link</button>
+        </details>
+
         <p v-if="msg" class="mod-ok">{{ msg }}</p>
         <p v-if="err" class="mod-err">{{ err }}</p>
       </section>
@@ -378,5 +439,26 @@ onMounted(() => {
     flex-direction: row;
     flex-wrap: wrap;
   }
+}
+.mod-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.mod-advanced {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.mod-advanced summary {
+  cursor: pointer;
+  color: rgba(243,240,247,.55);
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+.mod-advanced input {
+  margin-bottom: 8px;
 }
 </style>
