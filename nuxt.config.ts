@@ -51,6 +51,20 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   routeRules: {
+    // HTML/páginas: nunca cachear (evita deploy antigo no F5)
+    '/**': {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+      },
+    },
+    // Assets com hash do Vite: cache longo ok
+    '/_nuxt/**': {
+      headers: {
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    },
     '/chat/**': { ssr: true },
     '/chat': { ssr: true },
     '/chamada': { ssr: true },
