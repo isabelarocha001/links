@@ -4026,7 +4026,7 @@ function openWaFunnel(source = 'whatsapp') {
   funnelBlocked.value = false
   nextTick(async () => {
     // Abertura natural: sem menu, sem pressionar escolha
-    await funnelType('Oi amor 😘 Que bom que você veio. Pode falar comigo, estou aqui.', 1400)
+    await funnelType('Oi amor 😘|||Me conta o que você quer: pack, videochamada, chat ou um vídeo só seu?', 1400)
     saveFunnelState()
   })
 }
