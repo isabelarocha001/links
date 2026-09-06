@@ -36,9 +36,9 @@ export default defineEventHandler(async (event) => {
     conversation_id = body?.conversation_id ? String(body.conversation_id) : null
   }
 
-  // limite free-friendly: 8MB
-  if (bytes.length > 8 * 1024 * 1024) {
-    throw createError({ statusCode: 413, statusMessage: 'Arquivo acima de 8MB' })
+  // limite: 100MB
+  if (bytes.length > 100 * 1024 * 1024) {
+    throw createError({ statusCode: 413, statusMessage: 'Arquivo acima de 100MB' })
   }
 
   const up = await uploadTempMedia({
