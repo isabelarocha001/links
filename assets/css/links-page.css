@@ -3393,3 +3393,18 @@ html, body {
   border: 1px solid rgba(255,255,255,0.12);
 }
 .call-sales-btn:active { transform: scale(0.98); }
+
+
+/* Admin panel: botões Salvar/Fechar sempre visíveis no rodapé */
+.wl-row--sticky {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin-top: 16px !important;
+  padding-top: 12px;
+  padding-bottom: 4px;
+  background: linear-gradient(180deg, transparent, #1e1230 30%);
+}
+.wl-row--sticky .wl-btn {
+  margin-top: 0;
+}
