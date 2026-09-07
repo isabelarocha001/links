@@ -2754,19 +2754,43 @@ function preferStripeCheckout() {
   }
 }
 
+/** Promise compartilhada do script Stripe.js (pré-aquece ao abrir o chat gringo). */
+let stripeJsPromise: Promise<any> | null = null
+
 async function loadStripeJs(): Promise<any> {
   if (typeof window === 'undefined') return null
   const w = window as any
   if (w.Stripe) return w.Stripe
-  await new Promise<void>((resolve, reject) => {
+  if (stripeJsPromise) return stripeJsPromise
+  stripeJsPromise = new Promise<any>((resolve, reject) => {
+    const existing = document.querySelector('script[data-stripe-js]') as HTMLScriptElement | null
+    if (existing) {
+      existing.addEventListener('load', () => resolve((window as any).Stripe))
+      existing.addEventListener('error', () => reject(new Error('Stripe.js failed to load')))
+      if ((window as any).Stripe) resolve((window as any).Stripe)
+      return
+    }
     const s = document.createElement('script')
     s.src = 'https://js.stripe.com/v3/'
     s.async = true
-    s.onload = () => resolve()
-    s.onerror = () => reject(new Error('Stripe.js failed to load'))
+    s.setAttribute('data-stripe-js', '1')
+    s.onload = () => resolve((window as any).Stripe)
+    s.onerror = () => {
+      stripeJsPromise = null
+      reject(new Error('Stripe.js failed to load'))
+    }
     document.head.appendChild(s)
   })
-  return (window as any).Stripe
+  return stripeJsPromise
+}
+
+/** Pré-aquece Stripe.js em background (só gringa — BR usa PIX). */
+function prewarmStripeJs() {
+  try {
+    if (typeof window === 'undefined') return
+    if (!preferStripeCheckout()) return
+    void loadStripeJs().catch(() => {})
+  } catch {}
 }
 
 async function closeStripeModal() {
