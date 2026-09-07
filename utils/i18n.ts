@@ -47,6 +47,18 @@ type Dict = Record<string, string>
 
 // --- PT-BR (Brasil) ---
 const pt: Dict = {
+  // payment method labels
+  cuPixBalloon: "Posso te mandar a chave PIX pra liberar o chat? 💚",
+  cuCardBalloon: "Pode pagar no cartão pra liberar o chat? 💚",
+  cuBtnConfirm: "Sim amor",
+  cuGenerating: "Gerando PIX…",
+  cuGeneratingCard: "Abrindo pagamento…",
+  payViaPix: "Pagamento via PIX · libera na hora",
+  payViaCard: "Card payment · unlocks instantly",
+  callSalesSubPix: "Videochamada real, no seu ritmo. Escolhe quanto tempo quer ficar comigo e a gente libera o PIX.",
+  callSalesSubCard: "Real video call, at your pace. Pick how long and pay by card to unlock.",
+  btnPay: "Pagar",
+  generatingPay: "Gerando…",
   waName: 'Criadora de conteúdo · Wanessa',
   waTyping: 'digitando…',
   waOnline: 'online',
@@ -128,6 +140,18 @@ const pt: Dict = {
 
 // --- English ---
 const en: Dict = {
+  // payment method labels
+  cuPixBalloon: "Can I send you the PIX key to unlock chat? 💚",
+  cuCardBalloon: "Pay by card to unlock the chat? 💚",
+  cuBtnConfirm: "Yes baby",
+  cuGenerating: "Creating PIX…",
+  cuGeneratingCard: "Opening checkout…",
+  payViaPix: "Pay with PIX · unlocks instantly",
+  payViaCard: "Card payment · unlocks instantly",
+  callSalesSubPix: "Real video call, at your pace. Pick how long and we unlock with PIX.",
+  callSalesSubCard: "Real video call, at your pace. Pick how long and pay by card to unlock.",
+  btnPay: "Pay",
+  generatingPay: "Loading…",
   cuBody3: "Unlocked? Then you can message me here… 🔥",
   waName: 'Content creator · Wanessa',
   waTyping: 'typing…',
@@ -209,6 +233,18 @@ const en: Dict = {
 
 // --- Español (herda en + overrides) ---
 const es: Dict = {
+  // payment method labels
+  cuPixBalloon: "¿Te mando la clave PIX para liberar el chat? 💚",
+  cuCardBalloon: "¿Pagas con tarjeta para liberar el chat? 💚",
+  cuBtnConfirm: "Sí amor",
+  cuGenerating: "Generando PIX…",
+  cuGeneratingCard: "Abriendo pago…",
+  payViaPix: "Pago con PIX · se libera al instante",
+  payViaCard: "Pago con tarjeta · se libera al instante",
+  callSalesSubPix: "Videollamada real. Elige el tiempo y liberamos con PIX.",
+  callSalesSubCard: "Videollamada real. Elige el tiempo y paga con tarjeta.",
+  btnPay: "Pagar",
+  generatingPay: "Cargando…",
   cuBody3: "¿Desbloqueaste? Entonces puedes escribirme aquí… 🔥",
   ...en,
   waName: 'Creadora de contenido · Wanessa',

@@ -218,12 +218,12 @@
               <img src="/model.jpg" alt="" class="cu-avatar" draggable="false" />
             </div>
             <div class="cu-balloon">
-              <p class="cu-balloon-text">Posso te mandar a chave PIX pra liberar o chat? 💚</p>
+              <p class="cu-balloon-text">{{ preferStripeCheckout() ? t('cuCardBalloon') : t('cuPixBalloon') }}</p>
               <span class="cu-balloon-tail" aria-hidden="true"></span>
             </div>
             <p class="cu-pix-hint">{{ tf('cuPixHint', { price: 'R$ 9,90' }) }}</p>
             <button type="button" class="cu-btn cu-btn--yes cu-btn--wide" :disabled="!!chatPayLoading" @click="confirmChatUnlockPix">
-              {{ chatPayLoading ? 'Gerando PIX…' : 'Sim amor' }}
+              {{ chatPayLoading ? (preferStripeCheckout() ? t('cuGeneratingCard') : t('cuGenerating')) : t('cuBtnConfirm') }}
             </button>
             <button type="button" class="cu-btn-link" @click="refuseChatUnlock">Agora não</button>
           </div>
@@ -783,7 +783,7 @@
           <img src="/model.jpg" alt="" class="call-sales-avatar" draggable="false" />
           <p class="call-sales-kicker">✦ Ao vivo comigo</p>
           <h3 class="call-sales-title">Você atendeu… agora escolhe o clima</h3>
-          <p class="call-sales-sub">Videochamada real, no seu ritmo. Escolhe quanto tempo quer ficar comigo e a gente libera o PIX.</p>
+          <p class="call-sales-sub">{{ preferStripeCheckout() ? t('callSalesSubCard') : t('callSalesSubPix') }}</p>
           <div class="call-sales-actions">
             <button type="button" class="call-sales-btn call-sales-btn--primary" @click="onCallSalesWantLive">Quero te ver ao vivo 🔥</button>
             <button type="button" class="call-sales-btn call-sales-btn--ghost" @click="closeCallSalesBalloon">Agora não</button>
@@ -863,7 +863,7 @@
             :disabled="mimoGiftLoading"
             @click="sendMimoGift"
           >
-            {{ mimoGiftLoading ? 'Gerando PIX…' : 'Enviar mimo' }}
+            {{ mimoGiftLoading ? (preferStripeCheckout() ? t('cuGeneratingCard') : t('cuGenerating')) : 'Enviar mimo' }}
           </button>
         </div>
       </div>
@@ -993,11 +993,11 @@
             </div>
             <div class="chat-plan-right">
               <span class="chat-plan-price">R$ 49,90</span>
-              <span class="chat-plan-cta">{{ blockedUnlockLoading ? 'Gerando PIX…' : 'Pagar' }}</span>
+              <span class="chat-plan-cta">{{ blockedUnlockLoading ? (preferStripeCheckout() ? t('cuGeneratingCard') : t('cuGenerating')) : t('btnPay') }}</span>
             </div>
           </button>
           <p v-if="blockedUnlockError" class="chat-plans-error">{{ blockedUnlockError }}</p>
-          <p class="chat-plans-note">Pagamento via PIX · libera na hora</p>
+          <p class="chat-plans-note">{{ preferStripeCheckout() ? t('payViaCard') : t('payViaPix') }}</p>
         </div>
       </div>
 
@@ -1047,12 +1047,12 @@
               </div>
               <div class="chat-plan-right">
                 <span class="chat-plan-price">R$ {{ p.priceLabel }}</span>
-                <span class="chat-plan-cta">{{ chatPayLoading === p.key ? 'Gerando PIX…' : 'Pagar' }}</span>
+                <span class="chat-plan-cta">{{ chatPayLoading === p.key ? (preferStripeCheckout() ? t('cuGeneratingCard') : t('cuGenerating')) : t('btnPay') }}</span>
               </div>
             </button>
           </div>
           <p v-if="chatPayError" class="chat-plans-error">{{ chatPayError }}</p>
-          <p class="chat-plans-note">Pagamento via PIX · libera na hora</p>
+          <p class="chat-plans-note">{{ preferStripeCheckout() ? t('payViaCard') : t('payViaPix') }}</p>
         </div>
       </div>
 
@@ -1450,8 +1450,13 @@ async function refuseChatUnlock() {
 /** Popup 1 aceito → popup 2 (balão + sim amor) */
 function acceptChatUnlock() {
   showChatUnlockInfo.value = false
-  showChatUnlockPix.value = true
   try { track('chat_unlock_info_accept', { offer_slug: 'chat_quick' }) } catch {}
+  // Gringa: pula balão de PIX e abre Stripe direto
+  if (preferStripeCheckout()) {
+    void confirmChatUnlockPix()
+    return
+  }
+  showChatUnlockPix.value = true
 }
 
 /** Popup 2: Sim amor → gera PIX R$ 9,90 na conversa */
@@ -1466,12 +1471,14 @@ async function confirmChatUnlockPix() {
   selectedChatPlan.value = CHAT_MSG_UNLOCK_PLAN
   try { track('chat_unlock_pix_confirm', { offer_slug: 'chat_quick', amount: 9.9 }) } catch {}
   try {
-    await funnelType(tf('funnelUnlockPix', { price: 'R$ 9,90' }), 900)
+    if (!preferStripeCheckout()) {
+      await funnelType(tf('funnelUnlockPix', { price: 'R$ 9,90' }), 900)
+    }
   } catch {}
   try {
     await buyChatPlan(CHAT_MSG_UNLOCK_PLAN)
   } catch (e) {
-    console.warn('[chat-unlock] pix', e)
+    console.warn('[chat-unlock] pay', e)
     try {
       await funnelType(t('funnelUnlockFail'), 900)
     } catch {}
