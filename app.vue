@@ -196,17 +196,17 @@
         <!-- Popup 1: explicação simples do chat bloqueado -->
         <div v-if="showChatUnlockInfo" class="cu-overlay" style="z-index:2147483000" @click.self="closeChatUnlockInfo">
           <div class="cu-card" role="dialog" aria-modal="true" @click.stop>
-            <button type="button" class="cu-x" aria-label="Fechar" @click="closeChatUnlockInfo">✕</button>
-            <p class="cu-title">{{ chatUnlockReason === 'call' ? 'Oi amor… a chamada tá bloqueada 🔒' : 'Oi amor… o chat tá bloqueado 🔒' }}</p>
+            <button type="button" class="cu-x" :aria-label="t('close')" @click="closeChatUnlockInfo">✕</button>
+            <p class="cu-title">{{ chatUnlockReason === 'call' ? t('cuTitleCall') : t('cuTitleChat') }}</p>
             <div class="cu-body">
-              <p v-if="chatUnlockReason === 'call'">A videochamada só libera depois que o chat está desbloqueado.</p>
-              <p>Eu recebo muita mensagem por aqui, então deixo o chat bloqueado pra quem realmente quer falar comigo.</p>
-              <p>São só <strong>R$ 9,90</strong> pra liberar — assim eu consigo dar atenção pra quem realmente veio conversar comigo 😏</p>
-              <p>Desbloqueou? Aí pode me chamar por aqui… 🔥</p>
+              <p v-if="chatUnlockReason === 'call'">{{ t('cuBodyCall') }}</p>
+              <p>{{ t('cuBody1') }}</p>
+              <p>{{ tf('cuBody2', { price: 'R$ 9,90' }) }}</p>
+              <p>{{ t('cuBody3') }}</p>
             </div>
             <div class="cu-actions">
-              <button type="button" class="cu-btn cu-btn--no" @click="refuseChatUnlock">Agora não</button>
-              <button type="button" class="cu-btn cu-btn--yes" @click="acceptChatUnlock">Desbloquear por R$ 9,90</button>
+              <button type="button" class="cu-btn cu-btn--no" @click="refuseChatUnlock">{{ t('cuBtnNo') }}</button>
+              <button type="button" class="cu-btn cu-btn--yes" @click="acceptChatUnlock">{{ tf('cuBtnYes', { price: 'R$ 9,90' }) }}</button>
             </div>
           </div>
         </div>
@@ -221,7 +221,7 @@
               <p class="cu-balloon-text">Posso te mandar a chave PIX pra liberar o chat? 💚</p>
               <span class="cu-balloon-tail" aria-hidden="true"></span>
             </div>
-            <p class="cu-pix-hint">R$ 9,90 · libera na hora</p>
+            <p class="cu-pix-hint">{{ tf('cuPixHint', { price: 'R$ 9,90' }) }}</p>
             <button type="button" class="cu-btn cu-btn--yes cu-btn--wide" :disabled="!!chatPayLoading" @click="confirmChatUnlockPix">
               {{ chatPayLoading ? 'Gerando PIX…' : 'Sim amor' }}
             </button>
@@ -339,7 +339,7 @@
               class="wa-profile-photo-overlay"
               @click.self="closeFunnelPhoto"
             >
-              <button type="button" class="wa-profile-photo-close" aria-label="Fechar" @click="closeFunnelPhoto">✕</button>
+              <button type="button" class="wa-profile-photo-close" :aria-label="t('close')" @click="closeFunnelPhoto">✕</button>
               <div class="wa-profile-photo-circle" @click.stop>
                 <img src="/model.jpg" alt="Wanessa" draggable="false" />
               </div>
@@ -362,7 +362,7 @@
                     <span class="wa-fs-sub">Wanessa</span>
                   </div>
                 </div>
-                <button type="button" class="wa-fs-close" aria-label="Fechar" @click="closeChatMediaFullscreen">✕</button>
+                <button type="button" class="wa-fs-close" :aria-label="t('close')" @click="closeChatMediaFullscreen">✕</button>
               </header>
 
               <div v-if="chatMediaFullscreenIsVideo" class="wa-fs-stage" @click.stop>
@@ -425,7 +425,7 @@
             <div class="wa-profile-topbar">
               <button type="button" class="wa-profile-back" aria-label="Voltar" @click="showFunnelProfile = false">‹</button>
               <span class="wa-profile-topbar-spacer"></span>
-              <button type="button" class="wa-profile-x" aria-label="Fechar" @click="showFunnelProfile = false">✕</button>
+              <button type="button" class="wa-profile-x" :aria-label="t('close')" @click="showFunnelProfile = false">✕</button>
             </div>
             <div class="wa-profile-panel-body">
               <button type="button" class="wa-profile-big-avatar" @click.stop="openFunnelPhoto">
@@ -831,7 +831,7 @@
       <!-- Mimo / presente (fluxo separado do bloqueio) -->
       <div v-if="showMimoGiftModal" class="chat-plans-overlay mimo-gift-overlay" style="z-index:40060" @click.self="closeMimoGiftModal">
         <div class="mimo-gift-card" @click.stop>
-          <button type="button" class="chat-plans-x mimo-gift-x" aria-label="Fechar" @click="closeMimoGiftModal">✕</button>
+          <button type="button" class="chat-plans-x mimo-gift-x" :aria-label="t('close')" @click="closeMimoGiftModal">✕</button>
           <img class="mimo-gift-avatar" src="/model.jpg" alt="Wanessa" draggable="false" />
           <p class="mimo-gift-name">Wanessa</p>
           <label class="mimo-gift-label" for="mimo-gift-amount">Digite o valor do mimo pra Wanessa</label>
@@ -871,7 +871,7 @@
       <!-- Lead bloqueou Wanessa: justificativa obrigatória -->
       <div v-if="showBlockReasonModal" class="chat-plans-overlay" style="z-index:40070" @click.self="closeBlockReasonModal">
         <div class="block-reason-card" @click.stop>
-          <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeBlockReasonModal">✕</button>
+          <button type="button" class="chat-plans-x" :aria-label="t('close')" @click="closeBlockReasonModal">✕</button>
           <p class="block-reason-title">Por que você quer bloquear essa pessoa?</p>
           <p class="block-reason-sub">A justificativa é obrigatória para o sistema registrar o bloqueio.</p>
           <textarea
@@ -892,7 +892,7 @@
       <!-- Modal criar enquete -->
       <div v-if="showPollModal" class="chat-plans-overlay" style="z-index:40080" @click.self="closePollModal">
         <div class="attach-form-card" @click.stop>
-          <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePollModal">✕</button>
+          <button type="button" class="chat-plans-x" :aria-label="t('close')" @click="closePollModal">✕</button>
           <p class="attach-form-title">Criar enquete</p>
           <label class="attach-form-label">Pergunta da enquete</label>
           <input v-model="pollQuestion" class="attach-form-input" type="text" maxlength="120" placeholder="Ex: Qual horário prefere?" />
@@ -923,7 +923,7 @@
       <!-- Modal cadastrar chave PIX -->
       <div v-if="showPixKeyModal" class="chat-plans-overlay" style="z-index:40080" @click.self="closePixKeyModal">
         <div class="attach-form-card" @click.stop>
-          <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePixKeyModal">✕</button>
+          <button type="button" class="chat-plans-x" :aria-label="t('close')" @click="closePixKeyModal">✕</button>
           <p class="attach-form-title">Cadastrar chave PIX</p>
           <label class="attach-form-label">Tipo da chave</label>
           <div class="attach-pix-types">
@@ -959,12 +959,12 @@
         @click.stop
       >
         <div class="wa-perm-block-card">
-          <button type="button" class="wa-perm-block-x" aria-label="Fechar" @click="permBlockCardDismissed = true">✕</button>
-          <p class="wa-perm-block-title">Wanessa te bloqueou permanentemente</p>
-          <p class="wa-perm-block-sub">Você não pode digitar, enviar áudio, emoji, mídia nem fazer chamadas.</p>
-          <p class="wa-perm-block-sub">Ainda quer uma segunda chance? Envie um mimo para desbloqueio automático.</p>
+          <button type="button" class="wa-perm-block-x" :aria-label="t('close')" @click="permBlockCardDismissed = true">✕</button>
+          <p class="wa-perm-block-title">{{ t('permTitle') }}</p>
+          <p class="wa-perm-block-sub">{{ t('permSub1') }}</p>
+          <p class="wa-perm-block-sub">{{ t('permSub2') }}</p>
           <button type="button" class="wa-perm-block-btn" :disabled="blockedUnlockLoading" @click="startSegundaChanceMimo">
-            {{ blockedUnlockLoading ? 'Gerando PIX…' : 'Enviar mimo · R$ 29,90' }}
+            {{ blockedUnlockLoading ? t('generatingPix') : tf('permBtn', { price: 'R$ 29,90' }) }}
           </button>
         </div>
       </div>
@@ -974,11 +974,11 @@
           <div class="chat-plans-handle" aria-hidden="true"></div>
           <div class="chat-plans-head">
             <div>
-              <p class="chat-plans-kicker">Chat bloqueado</p>
-              <h3>Desbloquear conversa</h3>
-              <p class="chat-plans-sub">Você pode liberar o chat de novo por R$ 49,90 e continuar falando comigo 🔥</p>
+              <p class="chat-plans-kicker">{{ t('blockedKicker') }}</p>
+              <h3>{{ t('blockedTitle') }}</h3>
+              <p class="chat-plans-sub">{{ tf('blockedSub', { price: 'R$ 49,90' }) }}</p>
             </div>
-            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="showBlockedUnlock = false">✕</button>
+            <button type="button" class="chat-plans-x" :aria-label="t('close')" @click="showBlockedUnlock = false">✕</button>
           </div>
           <button
             type="button"
@@ -1011,7 +1011,7 @@
               <h3>Desbloqueie a conversa</h3>
               <p class="chat-plans-sub">Escolhe um plano e fala comigo agora 🔥</p>
             </div>
-            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeChatPlans">✕</button>
+            <button type="button" class="chat-plans-x" :aria-label="t('close')" @click="closeChatPlans">✕</button>
           </div>
           <button
             v-if="isAdmin"
@@ -1066,7 +1066,7 @@
               <h3>{{ selectedChatPlan?.title || 'Chat' }}</h3>
               <p class="chat-plans-sub">R$ {{ selectedChatPlan?.priceLabel }} · {{ pixModalSubHint }}</p>
             </div>
-            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePixModal">✕</button>
+            <button type="button" class="chat-plans-x" :aria-label="t('close')" @click="closePixModal">✕</button>
           </div>
           <div class="chat-pix-body">
             <div v-if="pixQrImage && pixIsEmv" class="chat-pix-qr-wrap">
@@ -1250,6 +1250,16 @@ const locale = ref<Locale>('pt')
 const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (intl)
 const telegramPublicUrlActive = computed(() => isPt.value ? telegramPublicUrl : telegramPublicUrlIntl)
 function t(key: string) { return tr(locale.value, key) }
+/** Tradução com placeholders {price}, {name}, etc. */
+function tf(key: string, vars: Record<string, string | number> = {}) {
+  let s = t(key)
+  for (const [k, v] of Object.entries(vars)) {
+    s = s.split(`{${k}}`).join(String(v))
+  }
+  return s
+}
+const chatUnlockPriceLabel = computed(() => 'R$ 9,90') // valor do desbloqueio de chat
+
 const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeURIComponent(t('waPrefill')))
 
 const PIX_KEY = '47992750967'
@@ -1424,10 +1434,11 @@ async function refuseChatUnlock() {
   showChatUnlockPix.value = false
   try { track('chat_unlock_info_refuse', { offer_slug: 'chat_quick' }) } catch {}
   // Recusa no 1º passo: leve, sem atacar identidade — deixa porta aberta pro remarketing
+  const price = 'R$ 9,90'
   const msgs = [
-    'Beleza… fica pra depois então 😌|||Quando quiser desbloquear é só R$ 9,90.',
-    'Ok. Se mudar de ideia, o chat continua aqui por R$ 9,90 💬',
-    'Tudo bem. Quem é sério acaba voltando… o desbloqueio é só R$ 9,90 🔥',
+    tf('funnelRefuse1', { price }),
+    tf('funnelRefuse2', { price }),
+    tf('funnelRefuse3', { price }),
   ]
   const msg = msgs[Math.floor(Math.random() * msgs.length)]
   try {
@@ -1454,14 +1465,14 @@ async function confirmChatUnlockPix() {
   selectedChatPlan.value = CHAT_MSG_UNLOCK_PLAN
   try { track('chat_unlock_pix_confirm', { offer_slug: 'chat_quick', amount: 9.9 }) } catch {}
   try {
-    await funnelType('Fechou, amor 💚|||Vou te mandar o PIX de R$ 9,90 pra liberar o chat…', 900)
+    await funnelType(tf('funnelUnlockPix', { price: 'R$ 9,90' }), 900)
   } catch {}
   try {
     await buyChatPlan(CHAT_MSG_UNLOCK_PLAN)
   } catch (e) {
     console.warn('[chat-unlock] pix', e)
     try {
-      await funnelType('Não deu pra gerar o PIX agora. Toca de novo em desbloquear 💚', 900)
+      await funnelType(t('funnelUnlockFail'), 900)
     } catch {}
   }
 }
@@ -3761,7 +3772,7 @@ const funnelOptions = computed(() => {
   }
   if (funnelStep.value === 'chat' || funnelStep.value === 'chat_unlock') {
     return [
-      { key: 'chat_quick', label: 'Liberar chat  R$ 9,90', variant: 'wa-quick--yes' },
+      { key: 'chat_quick', label: tf('chatPlanLabel', { price: 'R$ 9,90' }), variant: 'wa-quick--yes' },
       { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
     ]
   }
@@ -4177,7 +4188,7 @@ function applyAdminLivePayload(raw: string, msgId?: string) {
         if (msgId && declinedCallMsgIds.value[msgId]) return
         if (msgId) lastIncomingCallMsgId.value = msgId
         if (!funnelChatUnlocked.value && !isAdmin.value) {
-          pushFunnel('her', 'Quero te ligar… libera o chat por R$ 9,90 pra atender 💚', undefined, { skipLog: true })
+          pushFunnel('her', tf('funnelCallNeedUnlock', { price: 'R$ 9,90' }), undefined, { skipLog: true })
           openChatUnlockInfo('call')
           return
         }
