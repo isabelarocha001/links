@@ -1369,6 +1369,7 @@ let _unlockTapAt = 0
 // openChatUnlockInfo → se funnelPermBlocked, reabre card de bloqueio permanente
 // =============================================================================
 function openChatUnlockInfo(reason: 'chat' | 'call' | 'media' = 'chat') {
+  try { prewarmStripeJs() } catch {}
   if (funnelChatUnlocked.value) return
   // Bloqueio permanente da Wanessa → só o card de mimo, nunca o popup de chat pago
   if (funnelPermBlocked.value) {
@@ -4612,6 +4613,7 @@ function openWaFunnel(source = 'whatsapp') {
   try { onCardClick('WhatsApp Funnel', whatsappUrl.value) } catch {}
   try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open', source }) } catch {}
   showWaFunnel.value = true
+  try { prewarmStripeJs() } catch {}
   try { startLeadPresenceHeartbeat() } catch {}
   try { startLiveChatPoll() } catch {}
   funnelKeyboardOpen.value = false
