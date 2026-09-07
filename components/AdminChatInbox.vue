@@ -784,9 +784,9 @@ if (typeof window !== 'undefined') {
               <p v-if="listLoading && !conversations.length" class="ac-muted pad">Carregando…</p>
               <p v-if="listError" class="ac-err pad">{{ listError }}</p>
 
+              <!-- Lista de conversas -->
               <button
-                <!-- Lista de conversas -->
-            v-for="c in filteredConversations"
+                v-for="c in filteredConversations"
                 :key="c.id"
                 type="button"
                 class="ac-item"
@@ -866,8 +866,8 @@ if (typeof window !== 'undefined') {
             </div>
           </div>
 
-          <div <!-- Histórico de mensagens da conversa selecionada -->
-            id="admin-msg-list" class="ac-msgs">
+          <!-- Histórico de mensagens da conversa selecionada -->
+          <div id="admin-msg-list" class="ac-msgs">
             <p v-if="messagesLoading && !messages.length" class="ac-muted pad">Carregando msgs…</p>
             <div
               v-for="(m, i) in messages"
