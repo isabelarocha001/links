@@ -115,19 +115,20 @@
             <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
           </div>
           <div class="card-col" v-if="!hidePublicChannel">
-            <a class="lux-card lux-card--right" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
+            <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
               <div class="card-glow"></div>
               <div class="card-top">
-                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
+                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
                 <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
               </div>
-              <h2 class="card-title">{{ t('vipTitle') }}</h2>
-              <p class="card-desc">{{ t('vipDesc') }}</p>
+              <h2 class="card-title">{{ t('pubTitle') }}</h2>
+              <p class="card-desc">{{ t('pubDesc') }}</p>
             </a>
-            <a class="card-enter" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">{{ t('pubEnter') }}</a>
+            <a class="card-enter" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">{{ t('pubEnter') }}</a>
           </div>
         </section>
-        <section class="vip-block" v-if="configReady && isPt">
+        <!-- Bot Telegram VIP temporariamente desativado -->
+        <section class="vip-block" v-if="false && configReady && isPt">
           <a class="vip-card" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">
             <div class="vip-shine"></div>
             <div class="vip-content">
@@ -1194,7 +1195,8 @@ const isAdminRoute = computed(() => {
   return p === '/admin/chat' || p.endsWith('/admin/chat')
 })
 /** Coluna direita = bot Telegram (canal de prévias desligado) */
-const hidePublicChannel = computed(() => false)
+/** BR esconde canal de prévias (só grátis); gringo continua vendo */
+const hidePublicChannel = computed(() => isPt.value)
 import '~/assets/css/links-page.css'
 
 const DEFAULT_HIGHLIGHT = 'PrivSex'
