@@ -1,69 +1,6 @@
 <template>
   <NuxtPage />
   <AdminChatInbox v-if="isAdminRoute" />
-  <!-- Painel de config disponível também em /admin/chat -->
-    <Teleport to="body">
-      <div v-if="isAdmin && showAdminPanel" class="wl-overlay" @click.self="closeAdmin">
-        <div class="wl-card" role="dialog" aria-modal="true" @click.stop>
-          <div class="wl-head"><h2>Editar apresentação</h2><div class="wl-head-actions" style="display:flex;gap:8px;align-items:center"><button type="button" class="wl-x" style="width:auto;min-width:52px;padding:0 10px;font-size:13px" @click="doLogout">Sair</button><button type="button" class="wl-x" @click="closeAdmin">×</button></div></div>
-          <label class="wl-label">Nome</label>
-          <input v-model="edit.name" type="text" maxlength="80" class="wl-input" />
-          <label class="wl-label">Tagline / Bio</label>
-          <input v-model="edit.bio" type="text" maxlength="200" class="wl-input" />
-          <label class="wl-label">Botão em destaque (RGB)</label>
-          <select v-model="edit.highlight_label" class="wl-input wl-select">
-            <option value="">Nenhum</option>
-            <option v-for="l in edit.links.filter((x) => x.label.trim())" :key="l.label" :value="l.label">{{ l.label }}</option>
-          </select>
-          <label class="wl-label" style="margin-top:14px">Quiz / Funil de entrada</label>
-          <label class="wl-toggle" style="margin-bottom:12px">
-            <input type="checkbox" :checked="edit.quiz_enabled === true" @change="edit.quiz_enabled = ($event.target as HTMLInputElement).checked" />
-            <span>{{ edit.quiz_enabled ? 'Ativado' : 'Desativado (temporário)' }}</span>
-          </label>
-          <div class="wl-links-head"><span class="wl-label" style="margin:0">Links (admin)</span><button type="button" class="wl-btn wl-btn-sm wl-btn-primary" @click="addLink">+ Adicionar</button></div>
-          <div v-for="(l, i) in edit.links" :key="i" class="wl-link-edit" :class="{ 'is-off': l.enabled === false }">
-            <div class="wl-link-row"><input v-model="l.icon" class="wl-input wl-icon" placeholder="🔥" /><input v-model="l.label" class="wl-input" placeholder="Título" /></div>
-            <input v-model="l.url" class="wl-input" placeholder="https://..." />
-            <textarea v-model="l.desc" class="wl-input wl-textarea" placeholder="Texto acima do botão (opcional)" maxlength="300" rows="3" />
-            <div class="wl-link-actions">
-              <label class="wl-toggle"><input type="checkbox" :checked="l.enabled !== false" @change="l.enabled = ($event.target as HTMLInputElement).checked" /><span>{{ l.enabled === false ? 'Desativado' : 'Ativo' }}</span></label>
-              <button type="button" class="wl-btn wl-btn-sm wl-btn-danger" @click="removeLink(i)">Remover</button>
-            </div>
-          </div>
-          <p v-if="saveMsg" class="wl-ok">{{ saveMsg }}</p>
-          <p v-if="saveError" class="wl-error">{{ saveError }}</p>
-          <div class="wl-row">
-            
-          <label class="wl-label">Enquadramento do avatar</label>
-          <div class="wl-avatar-frame">
-            <div class="wl-avatar-frame-preview">
-              <img
-                src="/model.jpg"
-                alt="Preview avatar"
-                draggable="false"
-                :style="{ objectPosition: avatarFocusX + '% ' + avatarFocusY + '%' }"
-              />
-            </div>
-            <div class="wl-avatar-frame-controls">
-              <label class="wl-avatar-slider-label">Horizontal <span>{{ avatarFocusX }}%</span></label>
-              <input v-model.number="avatarFocusX" class="wl-range" type="range" min="0" max="100" step="1" @input="applyAvatarFocus" />
-              <label class="wl-avatar-slider-label">Vertical <span>{{ avatarFocusY }}%</span></label>
-              <input v-model.number="avatarFocusY" class="wl-range" type="range" min="0" max="100" step="1" @input="applyAvatarFocus" />
-              <button type="button" class="wl-btn wl-btn-sm wl-btn-ghost" style="margin-top:8px" @click="resetAvatarFocus">Resetar enquadramento</button>
-            </div>
-          </div>
-          <p class="wl-hint" style="opacity:.7;font-size:12px;margin:4px 0 14px">Arraste os controles para centralizar o rosto no círculo (vale no chat e na foto em tela cheia).</p>
-
-          <label class="wl-label">Vídeos da videochamada (URLs, um por linha)</label>
-          <textarea v-model="editVideoCallUrls" class="wl-input" rows="3" placeholder="https://.../video1.mp4" style="min-height:72px;resize:vertical"></textarea>
-          <p class="wl-hint" style="opacity:.7;font-size:12px;margin:4px 0 12px">Depois do PIX da videochamada, o lead assiste esses vídeos aqui no chat (não vai pro WhatsApp).</p>
-
-          <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doSave">{{ loading ? 'Salvando...' : 'Salvar' }}</button>
-            <button type="button" class="wl-btn wl-btn-ghost" @click="closeAdmin">Fechar</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   <div v-else class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="bg-grain" aria-hidden="true"></div>
@@ -1195,6 +1132,69 @@
     </Teleport>
 
   </ClientOnly>
+  <!-- Painel de config disponível também em /admin/chat -->
+    <Teleport to="body">
+      <div v-if="isAdmin && showAdminPanel" class="wl-overlay" @click.self="closeAdmin">
+        <div class="wl-card" role="dialog" aria-modal="true" @click.stop>
+          <div class="wl-head"><h2>Editar apresentação</h2><div class="wl-head-actions" style="display:flex;gap:8px;align-items:center"><button type="button" class="wl-x" style="width:auto;min-width:52px;padding:0 10px;font-size:13px" @click="doLogout">Sair</button><button type="button" class="wl-x" @click="closeAdmin">×</button></div></div>
+          <label class="wl-label">Nome</label>
+          <input v-model="edit.name" type="text" maxlength="80" class="wl-input" />
+          <label class="wl-label">Tagline / Bio</label>
+          <input v-model="edit.bio" type="text" maxlength="200" class="wl-input" />
+          <label class="wl-label">Botão em destaque (RGB)</label>
+          <select v-model="edit.highlight_label" class="wl-input wl-select">
+            <option value="">Nenhum</option>
+            <option v-for="l in edit.links.filter((x) => x.label.trim())" :key="l.label" :value="l.label">{{ l.label }}</option>
+          </select>
+          <label class="wl-label" style="margin-top:14px">Quiz / Funil de entrada</label>
+          <label class="wl-toggle" style="margin-bottom:12px">
+            <input type="checkbox" :checked="edit.quiz_enabled === true" @change="edit.quiz_enabled = ($event.target as HTMLInputElement).checked" />
+            <span>{{ edit.quiz_enabled ? 'Ativado' : 'Desativado (temporário)' }}</span>
+          </label>
+          <div class="wl-links-head"><span class="wl-label" style="margin:0">Links (admin)</span><button type="button" class="wl-btn wl-btn-sm wl-btn-primary" @click="addLink">+ Adicionar</button></div>
+          <div v-for="(l, i) in edit.links" :key="i" class="wl-link-edit" :class="{ 'is-off': l.enabled === false }">
+            <div class="wl-link-row"><input v-model="l.icon" class="wl-input wl-icon" placeholder="🔥" /><input v-model="l.label" class="wl-input" placeholder="Título" /></div>
+            <input v-model="l.url" class="wl-input" placeholder="https://..." />
+            <textarea v-model="l.desc" class="wl-input wl-textarea" placeholder="Texto acima do botão (opcional)" maxlength="300" rows="3" />
+            <div class="wl-link-actions">
+              <label class="wl-toggle"><input type="checkbox" :checked="l.enabled !== false" @change="l.enabled = ($event.target as HTMLInputElement).checked" /><span>{{ l.enabled === false ? 'Desativado' : 'Ativo' }}</span></label>
+              <button type="button" class="wl-btn wl-btn-sm wl-btn-danger" @click="removeLink(i)">Remover</button>
+            </div>
+          </div>
+          <p v-if="saveMsg" class="wl-ok">{{ saveMsg }}</p>
+          <p v-if="saveError" class="wl-error">{{ saveError }}</p>
+          <div class="wl-row">
+            
+          <label class="wl-label">Enquadramento do avatar</label>
+          <div class="wl-avatar-frame">
+            <div class="wl-avatar-frame-preview">
+              <img
+                src="/model.jpg"
+                alt="Preview avatar"
+                draggable="false"
+                :style="{ objectPosition: avatarFocusX + '% ' + avatarFocusY + '%' }"
+              />
+            </div>
+            <div class="wl-avatar-frame-controls">
+              <label class="wl-avatar-slider-label">Horizontal <span>{{ avatarFocusX }}%</span></label>
+              <input v-model.number="avatarFocusX" class="wl-range" type="range" min="0" max="100" step="1" @input="applyAvatarFocus" />
+              <label class="wl-avatar-slider-label">Vertical <span>{{ avatarFocusY }}%</span></label>
+              <input v-model.number="avatarFocusY" class="wl-range" type="range" min="0" max="100" step="1" @input="applyAvatarFocus" />
+              <button type="button" class="wl-btn wl-btn-sm wl-btn-ghost" style="margin-top:8px" @click="resetAvatarFocus">Resetar enquadramento</button>
+            </div>
+          </div>
+          <p class="wl-hint" style="opacity:.7;font-size:12px;margin:4px 0 14px">Arraste os controles para centralizar o rosto no círculo (vale no chat e na foto em tela cheia).</p>
+
+          <label class="wl-label">Vídeos da videochamada (URLs, um por linha)</label>
+          <textarea v-model="editVideoCallUrls" class="wl-input" rows="3" placeholder="https://.../video1.mp4" style="min-height:72px;resize:vertical"></textarea>
+          <p class="wl-hint" style="opacity:.7;font-size:12px;margin:4px 0 12px">Depois do PIX da videochamada, o lead assiste esses vídeos aqui no chat (não vai pro WhatsApp).</p>
+
+          <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doSave">{{ loading ? 'Salvando...' : 'Salvar' }}</button>
+            <button type="button" class="wl-btn wl-btn-ghost" @click="closeAdmin">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 </template>
 
 <script setup lang="ts">
