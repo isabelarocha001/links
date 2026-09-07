@@ -128,6 +128,7 @@ async function doLogout() {
   } catch {}
   presenceOk.value = false
   authed.value = false
+  setAdminSession?.(false)
   conversations.value = []
   selectedId.value = null
   messages.value = []
@@ -615,6 +616,7 @@ if (typeof window !== 'undefined') {
             {{ presenceOk ? 'Online' : 'Offline' }}
           </span>
           <button type="button" class="ac-link-btn" @click="loadConversations">Atualizar</button>
+          <button type="button" class="ac-link-btn ac-link-btn--cfg" @click="openAdminConfig?.()">⚙ Configurações</button>
           <button type="button" class="ac-link-btn" @click="doLogout">Sair</button>
         </div>
       </header>
