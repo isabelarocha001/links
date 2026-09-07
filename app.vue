@@ -2287,6 +2287,15 @@ async function buySegundaChanceMimo() {
     price: SEGUNDA_CHANCE_PLAN.priceLabel,
   }
   try {
+    if (preferStripeCheckout()) {
+      await startUnifiedCheckout({
+        plan_key: SEGUNDA_CHANCE_PLAN.key,
+        amount: SEGUNDA_CHANCE_PLAN.price,
+        title: SEGUNDA_CHANCE_PLAN.title,
+        source: 'chat_unlock_segunda_chance',
+      })
+      return
+    }
     let visitor_id: string | null = null
     try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
     const res = await $fetch<{
@@ -2476,6 +2485,12 @@ const showChatPlans = ref(false)
 const showChatUnlockInfo = ref(false)
 const showChatUnlockPix = ref(false)
 const showPixModal = ref(false)
+const showStripeModal = ref(false)
+const stripeMountEl = ref<HTMLElement | null>(null)
+const stripeLoading = ref(false)
+const stripeError = ref('')
+let stripeCheckout: any = null
+
 const chatPayLoading = ref<string | null>(null)
 const chatPayError = ref('')
 const selectedChatPlan = ref<{ key: string; title: string; desc: string; price: number; priceLabel: string; hot?: boolean } | null>(null)
@@ -2654,6 +2669,16 @@ async function buyBlockedUnlock() {
     price: BLOCKED_UNLOCK_PLAN.priceLabel,
   }
   try {
+    if (preferStripeCheckout()) {
+      await startUnifiedCheckout({
+        plan_key: BLOCKED_UNLOCK_PLAN.key,
+        amount: BLOCKED_UNLOCK_PLAN.price,
+        title: BLOCKED_UNLOCK_PLAN.title,
+        source: 'chat_unlock_blocked',
+      })
+      showBlockedUnlock.value = false
+      return
+    }
     let visitor_id: string | null = null
     try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
     const res = await $fetch<{
@@ -2719,69 +2744,226 @@ async function buyBlockedUnlock() {
 // =============================================================================
 // CHECKOUT PIX DOS PLANOS DE CHAT
 // =============================================================================
+
+/** BR → PIX; gringa → Stripe Checkout embutido no popup */
+function preferStripeCheckout() {
+  try {
+    return !isPt.value
+  } catch {
+    return false
+  }
+}
+
+async function loadStripeJs(): Promise<any> {
+  if (typeof window === 'undefined') return null
+  const w = window as any
+  if (w.Stripe) return w.Stripe
+  await new Promise<void>((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = 'https://js.stripe.com/v3/'
+    s.async = true
+    s.onload = () => resolve()
+    s.onerror = () => reject(new Error('Stripe.js failed to load'))
+    document.head.appendChild(s)
+  })
+  return (window as any).Stripe
+}
+
+async function closeStripeModal() {
+  try {
+    if (stripeCheckout && typeof stripeCheckout.destroy === 'function') {
+      stripeCheckout.destroy()
+    }
+  } catch {}
+  stripeCheckout = null
+  showStripeModal.value = false
+  stripeError.value = ''
+  stripeLoading.value = false
+}
+
+/**
+ * Checkout unificado: PIX (BR) ou Stripe embedded (intl).
+ * opts: plan_key, amount, title, source
+ */
+async function startUnifiedCheckout(opts: {
+  plan_key: string
+  amount: number
+  title: string
+  source?: string
+}) {
+  let visitor_id: string | null = null
+  try {
+    visitor_id = getOrCreateVisitorId()
+  } catch {
+    visitor_id = null
+  }
+  const source = opts.source || 'links_checkout'
+
+  if (preferStripeCheckout()) {
+    stripeError.value = ''
+    stripeLoading.value = true
+    showStripeModal.value = true
+    showPixModal.value = false
+    showChatPlans.value = false
+    try {
+      const res = await $fetch<{
+        ok?: boolean
+        client_secret?: string
+        session_id?: string
+        payment_id?: string
+        publishable_key?: string | null
+        amount?: number
+      }>('/api/checkout/stripe-session', {
+        method: 'POST',
+        body: {
+          plan_key: opts.plan_key,
+          amount: opts.amount,
+          title: opts.title,
+          visitor_id,
+          source,
+          return_origin: typeof window !== 'undefined' ? window.location.origin : '',
+        },
+      })
+      if (!res?.ok || !res.client_secret) {
+        throw new Error('Stripe session failed')
+      }
+      const config = useRuntimeConfig()
+      const pk =
+        res.publishable_key ||
+        String((config.public as any)?.stripePublishableKey || '').trim()
+      if (!pk) {
+        throw new Error('Missing Stripe publishable key')
+      }
+      const StripeCtor = await loadStripeJs()
+      const stripe = StripeCtor(pk)
+      await nextTick()
+      // espera o container no DOM
+      let el = document.getElementById('stripe-embed-mount')
+      for (let i = 0; i < 20 && !el; i++) {
+        await new Promise((r) => setTimeout(r, 50))
+        el = document.getElementById('stripe-embed-mount')
+      }
+      if (!el) throw new Error('Stripe mount element missing')
+      el.innerHTML = ''
+      if (stripeCheckout && typeof stripeCheckout.destroy === 'function') {
+        try {
+          stripeCheckout.destroy()
+        } catch {}
+      }
+      stripeCheckout = await stripe.initEmbeddedCheckout({
+        clientSecret: res.client_secret,
+        onComplete: async () => {
+          try {
+            pixPaid.value = true
+            funnelChatUnlocked.value = true
+            try {
+              localStorage.setItem('wanessa_chat_unlocked', '1')
+            } catch {}
+            showStripeModal.value = false
+            try {
+              await funnelType('Payment confirmed 💚|||Chat unlocked — you can message me now.', 800)
+            } catch {}
+            try {
+              track('stripe_checkout_complete', { plan_key: opts.plan_key, amount: opts.amount })
+            } catch {}
+          } catch (e) {
+            console.warn('[stripe onComplete]', e)
+          }
+        },
+      })
+      stripeCheckout.mount('#stripe-embed-mount')
+      pixPaymentId.value = res.payment_id || ''
+      pixExternalId.value = res.session_id || ''
+      try {
+        track('stripe_checkout_open', { plan_key: opts.plan_key, amount: opts.amount })
+      } catch {}
+    } catch (e: any) {
+      stripeError.value =
+        e?.data?.statusMessage || e?.message || 'Card payment unavailable. Try again.'
+      console.error('[stripe checkout]', e)
+    } finally {
+      stripeLoading.value = false
+    }
+    return
+  }
+
+  // --- PIX (Brasil) ---
+  const res = await $fetch<{
+    ok: boolean
+    mode?: string
+    pix_code?: string
+    qr_image?: string
+    payment_id?: string
+    external_id?: string
+    hint?: string
+    error?: string
+  }>('/api/checkout/pix', {
+    method: 'POST',
+    body: {
+      plan_key: opts.plan_key,
+      amount: opts.amount,
+      title: opts.title,
+      visitor_id,
+      source,
+    },
+  })
+  if (!res?.ok || !res.pix_code) {
+    throw new Error(res?.error || 'Falha ao gerar PIX')
+  }
+  pixPaid.value = false
+  pixCopyCode.value = res.pix_code
+  const isEmv = /^000201/.test(res.pix_code)
+  pixQrImage.value = isEmv
+    ? res.qr_image ||
+      `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`
+    : ''
+  pixPaymentId.value = res.payment_id || ''
+  pixExternalId.value = res.external_id || res.payment_id || ''
+  pixStatusText.value = isEmv
+    ? 'Aguardando pagamento… use o QR ou o copia e cola'
+    : res.hint || 'Pague o PIX e confirme o status'
+  showChatPlans.value = false
+  showPixModal.value = true
+  if (pixExternalId.value || pixPaymentId.value) {
+    if (pixPollTimer) clearInterval(pixPollTimer)
+    let tries = 0
+    pixPollTimer = setInterval(() => {
+      checkPixStatus(true)
+      tries++
+      if (tries > 45 && pixPollTimer) {
+        clearInterval(pixPollTimer)
+        pixPollTimer = null
+      }
+    }, 5000)
+  }
+}
+
 async function buyChatPlan(p: typeof chatPlans[number]) {
   chatPayError.value = ''
   chatPayLoading.value = p.key
   selectedChatPlan.value = p
   try {
-    let visitor_id: string | null = null
-    try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
-    const res = await $fetch<{
-      ok: boolean
-      mode?: string
-      pix_code?: string
-      qr_image?: string
-      payment_id?: string
-      external_id?: string
-      hint?: string
-      amount_label?: string
-      credentials_found?: boolean
-      error?: string
-    }>('/api/checkout/pix', {
-      method: 'POST',
-      body: {
-        plan_key: p.key,
-        amount: p.price,
-        title: p.title,
-        visitor_id,
-        source: 'links_chat_lock',
-      },
+    await startUnifiedCheckout({
+      plan_key: p.key,
+      amount: p.price,
+      title: p.title,
+      source: 'links_chat_lock',
     })
-    if (!res?.ok || !res.pix_code) {
-      throw new Error(res?.error || 'Falha ao gerar PIX')
-    }
-    pixPaid.value = false
-    pixCopyCode.value = res.pix_code
-    const isEmv = /^000201/.test(res.pix_code)
-    pixQrImage.value = isEmv
-      ? (res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`)
-      : ''
-    pixPaymentId.value = res.payment_id || ''
-    pixExternalId.value = res.external_id || res.payment_id || ''
-    pixStatusText.value = isEmv
-      ? 'Aguardando pagamento… use o QR ou o copia e cola'
-      : (res.hint || 'Pague o PIX e confirme o status')
-    showChatPlans.value = false
-    showPixModal.value = true
-    try { track('chat_plan_checkout', { offer_slug: p.key, amount: p.price, mode: res.mode || 'unknown' }) } catch {}
-    if (pixExternalId.value || pixPaymentId.value) {
-      if (pixPollTimer) clearInterval(pixPollTimer)
-      let tries = 0
-      pixPollTimer = setInterval(() => { checkPixStatus(true); tries++; if (tries > 45 && pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null } }, 5000)
-    }
+    try { track('chat_plan_checkout', { offer_slug: p.key, amount: p.price, mode: preferStripeCheckout() ? 'stripe' : 'pix' }) } catch {}
   } catch (e: any) {
     const msg =
       e?.data?.statusMessage ||
       e?.data?.message ||
       e?.statusMessage ||
       e?.message ||
-      'Erro ao gerar cobrança. Tenta de novo.'
+      'Falha no checkout'
     chatPayError.value = String(msg)
-    console.error('[buyChatPlan]', e)
   } finally {
-    chatPayLoading.value = null
+    chatPayLoading.value = ''
   }
 }
+
+
 async function checkPixStatus(silent = false) {
   const id = pixPaymentId.value || pixExternalId.value
   if (!id) {
@@ -3045,6 +3227,15 @@ async function generateFunnelPix() {
   if (!pack) return false
   const amount = priceToNumber(pack.price)
   try {
+    if (preferStripeCheckout()) {
+      await startUnifiedCheckout({
+        plan_key: String(pack.key || selectedChatPlan.value?.key || 'custom'),
+        amount: amount,
+        title: String(pack.label || selectedChatPlan.value?.title || 'Offer'),
+        source: 'funnel_offer',
+      })
+      return true
+    }
     const visitor_id = (() => { try { return getOrCreateVisitorId() } catch { return null } })()
     const res = await $fetch<{
       ok: boolean
