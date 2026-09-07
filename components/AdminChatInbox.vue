@@ -736,8 +736,8 @@ if (typeof window !== 'undefined') {
               />
             </div>
 
-            <div <!-- Abas: Todas | Não lidas | Abertas | Chat pago -->
-            class="ac-tabs">
+            <!-- Abas: Todas | Não lidas | Abertas | Chat pago -->
+            <div class="ac-tabs">
               <button type="button" class="ac-tab" :class="{ active: filter === 'all' }" @click="filter = 'all'">Todas</button>
               <button type="button" class="ac-tab" :class="{ active: filter === 'new' }" @click="filter = 'new'">
                 Não lidas
@@ -750,8 +750,8 @@ if (typeof window !== 'undefined') {
               </button>
             </div>
 
-            <div <!-- Liberar chat pago por visitor_id / nome -->
-            class="ac-unlock">
+            <!-- Liberar chat pago por visitor_id / nome -->
+            <div class="ac-unlock">
               <p class="ac-unlock-label">Liberar chat pago (teste)</p>
               <div class="ac-unlock-row">
                 <input
