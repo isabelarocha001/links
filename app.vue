@@ -4790,6 +4790,7 @@ async function sendFunnelFreeText() {
           history,
           visitor_id: getOrCreateVisitorId(),
           step: funnelStep.value,
+          locale: locale.value,
         },
       })
       const reply = String(res?.reply || '').trim().slice(0, 600)
@@ -5024,6 +5025,7 @@ async function sendFunnelFreeText() {
         history,
         visitor_id: getOrCreateVisitorId(),
         step: funnelStep.value,
+        locale: locale.value,
       },
     })
     const reply = (res?.reply || '').trim()
