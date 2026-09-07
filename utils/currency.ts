@@ -1,6 +1,7 @@
 /**
  * Moeda por país/idioma do navegador.
- * Preços base do produto são em BRL; convertemos com taxas aproximadas (atualize periodicamente).
+ * O valor numérico do plano é o mesmo (ex.: 9.90); só a moeda muda (USD/EUR/…).
+ * Sem conversão cambial no checkout.
  */
 
 export type MoneyLocale = {

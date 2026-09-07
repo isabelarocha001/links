@@ -6,7 +6,6 @@
 import { useServiceSupabase, getClientIp } from '../../utils/supabase'
 import {
   currencyFromLocaleTag,
-  convertFromBrl,
   toStripeUnitAmount,
   formatMoney,
 } from '../../../utils/currency'
@@ -93,7 +92,8 @@ export default defineEventHandler(async (event) => {
   // body.currency opcional (override), senão detectado
   const currency = String(body?.currency || money.currency || 'usd').toLowerCase().slice(0, 3)
 
-  const finalAmount = currency === 'brl' ? amountBrl : convertFromBrl(amountBrl, currency)
+  // Mesmo valor numérico do plano (ex.: 9.90) — só muda a moeda do país, SEM conversão FX
+  const finalAmount = amountBrl
   const unitAmount = toStripeUnitAmount(finalAmount, currency)
   if (unitAmount < 1) {
     throw createError({ statusCode: 400, statusMessage: 'Amount too low for Stripe' })
