@@ -1,3 +1,7 @@
+/**
+ * POST /api/funnel-chat
+ * Lead envia mensagem/evento do funil; grava em wa_funnel_messages.
+ */
 import { useServiceSupabase, getClientIp } from '../utils/supabase'
 import { leadConversationTitle } from '../utils/lead-name'
 import { notifyTelegramLeadMessage } from '../utils/telegram'

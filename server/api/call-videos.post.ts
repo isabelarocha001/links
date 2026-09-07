@@ -1,3 +1,7 @@
+/**
+ * POST /api/call-videos
+ * Upload/cadastro de vídeos de chamada (painel moderador).
+ */
 import { useServiceSupabase, verifyAdminToken } from '../utils/supabase'
 
 const CALL_BUCKET = 'call-videos'

@@ -1,3 +1,7 @@
+/**
+ * POST /api/admin/update
+ * Atualiza config da página de links (bio, links, etc.) no Supabase.
+ */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const token = getCookie(event, 'admin_token')

@@ -1,3 +1,7 @@
+/**
+ * GET /api/funnel-chat
+ * Lead busca mensagens novas do admin (poll do chat ao vivo).
+ */
 import { useServiceSupabase } from '../utils/supabase'
 
 /**

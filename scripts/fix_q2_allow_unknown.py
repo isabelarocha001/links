@@ -1,3 +1,4 @@
+# Script one-shot: quiz Q2 permite desconhecido
 #!/usr/bin/env python3
 from pathlib import Path
 APP = Path("app.vue")

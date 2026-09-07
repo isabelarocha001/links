@@ -1,3 +1,7 @@
+/**
+ * POST /api/admin/presence { offline? }
+ * Heartbeat de presença do admin (lead vê online / visto por último).
+ */
 import { useServiceSupabase, verifyAdminToken } from '../../utils/supabase'
 
 /**

@@ -1,3 +1,7 @@
+/**
+ * GET /api/config
+ * Config pública da link page (nome, bio, links, quiz_enabled) via Supabase.
+ */
 export default defineEventHandler(async () => {
   const supabase = useAnonSupabase()
   const { data, error } = await supabase

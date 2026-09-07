@@ -1,3 +1,7 @@
+/**
+ * GET /api/version
+ * Versão/deploy id (usado pelo plugin fresh-deploy).
+ */
 /** Build id — muda a cada deploy. Sem cache. */
 export default defineEventHandler((event) => {
   const id =

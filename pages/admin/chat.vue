@@ -1,3 +1,4 @@
+<!-- Rota /admin/chat: monta o AdminChatInbox (inbox de conversas do funil). -->
 <script setup lang="ts">
 /**
  * Rota /admin/chat — login na própria página (AdminChatInbox).

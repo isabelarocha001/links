@@ -1,3 +1,4 @@
+/** Plugin client: detecta deploy novo e força refresh de cache/assets. */
 /**
  * Se o build mudou após um deploy, força 1 reload limpo
  * (evita ficar preso em JS antigo no cache do celular).

@@ -1,3 +1,7 @@
+/**
+ * POST /api/webhooks/syncpay
+ * Webhook SyncPay: pagamento aprovado → libera chat/plano no Supabase.
+ */
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { useServiceSupabase } from '../../utils/supabase'
 

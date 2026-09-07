@@ -1,3 +1,4 @@
+<!-- Rota /chat: redireciona/landing padrão do chat. -->
 <script setup lang="ts">
 /**
  * /chat — mesma landing de /chat/wanessabsx (abre funil WhatsApp direto)

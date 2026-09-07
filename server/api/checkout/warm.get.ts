@@ -1,3 +1,7 @@
+/**
+ * GET /api/checkout/warm
+ * Warm-up das credenciais/API SyncPay (reduz latência no 1º PIX).
+ */
 import { useServiceSupabase } from '../../utils/supabase'
 
 async function loadSyncPayCredentials() {

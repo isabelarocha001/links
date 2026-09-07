@@ -1,3 +1,4 @@
+<!-- Rota /CanalPublico: landing que esconde canal público e abre funil direto. -->
 <script setup lang="ts">
 // Rota /CanalPublico — leads vindos do canal público (checkout direto).
 // A UI principal vive em app.vue; aqui só garantimos que a rota existe.

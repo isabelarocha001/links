@@ -1,3 +1,4 @@
+<!-- Rota /chat/:slug: landing de chat com slug da criadora. -->
 <script setup lang="ts">
 /**
  * Rota pública do lead: /chat/wanessabsx | /chat/wanessa

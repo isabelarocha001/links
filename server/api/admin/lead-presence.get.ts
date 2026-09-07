@@ -1,3 +1,7 @@
+/**
+ * GET /api/admin/lead-presence
+ * Status online/activity do lead na conversa aberta (para o inbox admin).
+ */
 import { useServiceSupabase, verifyAdminToken } from '../../utils/supabase'
 
 /**

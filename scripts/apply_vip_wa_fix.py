@@ -1,3 +1,4 @@
+# Script one-shot: aplica form VIP WhatsApp no app.vue
 #!/usr/bin/env python3
 from pathlib import Path
 

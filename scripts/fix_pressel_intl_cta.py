@@ -1,3 +1,4 @@
+# Script one-shot: CTA pressel internacional
 #!/usr/bin/env python3
 from pathlib import Path
 

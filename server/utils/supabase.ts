@@ -1,6 +1,11 @@
+/**
+ * Utils Supabase: clients anon/service + verifyAdminToken.
+ * useServiceSupabase() = service role (server-only).
+ */
 import { createClient } from '@supabase/supabase-js'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
+/** useServiceSupabase */
 export function useServiceSupabase() {
   const config = useRuntimeConfig()
   const key = config.supabaseServiceKey || config.public.supabaseAnonKey
@@ -9,6 +14,7 @@ export function useServiceSupabase() {
   })
 }
 
+/** useAnonSupabase */
 export function useAnonSupabase() {
   const config = useRuntimeConfig()
   return createClient(config.public.supabaseUrl, config.public.supabaseAnonKey, {
@@ -16,6 +22,7 @@ export function useAnonSupabase() {
   })
 }
 
+/** getClientIp */
 export function getClientIp(event: any): string {
   const xf = getHeader(event, 'x-forwarded-for')
   if (xf) return xf.split(',')[0].trim()
@@ -24,6 +31,7 @@ export function getClientIp(event: any): string {
   return 'unknown'
 }
 
+/** signAdminToken */
 export function signAdminToken(secret: string): string {
   const exp = Date.now() + 1000 * 60 * 60 * 24 * 30 // 30 dias — encerra só no logout
   const payload = `admin:${exp}`
@@ -31,6 +39,7 @@ export function signAdminToken(secret: string): string {
   return Buffer.from(`${payload}.${sig}`).toString('base64url')
 }
 
+/** verifyAdminToken */
 export function verifyAdminToken(token: string | undefined, secret: string): boolean {
   if (!token) return false
   try {

@@ -1,3 +1,7 @@
+/**
+ * POST /api/telegram/webhook
+ * Webhook do bot Telegram (mensagens, callbacks).
+ */
 import { useServiceSupabase } from '../../utils/supabase'
 import { getTelegramConfig, ensureOwnerChatId } from '../../utils/telegram'
 import { ingestTelegramFile, deleteTempMediaByUrl } from '../../utils/media'

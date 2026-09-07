@@ -1,3 +1,7 @@
+/**
+ * GET /api/call-credit
+ * Consulta saldo/crédito de videochamada do visitor.
+ */
 import { useServiceSupabase } from '../utils/supabase'
 
 /**

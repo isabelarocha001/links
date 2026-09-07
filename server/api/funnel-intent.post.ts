@@ -1,3 +1,7 @@
+/**
+ * POST /api/funnel-intent
+ * Registra intenção/clique de oferta do funil (pack, call, webnamoro).
+ */
 import { useServiceSupabase, getClientIp } from '../utils/supabase'
 
 type IntentResult = {

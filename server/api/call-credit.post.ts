@@ -1,3 +1,7 @@
+/**
+ * POST /api/call-credit
+ * Consome ou adiciona crédito de videochamada após pagamento/uso.
+ */
 import { useServiceSupabase } from '../utils/supabase'
 
 /**

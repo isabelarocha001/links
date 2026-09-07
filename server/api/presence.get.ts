@@ -1,3 +1,7 @@
+/**
+ * GET /api/presence
+ * Público: lead consulta se admin está online / visto por último.
+ */
 import { useServiceSupabase } from '../utils/supabase'
 
 /**

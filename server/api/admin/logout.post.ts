@@ -1,3 +1,7 @@
+/**
+ * POST /api/admin/logout
+ * Invalida sessão admin e zera presença.
+ */
 import { useServiceSupabase, verifyAdminToken } from '../../utils/supabase'
 
 export default defineEventHandler(async (event) => {

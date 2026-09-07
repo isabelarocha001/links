@@ -1,3 +1,7 @@
+/**
+ * POST /api/admin/test-pay
+ * Endpoint de teste de pagamento (dev/admin).
+ */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const token = getCookie(event, 'admin_token')

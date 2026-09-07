@@ -1,3 +1,4 @@
+/** Gera fingerprint do device do visitor (visitor_id estável). */
 export async function hashString(input: string): Promise<string> {
   try {
     const data = new TextEncoder().encode(input)
@@ -15,6 +16,7 @@ export async function hashString(input: string): Promise<string> {
 
 const FP_KEY = 'wanessa_fp_v1'
 
+/** getDeviceFingerprint */
 export async function getDeviceFingerprint(): Promise<string> {
   if (typeof window === 'undefined') return ''
   try {

@@ -1,3 +1,7 @@
+/**
+ * POST /api/media/temp-upload
+ * Upload temporário de mídia (foto/vídeo/áudio) no funil/admin.
+ */
 import { uploadTempMedia } from '../../utils/media'
 
 /**

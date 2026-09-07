@@ -1,3 +1,7 @@
+/**
+ * POST /api/admin/login { password }
+ * Valida senha admin e seta cookie admin_token httpOnly.
+ */
 import bcrypt from 'bcryptjs'
 
 export default defineEventHandler(async (event) => {

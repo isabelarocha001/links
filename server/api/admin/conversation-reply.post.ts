@@ -1,3 +1,8 @@
+/**
+ * POST /api/admin/conversation-reply
+ * Admin responde na conversa (texto, mídia, poll, convite de call).
+ * Grava direction=bot, step=live_admin.
+ */
 import { useServiceSupabase, verifyAdminToken } from '~~/server/utils/supabase'
 
 /**

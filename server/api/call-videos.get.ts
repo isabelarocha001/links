@@ -1,3 +1,7 @@
+/**
+ * GET /api/call-videos
+ * Lista vídeos disponíveis para o fluxo de videochamada.
+ */
 import { useServiceSupabase } from '../utils/supabase'
 
 /**

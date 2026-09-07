@@ -1,3 +1,8 @@
+/**
+ * GET /api/checkout/status
+ * Consulta status de um pagamento PIX (pending/approved).
+ * Usado pelo front para liberar chat/plano após pagar.
+ */
 import { useServiceSupabase } from '../../utils/supabase'
 
 /** Rate limit in-memory (por instância serverless). Chave: IP + payment id */

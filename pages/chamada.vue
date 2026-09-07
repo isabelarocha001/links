@@ -1,3 +1,4 @@
+<!-- Rota /chamada: abre funil + popup de videochamada (tráfego canal de prévias). -->
 <script setup lang="ts">
 /**
  * Rota isolada canal de prévias: /chamada

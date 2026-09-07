@@ -1,3 +1,7 @@
+/**
+ * POST /api/lead-presence
+ * Lead reporta presença/activity (typing, online) para o admin ver.
+ */
 import { useServiceSupabase } from '../utils/supabase'
 
 /**

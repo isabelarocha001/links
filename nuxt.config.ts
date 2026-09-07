@@ -1,3 +1,7 @@
+/**
+ * Configuração Nuxt do projeto links.
+ * Runtime config (secrets SyncPay, admin, Supabase), CSS, módulos.
+ */
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },

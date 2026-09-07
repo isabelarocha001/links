@@ -1,3 +1,4 @@
+/** Middleware Nuxt: protege rotas /admin/* — redireciona se sem sessão admin. */
 /**
  * /admin/chat — página sempre acessível.
  * Auth fica no formulário de login do AdminChatInbox (cookie admin_token).

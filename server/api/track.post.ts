@@ -1,4 +1,8 @@
 /**
+ * POST /api/track
+ * Analytics de eventos do funil/página (views, cliques, unlocks).
+ */
+/**
  * Tracking da ÁRVORE DE LINKS (proxy server-side)
  *
  * Responde IMEDIATO ao browser; envia ao pressel em background.

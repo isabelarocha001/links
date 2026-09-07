@@ -1,3 +1,7 @@
+/**
+ * POST /api/media/ack-delivered
+ * Confirma entrega de mídia temporária ao lead.
+ */
 import { deleteTempMediaByUrl, deleteTempMediaByPath } from '../../utils/media'
 
 /**

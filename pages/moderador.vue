@@ -1,3 +1,7 @@
+/**
+ * Página /moderador — painel interno:
+ * upload/lista de vídeos de chamada, créditos, config operacional.
+ */
 <script setup lang="ts">
 /**
  * /moderador — gerencia vídeos que rodam na videochamada.
@@ -18,6 +22,7 @@ const password = ref('')
 const loginError = ref('')
 const loading = ref(false)
 const authed = ref(false)
+// --- Lista de vídeos de chamada ---
 const videos = ref<CallVideo[]>([])
 const newUrl = ref('')
 const newTitle = ref('')

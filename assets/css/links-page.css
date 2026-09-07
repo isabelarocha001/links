@@ -1,9 +1,15 @@
+/*
+ * links-page.css — estilos da página de links + funil WA + modais de PIX/bloqueio
+ * Navegue pelas seções marcadas com ==========
+ */
+/* ========== LAYOUT PÁGINA / FUNDO ========== */
 .page { min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; padding: max(12px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom)); position: relative; background: #12081a; box-sizing: border-box; -webkit-user-select: none; user-select: none; overflow-x: hidden; }
 .page--locked { pointer-events: none; filter: brightness(0.35); }
 .bg-glow { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: min(100vw, 520px); height: 420px; background: radial-gradient(ellipse 70% 50% at 50% 20%, rgba(168, 85, 247, 0.18) 0%, transparent 60%); pointer-events: none; }
 .bg-grain { position: absolute; inset: 0; opacity: 0.03; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); pointer-events: none; }
 .lock-btn { position: fixed; top: max(8px, env(safe-area-inset-top)); right: 8px; z-index: 50; width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .container { width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 1; margin: 0 auto; }
+/* ========== SHELL CHAT WHATSAPP (quiz gate) ========== */
 .wa-shell { width: 100%; max-width: 400px; height: min(92dvh, 720px); display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; background: #0b141a; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 50px rgba(0,0,0,0.55); }
 .wa-header { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #1f2c34; flex-shrink: 0; }
 .wa-header-side { width: 28px; display: flex; align-items: center; }
@@ -44,6 +50,7 @@
 .wa-emoji, .wa-send { width: 36px; height: 36px; border: none; border-radius: 50%; background: transparent; color: #8696a0; display: flex; align-items: center; justify-content: center; opacity: 0.55; cursor: not-allowed; }
 .wa-input { flex: 1; height: 40px; border-radius: 22px; border: none; background: #2a3942; color: #8696a0; padding: 0 14px; font-size: 0.88rem; outline: none; cursor: not-allowed; }
 .wa-input::placeholder { color: #667781; }
+/* ========== HERO / FOTO ========== */
 .hero { width: 100%; text-align: center; margin-bottom: 28px; }
 .photo-stage { position: relative; width: 100%; max-width: 340px; margin: 0 auto 24px; }
 .photo-frame {
@@ -199,6 +206,7 @@
 .identity { padding: 0 8px; }
 .eyebrow { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #c084fc; margin: 0 0 6px; }
 .accent-line { width: 48px; height: 1px; margin: 16px auto 0; background: linear-gradient(90deg, transparent, #c084fc, transparent); }
+/* ========== CARDS PRIVSEX + TELEGRAM ========== */
 .main-cards { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; align-items: stretch; }
 .main-cards--single { grid-template-columns: 1fr; max-width: 320px; margin-left: auto; margin-right: auto; }
 .card-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -238,6 +246,7 @@
 .card-desc { font-size: 0.72rem; color: rgba(245, 240, 255, 0.55); line-height: 1.35; margin: 0 0 auto; position: relative; z-index: 1; flex: 1; }
 .card-cta { font-size: 0.75rem; font-weight: 600; color: #c084fc; margin-top: 12px; position: relative; z-index: 1; }
 /* PrivSex portal: buraco negro / espiral sugando */
+/* ========== PORTAL PRIVSEX (espiral) ========== */
 .lux-card--portal {
   isolation: isolate;
   border: 1px solid rgba(168, 85, 247, 0.4);
@@ -330,6 +339,7 @@
 }
 .lux-card--portal .card-cta { color: #e9d5ff; text-shadow: 0 1px 6px rgba(0,0,0,0.9); }
 
+/* ========== BLOCO VIP BOT RODAPÉ ========== */
 .vip-block { width: 100%; margin-bottom: 22px; }
 .vip-card { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 18px; border-radius: 14px; background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(126, 34, 206, 0.12)); border: 1px solid rgba(192, 132, 252, 0.45); text-decoration: none; overflow: hidden; transition: transform 0.15s ease, box-shadow 0.15s ease; }
 .vip-card:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(168, 85, 247, 0.25); }
@@ -944,6 +954,7 @@ button.direct-btn {
 }
 
 /* Planos low-ticket */
+/* ========== MODAIS DE PLANOS / PIX ========== */
 .chat-plans-overlay {
   position: fixed;
   inset: 0;
@@ -2327,6 +2338,7 @@ button {
 }
 
 /* Overlay bloqueio (lead ou Wanessa) — CSS completo */
+/* ========== BLOQUEIO PERMANENTE (mimo) ========== */
 .wa-perm-block-overlay {
   position: fixed !important;
   inset: 0 !important;

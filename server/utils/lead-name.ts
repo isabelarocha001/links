@@ -1,3 +1,4 @@
+/** Utils: normaliza/extrai nome do lead a partir de título/visitor. */
 /**
  * Nome legível e estável por visitor_id (mesmo lead = mesmo nome).
  * Nomes brasileiros comuns pra admin distinguir conversas.
@@ -20,6 +21,7 @@ const LAST = [
   'Gonçalves', 'Santana', 'Teixeira', 'Moraes', 'Araujo', 'Castro', 'Campos', 'Pinto',
 ]
 
+/** hashStr */
 function hashStr(s: string): number {
   let h = 2166136261
   for (let i = 0; i < s.length; i++) {
@@ -29,6 +31,7 @@ function hashStr(s: string): number {
   return h >>> 0
 }
 
+/** leadDisplayName */
 export function leadDisplayName(visitorId: string): string {
   const id = String(visitorId || 'anon')
   const h = hashStr(id)
@@ -37,6 +40,7 @@ export function leadDisplayName(visitorId: string): string {
   return `${first} ${last}`
 }
 
+/** leadConversationTitle */
 export function leadConversationTitle(visitorId: string, creatorSlug?: string): string {
   const name = leadDisplayName(visitorId)
   // título curto só com o nome — admin distingue pelo nome

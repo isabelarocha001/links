@@ -1,7 +1,9 @@
+/** Utils Telegram: envio de mensagens/API do bot. */
 import { useServiceSupabase } from './supabase'
 import { deleteTempMediaByUrl } from './media'
 import { leadDisplayName } from './lead-name'
 
+/** getTelegramConfig */
 export async function getTelegramConfig(): Promise<{ botToken: string; ownerChatId: string }> {
   const env = process.env as Record<string, string | undefined>
   let botToken = String(env.TELEGRAM_BOT_TOKEN || env.NUXT_TELEGRAM_BOT_TOKEN || '').trim()
@@ -31,6 +33,7 @@ export async function getTelegramConfig(): Promise<{ botToken: string; ownerChat
   return { botToken, ownerChatId }
 }
 
+/** ensureOwnerChatId */
 export async function ensureOwnerChatId(chatId: string | number) {
   const id = String(chatId || '').trim()
   if (!id) return
@@ -44,6 +47,7 @@ export async function ensureOwnerChatId(chatId: string | number) {
   }
 }
 
+/** sendTelegramOwnerMessage */
 export async function sendTelegramOwnerMessage(text: string) {
   const { botToken, ownerChatId } = await getTelegramConfig()
   if (!botToken) return { ok: false as const, error: 'bot_token_missing' }
@@ -127,6 +131,7 @@ export async function sendTelegramOwnerMedia(opts: {
   return { ok: true as const }
 }
 
+/** notifyTelegramLeadMessage */
 export async function notifyTelegramLeadMessage(opts: {
   conversationId: string
   visitorId: string

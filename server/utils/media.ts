@@ -1,11 +1,14 @@
+/** Utils: helpers de mídia (URL temp, validação, storage). */
 import { useServiceSupabase } from './supabase'
 
 const BUCKET = 'chat-media-temp'
 
+/** mediaBucket */
 export function mediaBucket() {
   return BUCKET
 }
 
+/** uploadTempMedia */
 export async function uploadTempMedia(opts: {
   bytes: Buffer | Uint8Array
   contentType: string
@@ -39,6 +42,7 @@ export async function uploadTempMedia(opts: {
   return { path, public_url }
 }
 
+/** deleteTempMediaByPath */
 export async function deleteTempMediaByPath(path: string) {
   const supabase = useServiceSupabase()
   const p = String(path || '').trim()
@@ -54,6 +58,7 @@ export async function deleteTempMediaByPath(path: string) {
   } catch {}
 }
 
+/** deleteTempMediaByUrl */
 export async function deleteTempMediaByUrl(url: string) {
   const u = String(url || '')
   const marker = `/object/public/${BUCKET}/`
@@ -74,6 +79,7 @@ export async function deleteTempMediaByUrl(url: string) {
   if (data?.storage_path) await deleteTempMediaByPath(data.storage_path)
 }
 
+/** guessExt */
 function guessExt(ct: string) {
   const c = (ct || '').toLowerCase()
   if (c.includes('jpeg') || c.includes('jpg')) return 'jpg'

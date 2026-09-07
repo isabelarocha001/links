@@ -1,3 +1,7 @@
+/**
+ * GET /api/admin/conversation-messages?id=
+ * Histórico de mensagens de uma conversa (auth admin).
+ */
 import { useServiceSupabase, verifyAdminToken } from '~~/server/utils/supabase'
 
 /** Mensagens de uma conversa (admin). GET ?id= */
