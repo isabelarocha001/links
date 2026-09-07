@@ -115,20 +115,8 @@
             <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
           </div>
           <div class="card-col" v-if="!hidePublicChannel">
-            <!-- Canal público ativo no admin → direita = canal; senão → direita = bot Telegram -->
-            <template v-if="publicChannelEnabled">
-              <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
-                <div class="card-glow"></div>
-                <div class="card-top">
-                  <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
-                  <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
-                </div>
-                <h2 class="card-title">{{ t('pubTitle') }}</h2>
-                <p class="card-desc">{{ t('pubDesc') }}</p>
-              </a>
-              <a class="card-enter" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">{{ t('pubEnter') }}</a>
-            </template>
-            <template v-else>
+            <!-- BR + canal desativado no admin → bot; gringa SEMPRE canal público (nunca bot) -->
+            <template v-if="isPt && !publicChannelEnabled">
               <a class="lux-card lux-card--right" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
                 <div class="card-glow"></div>
                 <div class="card-top">
@@ -139,6 +127,18 @@
                 <p class="card-desc">{{ t('vipDesc') }}</p>
               </a>
               <a class="card-enter" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">{{ t('pubEnter') }}</a>
+            </template>
+            <template v-else>
+              <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
+                <div class="card-glow"></div>
+                <div class="card-top">
+                  <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
+                  <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
+                </div>
+                <h2 class="card-title">{{ t('pubTitle') }}</h2>
+                <p class="card-desc">{{ t('pubDesc') }}</p>
+              </a>
+              <a class="card-enter" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">{{ t('pubEnter') }}</a>
             </template>
           </div>
         </section>
@@ -4279,10 +4279,27 @@ function clearFunnelState() {
   funnelBlocked.value = false
 }
 
+async function checkServerChatUnlock() {
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    if (!visitor_id) return false
+    const res = await $fetch<{ unlocked?: boolean }>('/api/chat-unlock', { query: { visitor_id } })
+    if (res?.unlocked) {
+      funnelChatUnlocked.value = true
+      funnelBlocked.value = false
+      try { startLiveChatPoll() } catch {}
+      return true
+    }
+  } catch {}
+  return false
+}
+
 function openWaFunnel(source = 'whatsapp') {
   warmSyncPay()
   loadFunnelConversationLocal()
   loadPermanentBlock()
+  // Se admin liberou chat pra este visitor_id, aplica na hora
+  checkServerChatUnlock()
 
   track('whatsapp_funnel_open', { offer_slug: source || 'whatsapp' })
   try { onCardClick('WhatsApp Funnel', whatsappUrl.value) } catch {}
@@ -5417,7 +5434,7 @@ const DEFAULT_LINKS: LinkItem[] = [
 ]
 const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
 const configReady = ref(false)
-/** Canal público ativo no painel admin (link "Canal de prévias" / similar habilitado) */
+/** Toggle admin "Canal de prévias" — afeta SÓ layout BR (gringa sempre vê canal, nunca bot) */
 const publicChannelEnabled = computed(() => {
   return config.links.some((l) => {
     if (l.enabled === false) return false
