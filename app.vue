@@ -1078,9 +1078,7 @@
             <div>
               <p class="chat-plans-kicker">Card</p>
               <h3>{{ selectedChatPlan?.title || selectedPack?.label || 'Checkout' }}</h3>
-              <p class="chat-plans-sub">
-                {{ selectedChatPlan?.priceLabel ? ('R$ ' + selectedChatPlan.priceLabel) : '' }}
-              </p>
+              <p class="chat-plans-sub">{{ stripeAmountLabel || '' }}</p>
             </div>
             <button type="button" class="chat-plans-x" aria-label="Close" @click="closeStripeModal">✕</button>
           </div>
@@ -1108,7 +1106,7 @@
               style="width:100%;margin-top:14px"
               :disabled="stripeLoading || stripePaying"
             >
-              {{ stripePaying ? 'Processing…' : (stripeLoading ? 'Loading…' : 'Pay') }}
+              {{ stripePaying ? 'Processing…' : (stripeLoading ? 'Loading…' : (stripeAmountLabel ? ('Pay ' + stripeAmountLabel) : 'Pay')) }}
             </button>
           </form>
         </div>
@@ -1279,6 +1277,7 @@ import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 import { getDeviceFingerprint } from '~/utils/fingerprint'
 import { IG_PROFILE_SRC as igProfileSrc } from '~/utils/ig-profile'
 import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i18n'
+import { detectBrowserMoney, formatMoney, convertFromBrl } from '~/utils/currency'
 
 /** Lead veio de /CanalPublico (tráfego do canal) → esconde botão do canal público (checkout direto) */
 const route = useRoute()
@@ -2870,6 +2869,7 @@ async function closeStripeModal() {
   stripeElements = null
   stripeInstance = null
   stripeClientSecret = ''
+  stripeAmountLabel.value = ''
   showStripeModal.value = false
   stripeError.value = ''
   stripeLoading.value = false
@@ -2956,19 +2956,30 @@ async function startUnifiedCheckout(opts: {
         payment_id?: string
         publishable_key?: string
         amount?: number
+        amount_label?: string
+        currency?: string
+        region?: string
       }>('/api/checkout/stripe-intent', {
         method: 'POST',
         body: {
           plan_key: opts.plan_key,
           amount: opts.amount,
+          amount_brl: opts.amount,
           title: opts.title,
           visitor_id,
           source,
+          locale_tag: (typeof navigator !== 'undefined'
+            ? (navigator.language || (navigator.languages && navigator.languages[0]) || 'en-US')
+            : 'en-US'),
+          locale: locale.value,
         },
       })
       if (!res?.ok || !res.client_secret) {
         throw new Error('Stripe intent failed')
       }
+      stripeAmountLabel.value = String((res as any).amount_label || '')
+      stripeCurrency.value = String((res as any).currency || 'usd')
+
       const pk = String(res.publishable_key || '').trim()
       if (!pk.startsWith('pk_')) {
         throw new Error('Missing Stripe publishable key (app_secrets)')

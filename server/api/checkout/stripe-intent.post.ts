@@ -4,6 +4,12 @@
  * Chaves só em app_secrets (STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY).
  */
 import { useServiceSupabase, getClientIp } from '../../utils/supabase'
+import {
+  currencyFromLocaleTag,
+  convertFromBrl,
+  toStripeUnitAmount,
+  formatMoney,
+} from '../../../utils/currency'
 
 const PLAN_FALLBACK: Record<string, { title: string; amount: number }> = {
   chat_quick: { title: 'Unlock chat', amount: 9.9 },
@@ -62,30 +68,50 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event).catch(() => ({} as any))
   const planKey = String(body?.plan_key || '').trim() || 'custom'
   const plan = PLAN_FALLBACK[planKey]
-  const amount = Number(body?.amount)
-  const finalAmount =
-    Number.isFinite(amount) && amount > 0 ? Number(amount.toFixed(2)) : plan?.amount
-  if (!finalAmount || finalAmount <= 0) {
+  // Preço base sempre em BRL (catálogo)
+  const amountBrlRaw = Number(body?.amount_brl ?? body?.amount)
+  const amountBrl =
+    Number.isFinite(amountBrlRaw) && amountBrlRaw > 0
+      ? Number(amountBrlRaw.toFixed(2))
+      : plan?.amount
+  if (!amountBrl || amountBrl <= 0) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid amount' })
   }
 
   const title = String(body?.title || plan?.title || planKey).slice(0, 80)
   const visitor_id = body?.visitor_id ? String(body.visitor_id).slice(0, 120) : null
   const source = String(body?.source || 'links_stripe').slice(0, 60)
-  const currency = String(body?.currency || 'brl').toLowerCase().slice(0, 3) || 'brl'
   const ip = getClientIp(event)
-  const unitAmount = Math.round(finalAmount * 100)
-  if (unitAmount < 50) {
+
+  // Idioma/país do lead → moeda
+  let localeTag = String(body?.locale_tag || body?.locale || '').trim()
+  if (!localeTag) {
+    const al = String(getHeader(event, 'accept-language') || '')
+    localeTag = al.split(',')[0]?.trim() || 'en-US'
+  }
+  const money = currencyFromLocaleTag(localeTag)
+  // body.currency opcional (override), senão detectado
+  const currency = String(body?.currency || money.currency || 'usd').toLowerCase().slice(0, 3)
+
+  const finalAmount = currency === 'brl' ? amountBrl : convertFromBrl(amountBrl, currency)
+  const unitAmount = toStripeUnitAmount(finalAmount, currency)
+  if (unitAmount < 1) {
     throw createError({ statusCode: 400, statusMessage: 'Amount too low for Stripe' })
   }
+
+  const amountLabel = formatMoney(finalAmount, currency, localeTag)
 
   const params = new URLSearchParams()
   params.append('amount', String(unitAmount))
   params.append('currency', currency)
   params.append('automatic_payment_methods[enabled]', 'true')
-  params.append('description', title)
+  params.append('description', `${title} (${amountLabel})`)
   params.append('metadata[plan_key]', planKey)
   params.append('metadata[source]', source)
+  params.append('metadata[amount_brl]', String(amountBrl))
+  params.append('metadata[currency]', currency)
+  params.append('metadata[locale_tag]', localeTag)
+  params.append('metadata[region]', money.region)
   if (visitor_id) params.append('metadata[visitor_id]', visitor_id)
 
   const stripeRes = await fetch('https://api.stripe.com/v1/payment_intents', {
@@ -124,6 +150,11 @@ export default defineEventHandler(async (event) => {
           ip,
           provider: 'stripe',
           stripe_payment_intent: intent.id,
+          amount_brl: amountBrl,
+          currency,
+          locale_tag: localeTag,
+          region: money.region,
+          amount_label: amountLabel,
         },
       })
       .select('id')
@@ -148,7 +179,11 @@ export default defineEventHandler(async (event) => {
     payment_intent_id: intent.id,
     payment_id: paymentId,
     amount: finalAmount,
+    amount_brl: amountBrl,
+    amount_label: amountLabel,
     currency,
+    region: money.region,
+    locale_tag: localeTag,
     plan_key: planKey,
     publishable_key: publishable,
   }
