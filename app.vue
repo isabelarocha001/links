@@ -424,7 +424,7 @@
               </div>
               <div class="wa-profile-row">
                 <span class="wa-profile-row-label">Sobre</span>
-                <span class="wa-profile-row-value">Eu não faço encontros. Não faço programa. Não adianta oferecer valor alto: a resposta continua sendo não. Só conteúdo e atendimento online.</span>
+                <span class="wa-profile-row-value">Atendimento 100% online — packs, chat, vídeos e videochamada. Aqui a gente se diverte com calma e privacidade 🔥</span>
               </div>
             </div>
           </div>
