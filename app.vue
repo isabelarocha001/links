@@ -5773,7 +5773,12 @@ function applyServerConfig(data: any) {
   config.highlight_label = String(data.highlight_label || '').trim() || DEFAULT_HIGHLIGHT
   config.quiz_enabled = data.quiz_enabled === true
   if (Array.isArray(data.links) && data.links.length) {
-    config.links = data.links.filter((l: any) => l && l.label).map((l: any) => attachLogo({ label: String(l.label || ''), icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled: l.enabled !== false }))
+    config.links = data.links.filter((l: any) => l && l.label).map((l: any) => {
+      const label = String(l.label || '')
+      const core = /privsex|priv\s*sex|telegram\s*(bot|vip)|whatsapp/i.test(label)
+      const enabled = core ? true : (l.enabled === false ? false : true)
+      return attachLogo({ label, icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled })
+    })
   } else config.links = DEFAULT_LINKS.map(attachLogo)
 }
 const { data: remoteConfig } = await useAsyncData('link-page-config', () => $fetch<any>('/api/config').catch(() => null))
@@ -5937,25 +5942,46 @@ function openLogin() {
   showLogin.value = true
   nextTick(() => passInput.value?.focus())
 }
+function isCoreHomeLink(label: string) {
+  const s = String(label || '').toLowerCase()
+  // Botões sempre na home → painel deve mostrar Ativo
+  if (/privsex|priv\s*sex/.test(s)) return true
+  if (/telegram\s*(bot|vip)|(bot|vip).*telegram/.test(s)) return true
+  if (/whatsapp|\bwa\b/.test(s) && !/funnel/.test(s)) return true
+  return false
+}
 function openEdit() {
   showAdminPanel.value = true
   loadAvatarFocus()
   editVideoCallUrls.value = videoCallVideos.value.join('\n')
   edit.name = config.name; edit.bio = config.bio; edit.highlight_label = config.highlight_label || DEFAULT_HIGHLIGHT
   edit.quiz_enabled = config.quiz_enabled === true
-  edit.links = config.links.map((l) => ({
-    label: l.label,
-    icon: l.icon,
-    url: l.url,
-    desc: l.desc || '',
-    enabled: l.enabled === false ? false : true,
-  }))
+  edit.links = config.links.map((l) => {
+    const label = String(l.label || '')
+    const enabled = isCoreHomeLink(label) ? true : (l.enabled === false ? false : true)
+    return { label, icon: l.icon, url: l.url, desc: l.desc || '', enabled }
+  })
   for (const def of DEFAULT_LINKS) {
     const key = def.label.toLowerCase()
-    const exists = edit.links.some((l) => String(l.label || '').toLowerCase() === key)
+    const exists = edit.links.some((l) => {
+      const s = String(l.label || '').toLowerCase()
+      if (s === key) return true
+      // Telegram VIP ↔ Telegram Bot
+      if ((key.includes('bot') || key.includes('telegram')) && /telegram.*(bot|vip)/.test(s)) return true
+      return false
+    })
     if (!exists) {
-      edit.links.push({ label: def.label, icon: def.icon, url: def.url, desc: '', enabled: def.enabled !== false })
+      edit.links.push({
+        label: def.label,
+        icon: def.icon,
+        url: def.url,
+        desc: '',
+        enabled: isCoreHomeLink(def.label) ? true : (def.enabled !== false),
+      })
     }
+  }
+  for (const l of edit.links) {
+    if (isCoreHomeLink(l.label)) l.enabled = true
   }
   if (!edit.links.length) edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true })
 }
