@@ -1,4 +1,6184 @@
 <template>
   <NuxtPage />
-  <!-- RESTORED CONTENT WILL BE TOO LARGE FOR THIS SIMULATED CALL - ACTUAL WILL USE FILE -->
+  <AdminChatInbox v-if="isAdminRoute" />
+  <div v-else class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
+    <div class="bg-glow" aria-hidden="true"></div>
+    <div class="bg-grain" aria-hidden="true"></div>
+    <!-- cadeado removido do front: acesso admin só por rota direta (/admin/chat) -->
+    <main class="container">
+      <section
+        v-if="gateReady && (gate === 1 || gate === 2 || gate === 3 || gate === 4 || gate === 'reject')"
+        class="wa-shell"
+      >
+        <header class="wa-header">
+          <div class="wa-header-side">
+            <span class="wa-back" aria-hidden="true">‹</span>
+          </div>
+          <div class="wa-header-info">
+            <p class="wa-name">{{ t('waName') }}</p>
+            <p class="wa-status">
+              <span v-if="isTyping" class="wa-status-typing">{{ t('waTyping') }}</span>
+              <span v-else class="wa-status-online">{{ t('waOnline') }}</span>
+            </p>
+          </div>
+          <div class="wa-avatar-wrap">
+            <img class="wa-avatar" src="/model.jpg" alt="" draggable="false" />
+            <span class="wa-online-dot" aria-hidden="true"></span>
+          </div>
+        </header>
+
+        <div ref="chatBox" class="wa-chat">
+          <div class="wa-day">{{ t('waDay') }}</div>
+          <div
+            v-for="(m, i) in chatMessages"
+            :key="i"
+            class="wa-row"
+            :class="m.from === 'me' ? 'wa-row--me' : 'wa-row--her'"
+          >
+            <div class="wa-bubble" :class="m.from === 'me' ? 'wa-bubble--me' : 'wa-bubble--her'">
+              <p class="wa-text">{{ m.text }}</p>
+              <span class="wa-time">{{ m.time }}</span>
+            </div>
+          </div>
+          <div v-if="isTyping" class="wa-row wa-row--her">
+            <div class="wa-bubble wa-bubble--her wa-bubble--typing">
+              <span class="wa-dot"></span><span class="wa-dot"></span><span class="wa-dot"></span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!isTyping && gate !== 'reject' && quizOptions.length" class="wa-quick">
+          <button
+            v-for="opt in quizOptions"
+            :key="opt.key"
+            type="button"
+            class="wa-quick-btn"
+            :class="opt.variant"
+            @click="answerQuiz(opt.key)"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+
+        <div class="wa-composer">
+          <button type="button" class="wa-emoji" disabled aria-hidden="true">😊</button>
+          <input class="wa-input" type="text" disabled :placeholder="t('waPlaceholder')" readonly />
+          <button type="button" class="wa-send" disabled aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <template v-else-if="gateReady && gate === 'pass'">
+        <header class="hero">
+          <div class="photo-stage">
+            <div class="photo-frame">
+              <img v-for="(src, i) in gallery" :key="src + i" :src="src" :class="['hero-photo', { 'is-active': i === photoIndex }]" alt="" decoding="async" draggable="false" />
+              <div class="photo-shine" aria-hidden="true"></div>
+              <div class="photo-vignette" aria-hidden="true"></div>
+            </div>
+            <div class="photo-dots" aria-hidden="true">
+              <span v-for="(_, i) in gallery" :key="i" class="dot" :class="{ active: i === photoIndex }" />
+            </div>
+            <!-- CTA principal: WhatsApp logo abaixo da foto -->
+            <button type="button" class="hero-wa-btn" @click="openWaFunnel('hero_photo')">
+              <span class="hero-wa-ico" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              </span>
+              <span class="hero-wa-copy">
+                <span class="hero-wa-title">{{ t('waTitle') }}</span>
+                <span class="hero-wa-sub">{{ t('waSub') }}</span>
+              </span>
+              <span class="hero-wa-arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+          <!-- identity title removed -->
+        </header>
+        <section class="main-cards" :class="{ 'main-cards--single': hidePublicChannel }" v-if="configReady">
+          <div class="card-col">
+            <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
+              <div class="portal-spiral" aria-hidden="true">
+                <span class="ps-ring ps-r1"></span>
+                <span class="ps-ring ps-r2"></span>
+                <span class="ps-ring ps-r3"></span>
+                <span class="ps-ring ps-r4"></span>
+                <span class="ps-core"></span>
+              </div>
+              <div class="card-glow"></div>
+              <div class="card-top">
+                <span class="card-icon"><img v-if="logoPriv" :src="logoPriv" alt="" class="logo-img" width="28" height="28" /><template v-else>🔥</template></span>
+                <span class="card-badge">{{ t('portalBadge') }}</span>
+              </div>
+              <h2 class="card-title">{{ t('privTitle') }}</h2>
+              <p class="card-desc">{{ t('privDesc') }}</p>
+            </a>
+            <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
+          </div>
+          <div class="card-col" v-if="!hidePublicChannel">
+            <a class="lux-card lux-card--right" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
+              <div class="card-glow"></div>
+              <div class="card-top">
+                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
+                <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
+              </div>
+              <h2 class="card-title">{{ t('vipTitle') }}</h2>
+              <p class="card-desc">{{ t('vipDesc') }}</p>
+            </a>
+            <a class="card-enter" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">{{ t('pubEnter') }}</a>
+          </div>
+        </section>
+        <!-- Bot Telegram VIP temporariamente desativado -->
+        <section class="vip-block" v-if="false && configReady && isPt">
+          <a class="vip-card" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">
+            <div class="vip-shine"></div>
+            <div class="vip-content">
+              <span class="vip-icon vip-icon-stack" aria-hidden="true" title="Bot Telegram">
+                <span class="vip-robot">🤖</span>
+                <img class="vip-tg-logo" :src="logoTgPurple" alt="Telegram" width="18" height="18" />
+              </span>
+              <div>
+                <h3 class="vip-title">{{ t('vipTitle') }}</h3>
+                <p class="vip-desc">{{ t('vipDesc') }}</p>
+              </div>
+            </div>
+            <span class="vip-arrow">→</span>
+          </a>
+        </section>
+        <!-- Contato direto: TG só gringa (WA já está sob a foto) -->
+        <section v-if="!isPt" class="direct-section">
+          <p class="direct-label">{{ t('directLabel') }}</p>
+          <div class="direct-stack direct-stack--intl">
+            <a class="direct-btn direct-tg direct-btn--primary" :href="telegramPrivateUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Privado', telegramPrivateUrl)">
+              <span class="d-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></span>
+              <span class="d-btn-text"><span class="d-btn-title">{{ t('tgPrivTitle') }}</span><span class="d-btn-sub">{{ t('tgPrivSub') }}</span></span>
+            </a>
+          </div>
+        </section>
+        <footer class="bio-block">
+          <div class="ig-card">
+            <img class="ig-avatar" :src="igProfileSrc" alt="" width="72" height="72" draggable="false" />
+            <div class="ig-info">
+              <p class="ig-user">wanessabsx_</p>
+              <p class="ig-name">Wanessa Borges</p>
+              <div class="ig-stats">
+                <span><b>22</b> {{ t('posts') }}</span>
+                <span><b>{{ t('followersCount') }}</b> {{ t('followers') }}</span>
+                <span><b>53</b> {{ t('following') }}</span>
+              </div>
+            </div>
+          </div>
+          <p class="bio-meta">{{ t('bioMeta') }}</p>
+          <p class="bio-text">{{ t('bioText') }}</p>
+          <p class="bio-copy">© Wanessa</p>
+        </footer>
+      </template>
+    </main>
+  </div>
+
+  <ClientOnly>
+    <Teleport to="body">
+
+        <!-- Popup 1: explicação simples do chat bloqueado -->
+        <div v-if="showChatUnlockInfo" class="cu-overlay" style="z-index:2147483000" @click.self="closeChatUnlockInfo">
+          <div class="cu-card" role="dialog" aria-modal="true" @click.stop>
+            <button type="button" class="cu-x" aria-label="Fechar" @click="closeChatUnlockInfo">✕</button>
+            <p class="cu-title">{{ chatUnlockReason === 'call' ? 'Oi amor… a chamada tá bloqueada 🔒' : 'Oi amor… o chat tá bloqueado 🔒' }}</p>
+            <div class="cu-body">
+              <p v-if="chatUnlockReason === 'call'">A videochamada só libera depois que o chat está desbloqueado.</p>
+              <p>Eu recebo muita mensagem por aqui, então deixo o chat bloqueado pra quem realmente quer falar comigo.</p>
+              <p>São só <strong>R$ 3,00</strong> pra liberar — assim eu consigo dar atenção pra quem realmente veio conversar comigo 😏</p>
+              <p>Desbloqueou? Aí pode me chamar por aqui… 🔥</p>
+            </div>
+            <div class="cu-actions">
+              <button type="button" class="cu-btn cu-btn--no" @click="refuseChatUnlock">Agora não</button>
+              <button type="button" class="cu-btn cu-btn--yes" @click="acceptChatUnlock">Desbloquear por R$ 3</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Popup 2: balão gamificado + Sim amor → PIX R$ 3 -->
+        <div v-if="showChatUnlockPix" class="cu-overlay" style="z-index:2147483001" @click.self="closeChatUnlockPix">
+          <div class="cu-pix-wrap" role="dialog" aria-modal="true" @click.stop>
+            <div class="cu-avatar-ring">
+              <img src="/model.jpg" alt="" class="cu-avatar" draggable="false" />
+            </div>
+            <div class="cu-balloon">
+              <p class="cu-balloon-text">Posso te mandar a chave PIX pra liberar o chat? 💚</p>
+              <span class="cu-balloon-tail" aria-hidden="true"></span>
+            </div>
+            <p class="cu-pix-hint">R$ 3,00 · libera na hora</p>
+            <button type="button" class="cu-btn cu-btn--yes cu-btn--wide" :disabled="!!chatPayLoading" @click="confirmChatUnlockPix">
+              {{ chatPayLoading ? 'Gerando PIX…' : 'Sim amor' }}
+            </button>
+            <button type="button" class="cu-btn-link" @click="refuseChatUnlock">Agora não</button>
+          </div>
+        </div>
+
+
+
+      <div
+        v-if="showWaFunnel"
+        class="wa-funnel-overlay"
+        @click.self="onFunnelOverlayClick"
+      >
+        <div
+          class="wa-funnel-shell"
+          :class="{ 'wa-funnel-shell--kbd': funnelKeyboardOpen }"
+          role="dialog"
+          aria-modal="true"
+          :style="funnelShellStyle"
+          @click.stop
+        >
+          <header v-show="!showFunnelProfile" class="wa-header wa-funnel-header">
+            <button
+              v-if="!leadBlockedWanessa"
+              type="button"
+              class="wa-avatar-btn"
+              aria-label="Ver foto de perfil"
+              @click.stop="openFunnelPhoto"
+            >
+              <span class="wa-avatar-wrap wa-avatar-wrap--lg">
+                <img
+                  class="wa-avatar"
+                  src="/model.jpg"
+                  alt="Wanessa"
+                  width="104"
+                  height="104"
+                  decoding="sync"
+                  fetchpriority="high"
+                  draggable="false"
+                />
+                <span
+                  v-if="adminPresenceOnline"
+                  class="wa-online-dot"
+                  aria-hidden="true"
+                ></span>
+              </span>
+            </button>
+            <div v-else class="wa-avatar-wrap wa-avatar-wrap--lg wa-avatar-wrap--blocked" aria-hidden="true">
+              <span class="wa-avatar-blocked-ph">🚫</span>
+            </div>
+            <button
+              type="button"
+              class="wa-header-info wa-header-info-btn"
+              :disabled="leadBlockedWanessa"
+              @click="!leadBlockedWanessa && (showFunnelProfile = true)"
+            >
+              <p class="wa-name">{{ leadBlockedWanessa ? 'Contato bloqueado' : 'Wanessa' }}</p>
+              <p class="wa-status">
+                <span v-if="leadBlockedWanessa" class="wa-status-last">você bloqueou este contato</span>
+                <span v-else-if="funnelTyping" class="wa-status-typing">digitando…</span>
+                <span v-else-if="adminPresenceOnline" class="wa-status-online">online</span>
+                <span v-else class="wa-status-last">{{ adminPresenceLabel }}</span>
+              </p>
+            </button>
+            <div class="wa-header-actions">
+              <button
+                type="button"
+                class="wa-header-icon-btn wa-header-icon-btn--gift"
+                aria-label="Enviar mimo"
+                title="Enviar mimo"
+                :disabled="blockedUnlockLoading"
+                @click="onFunnelGiftMimo"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="8" width="18" height="4" rx="1"/>
+                  <path d="M12 8v13"/>
+                  <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+                  <path d="M7.5 8a2.5 2.5 0 1 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 1 1 0 5"/>
+                </svg>
+              </button>
+              <button type="button" class="wa-header-icon-btn" aria-label="Videochamada" @click="onFunnelVideoCall">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              </button>
+              <button type="button" class="wa-header-icon-btn" aria-label="Mais opcoes" @click="showFunnelMoreMenu = true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+              </button>
+              <button type="button" class="wa-close-btn" aria-label="Fechar chat" @click="closeWaFunnel">✕</button>
+            </div>
+            <input ref="funnelCameraInput" type="file" accept="image/*" capture="environment" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'photo')" />
+            <input ref="funnelPhotoInput" type="file" accept="image/*,video/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'gallery')" />
+            <input ref="funnelVideoInput" type="file" accept="video/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'video')" />
+            <input ref="funnelAudioInput" type="file" accept="audio/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'audio')" />
+            <input ref="funnelDocInput" type="file" accept=".pdf,.doc,.docx,.txt,image/*,application/*" class="wa-file-hidden" @change="onFunnelMediaPicked($event, 'doc')" />
+          </header>
+
+          <div v-if="showFunnelSearch" class="wa-search-bar">
+            <input
+              ref="funnelSearchInput"
+              v-model="funnelSearchQuery"
+              class="wa-search-input"
+              type="search"
+              placeholder="Pesquisar na conversa…"
+              autocomplete="off"
+              @keydown.esc="closeFunnelSearch"
+            />
+            <span v-if="funnelSearchQuery.trim()" class="wa-search-count">{{ funnelSearchMatchCount }}</span>
+            <button type="button" class="wa-search-close" aria-label="Fechar busca" @click="closeFunnelSearch">✕</button>
+          </div>
+
+          <!-- Foto de perfil tela cheia (fixed acima de tudo do chat) -->
+          <Teleport to="body">
+            <div
+              v-if="showFunnelPhoto"
+              class="wa-profile-photo-overlay"
+              @click.self="closeFunnelPhoto"
+            >
+              <button type="button" class="wa-profile-photo-close" aria-label="Fechar" @click="closeFunnelPhoto">✕</button>
+              <div class="wa-profile-photo-circle" @click.stop>
+                <img src="/model.jpg" alt="Wanessa" draggable="false" />
+              </div>
+              <p class="wa-profile-photo-name">Wanessa</p>
+            </div>
+          </Teleport>
+
+          <Teleport to="body">
+            <div
+              v-if="chatMediaFullscreenUrl"
+              class="wa-chat-media-fs"
+              :class="{ 'wa-chat-media-fs--video': chatMediaFullscreenIsVideo }"
+              @click.self="closeChatMediaFullscreen"
+            >
+              <header class="wa-fs-top">
+                <div class="wa-fs-top-left">
+                  <img src="/model.jpg" alt="" class="wa-fs-avatar" draggable="false" />
+                  <div class="wa-fs-top-meta">
+                    <span class="wa-fs-title">{{ chatMediaFullscreenIsVideo ? 'Vídeo' : 'Foto' }}</span>
+                    <span class="wa-fs-sub">Wanessa</span>
+                  </div>
+                </div>
+                <button type="button" class="wa-fs-close" aria-label="Fechar" @click="closeChatMediaFullscreen">✕</button>
+              </header>
+
+              <div v-if="chatMediaFullscreenIsVideo" class="wa-fs-stage" @click.stop>
+                <video
+                  ref="fsVideoEl"
+                  class="wa-chat-media-fs-video"
+                  :src="chatMediaFullscreenUrl"
+                  playsinline
+                  preload="metadata"
+                  @timeupdate="onFsVideoTime"
+                  @loadedmetadata="onFsVideoMeta"
+                  @ended="onFsVideoEnded"
+                  @click="toggleFsVideoPlay"
+                ></video>
+
+                <button
+                  v-if="!fsVideoPlaying"
+                  type="button"
+                  class="wa-fs-center-play"
+                  aria-label="Play"
+                  @click.stop="toggleFsVideoPlay"
+                >
+                  <span>▶</span>
+                </button>
+
+                <div class="wa-fs-controls" @click.stop>
+                  <button type="button" class="wa-fs-ctrl-btn" aria-label="Play/Pause" @click="toggleFsVideoPlay">
+                    {{ fsVideoPlaying ? '⏸' : '▶' }}
+                  </button>
+                  <span class="wa-fs-time">{{ fsVideoTimeLabel }}</span>
+                  <input
+                    class="wa-fs-seek"
+                    type="range"
+                    min="0"
+                    max="1000"
+                    step="1"
+                    :value="fsVideoSeek"
+                    @input="onFsVideoSeek($event)"
+                  />
+                  <span class="wa-fs-time">{{ fsVideoDurLabel }}</span>
+                  <button type="button" class="wa-fs-ctrl-btn" aria-label="Mudo" @click="toggleFsMute">
+                    {{ fsVideoMuted ? '🔇' : '🔊' }}
+                  </button>
+                </div>
+              </div>
+
+              <img
+                v-else
+                class="wa-chat-media-fs-img"
+                :src="chatMediaFullscreenUrl"
+                alt="foto"
+                draggable="false"
+                @click.stop
+              />
+            </div>
+          </Teleport>
+
+          <!-- Perfil / bio (estilo WhatsApp) -->
+          <div v-if="showFunnelProfile" class="wa-profile-panel">
+            <div class="wa-profile-topbar">
+              <button type="button" class="wa-profile-back" aria-label="Voltar" @click="showFunnelProfile = false">‹</button>
+              <span class="wa-profile-topbar-spacer"></span>
+              <button type="button" class="wa-profile-x" aria-label="Fechar" @click="showFunnelProfile = false">✕</button>
+            </div>
+            <div class="wa-profile-panel-body">
+              <button type="button" class="wa-profile-big-avatar" @click.stop="openFunnelPhoto">
+                <img src="/model.jpg" alt="Wanessa" draggable="false" />
+              </button>
+              <h2 class="wa-profile-name">Wanessa</h2>
+              <p class="wa-profile-about-label">Recado</p>
+              <p class="wa-profile-about">Criadora de conteúdo</p>
+              <div class="wa-profile-row">
+                <span class="wa-profile-row-label">Localização</span>
+                <span class="wa-profile-row-value">Balneário Camboriú, Santa Catarina, Brasil</span>
+              </div>
+              <div class="wa-profile-row">
+                <span class="wa-profile-row-label">Sobre</span>
+                <span class="wa-profile-row-value">Atendimento 100% online — packs, chat, vídeos e videochamada. Aqui a gente se diverte com calma e privacidade 🔥</span>
+              </div>
+            </div>
+          </div>
+
+          <div ref="funnelChatBox" class="wa-chat wa-funnel-chat">
+            <div class="wa-day">Hoje</div>
+            <div
+              v-for="(m, i) in funnelMessages"
+              :key="m.id || i"
+              class="wa-row"
+              :class="m.from === 'me' ? 'wa-row--me' : 'wa-row--her'"
+            >
+              <div
+                class="wa-bubble"
+                :class="[
+                  m.from === 'me' ? 'wa-bubble--me' : 'wa-bubble--her',
+                  m.mediaKind ? 'wa-bubble--media' : '',
+                  m.deleted ? 'wa-bubble--deleted' : '',
+                  showFunnelSearch && funnelSearchQuery.trim() && messageMatchesSearch(m) ? 'wa-bubble--search-hit' : '',
+                  showFunnelSearch && funnelSearchQuery.trim() && !messageMatchesSearch(m) ? 'wa-bubble--search-dim' : '',
+                ]"
+                @contextmenu.prevent="m.from === 'me' && !m.deleted && openFunnelMsgMenu(i)"
+                @touchstart.passive="m.from === 'me' && !m.deleted && onFunnelMsgTouchStart(i, $event)"
+                @touchend.passive="onFunnelMsgTouchEnd"
+                @touchmove.passive="onFunnelMsgTouchEnd"
+              >
+                <template v-if="m.deleted">
+                  <p class="wa-text wa-text--deleted">Mensagem apagada</p>
+                </template>
+                <template v-else-if="funnelEditingIdx === i">
+                  <div class="wa-edit-box">
+                    <input v-model="funnelEditDraft" class="wa-edit-input" type="text" @keydown.enter.prevent="saveFunnelMsgEdit" />
+                    <div class="wa-edit-actions">
+                      <button type="button" class="wa-edit-btn" @click="cancelFunnelMsgEdit">Cancelar</button>
+                      <button type="button" class="wa-edit-btn wa-edit-btn--ok" @click="saveFunnelMsgEdit">Salvar</button>
+                    </div>
+                  </div>
+                </template>
+                <template v-else>
+                  <div
+                    v-if="m.html"
+                    class="wa-media"
+                    v-html="m.html"
+                    @click="onFunnelMediaHtmlClick"
+                  ></div>
+                  <p v-else class="wa-text">{{ m.text }}</p>
+                  <span v-if="m.edited" class="wa-edited">editada</span>
+                </template>
+                <span class="wa-meta">
+                  <span class="wa-time">{{ m.time }}</span>
+                  <span
+                    v-if="m.from === 'me' && !m.deleted"
+                    class="wa-ticks"
+                    :class="{
+                      'wa-ticks--sent': !m.status || m.status === 'sent',
+                      'wa-ticks--delivered': m.status === 'delivered',
+                      'wa-ticks--read': m.status === 'read',
+                    }"
+                    aria-hidden="true"
+                  >
+                    <svg class="wa-tick" viewBox="0 0 16 11" width="16" height="11"><path d="M5.6 10.2L0.8 5.4l1.3-1.3 3.5 3.5L13.5.7 14.8 2z" fill="currentColor"/></svg>
+                    <svg class="wa-tick wa-tick--second" viewBox="0 0 16 11" width="16" height="11"><path d="M5.6 10.2L0.8 5.4l1.3-1.3 3.5 3.5L13.5.7 14.8 2z" fill="currentColor"/></svg>
+                  </span>
+                </span>
+                <button
+                  v-if="m.from === 'me' && !m.deleted && funnelEditingIdx !== i"
+                  type="button"
+                  class="wa-msg-menu-btn"
+                  aria-label="Opções da mensagem"
+                  @click.stop="openFunnelMsgMenu(i)"
+                >⋮</button>
+              </div>
+              <div v-if="m.from === 'me' && m.status === 'read' && !m.deleted" class="wa-read-label">Visualizado</div>
+            </div>
+
+            <!-- Menu editar / apagar mensagem -->
+            <div v-if="funnelMsgMenuIdx !== null" class="wa-msg-sheet-overlay" @click.self="funnelMsgMenuIdx = null">
+              <div class="wa-msg-sheet" role="dialog">
+                <button type="button" class="wa-msg-sheet-item" @click="startFunnelMsgEdit">Editar mensagem</button>
+                <button type="button" class="wa-msg-sheet-item wa-msg-sheet-item--danger" @click="deleteFunnelMsg">Apagar mensagem</button>
+                <button type="button" class="wa-msg-sheet-item wa-msg-sheet-item--cancel" @click="funnelMsgMenuIdx = null">Cancelar</button>
+              </div>
+            </div>
+            <div v-if="funnelTyping" class="wa-row wa-row--her">
+              <div class="wa-bubble wa-bubble--her wa-bubble--typing">
+                <span class="wa-dot"></span><span class="wa-dot"></span><span class="wa-dot"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="wa-quick wa-funnel-quick" :class="{ 'wa-funnel-quick--busy': funnelTyping, 'wa-funnel-quick--empty': !funnelTyping && !funnelOptions.length }">
+            <template v-if="!funnelTyping && funnelOptions.length">
+              <button
+                v-for="opt in funnelOptions"
+                :key="opt.key"
+                type="button"
+                class="wa-quick-btn"
+                :class="opt.variant || 'wa-quick--yes'"
+                @click="answerFunnel(opt)"
+              >
+                {{ opt.label }}
+              </button>
+            </template>
+            <div v-else class="wa-funnel-quick-placeholder" aria-hidden="true"></div>
+          </div>
+
+
+          <!-- Balão flutuante: lead descreve o vídeo avulso -->
+          <div
+            v-if="funnelStep === 'video_avulso' && !funnelTyping"
+            class="wa-float-reply"
+            style="position:absolute;left:12px;right:12px;bottom:72px;z-index:30;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:rgba(17,24,28,.96);border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.45)"
+          >
+            <p style="margin:0;font-size:13px;opacity:.9;line-height:1.35">✏️ Descreve como você quer o vídeo…</p>
+            <textarea
+              v-model="funnelInput"
+              rows="3"
+              placeholder="Ex: quero você de lingerie vermelha, gemendo meu nome…"
+              style="width:100%;resize:vertical;min-height:72px;max-height:140px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.35);color:#fff;padding:10px 12px;font-size:14px;line-height:1.4;outline:none;box-sizing:border-box"
+              @keydown.enter.exact.prevent="sendFunnelFreeText"
+            ></textarea>
+            <button
+              type="button"
+              :disabled="funnelTyping || (funnelChatUnlocked && !funnelInput.trim())"
+              @click="sendFunnelFreeText"
+              style="align-self:flex-end;border:0;border-radius:999px;padding:10px 18px;font-weight:600;font-size:14px;cursor:pointer;background:#25d366;color:#06280f;opacity:1"
+              :style="{ opacity: (!funnelInput.trim() || funnelTyping) ? 0.5 : 1 }"
+            >
+              Enviar pedido
+            </button>
+          </div>
+
+          <!-- Painel de emojis: backdrop fecha ao tocar fora -->
+          <div
+            v-if="showFunnelEmojiPicker && !funnelBlocked"
+            class="wa-emoji-backdrop"
+            @click="closeFunnelEmojiPicker"
+          ></div>
+          <div v-if="showFunnelEmojiPicker && !funnelBlocked" class="wa-emoji-panel" @click.stop>
+            <button
+              v-for="em in FUNNEL_EMOJIS"
+              :key="em"
+              type="button"
+              class="wa-emoji-item"
+              @click="insertFunnelEmoji(em)"
+            >{{ em }}</button>
+          </div>
+
+          <!-- Preview áudio: após parar gravação → descartar ou enviar -->
+          <div v-if="funnelAudioPreviewUrl" class="wa-audio-preview wa-audio-preview--modern">
+            <div class="wa-audio-modern">
+              <button type="button" class="wa-audio-play" aria-label="Play/Pause" @click="togglePreviewAudioPlay">
+                {{ previewAudioPlaying ? '⏸' : '▶' }}
+              </button>
+              <div class="wa-audio-wave">
+                <span v-for="n in 12" :key="n" class="wa-audio-bar" :class="{ on: previewAudioPlaying }"></span>
+              </div>
+              <span class="wa-audio-time">{{ previewAudioLabel }}</span>
+              <audio
+                ref="funnelPreviewAudioEl"
+                :src="funnelAudioPreviewUrl"
+                preload="metadata"
+                @timeupdate="onPreviewAudioTime"
+                @ended="previewAudioPlaying = false"
+              ></audio>
+            </div>
+            <button type="button" class="wa-audio-preview-btn wa-audio-preview-btn--discard" @click="discardFunnelAudio">Descartar</button>
+            <button type="button" class="wa-audio-preview-btn wa-audio-preview-btn--send" @click="sendFunnelAudioPreview">Enviar</button>
+          </div>
+
+          <!-- Contato bloqueado pelo lead: histórico continua visível; desbloqueio na conversa -->
+          <div v-if="leadBlockedWanessa && !showFunnelProfile" class="wa-lead-blocked-bar">
+            <p class="wa-lead-blocked-bar-text">Você bloqueou esta pessoa</p>
+            <button type="button" class="wa-lead-blocked-bar-btn" @click="unblockLeadBlock">Desbloquear</button>
+          </div>
+          <div
+            v-if="!showFunnelProfile"
+            class="wa-composer wa-funnel-composer"
+            :class="{ 'wa-composer--blocked': funnelBlocked, 'wa-composer--lead-blocked': leadBlockedWanessa }"
+            @click.capture="funnelBlocked && !leadBlockedWanessa && onFunnelComposerInteract($event)"
+          >
+            <!-- overlay: 1 toque abre o popup (mobile não precisa segurar) -->
+            <button
+              v-if="funnelBlocked && !leadBlockedWanessa"
+              type="button"
+              class="wa-composer-block-hit"
+              aria-label="Desbloquear chat"
+              @click.stop.prevent="onFunnelComposerInteract"
+            ></button>
+            <button type="button" class="wa-composer-icon" aria-label="Emoji" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelEmoji()">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            </button>
+            <input
+              v-model="funnelInput"
+              class="wa-input"
+              type="text"
+              enterkeyhint="send"
+              autocomplete="off"
+              :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : (funnelChatUnlocked ? 'Mensagem' : 'Toque para digitar…'))"
+              :readonly="!funnelChatUnlocked && !funnelBlocked && !leadBlockedWanessa"
+              :disabled="funnelBlocked || funnelTyping || leadBlockedWanessa"
+              @click.stop="onInputUnlockTap($event)"
+              @touchend.stop.prevent="onInputUnlockTap($event)"
+              @focus="onInputUnlockFocus($event)"
+              @blur="onFunnelInputBlur()"
+              @keydown="onFunnelComposerKey"
+              @keydown.enter.prevent="funnelChatUnlocked ? sendFunnelFreeText() : openChatUnlockInfo('chat')"
+            />
+            <button type="button" class="wa-composer-icon" aria-label="Anexar" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : (closeFunnelEmojiPicker(), onFunnelAttach())">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <button type="button" class="wa-composer-icon" aria-label="Camera" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : (closeFunnelEmojiPicker(), onFunnelCamera())">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
+            <button
+              type="button"
+              class="wa-composer-icon wa-composer-mic"
+              :class="{ 'is-rec': funnelRecording }"
+              aria-label="Audio"
+              tabindex="-1"
+              @click="funnelBlocked ? onFunnelComposerInteract() : (closeFunnelEmojiPicker(), onFunnelAudio())"
+            >
+              <svg v-if="!funnelRecording" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+              <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            </button>
+            <button
+              v-if="!funnelBlocked"
+              type="button"
+              class="wa-send"
+              aria-label="Enviar"
+              :disabled="!funnelInput.trim() || funnelTyping || !funnelChatUnlocked"
+              @click.stop.prevent="sendFunnelFreeText"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+
+          <!-- Menu anexos estilo WhatsApp -->
+          <div v-if="showFunnelAttachMenu" class="wa-attach-menu" @click.self="showFunnelAttachMenu = false">
+            <div class="wa-attach-sheet wa-attach-sheet--grid">
+              <p class="wa-attach-title">Anexar</p>
+              <div class="wa-attach-grid">
+                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('doc')"><span class="wa-attach-ico wa-attach-ico--doc">📄</span><span>Documento</span></button>
+                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('camera')"><span class="wa-attach-ico wa-attach-ico--cam">📷</span><span>Câmera</span></button>
+                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('gallery')"><span class="wa-attach-ico wa-attach-ico--gal">🖼️</span><span>Galeria</span></button>
+                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('audio')"><span class="wa-attach-ico wa-attach-ico--aud">🎧</span><span>Áudio</span></button>
+                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('contact')"><span class="wa-attach-ico wa-attach-ico--ct">👤</span><span>Contato</span></button>
+                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('poll')"><span class="wa-attach-ico wa-attach-ico--poll">📊</span><span>Enquete</span></button>
+                <button type="button" class="wa-attach-tile" @click="onFunnelAttachAction('pix')"><span class="wa-attach-ico wa-attach-ico--pix">💚</span><span>Chave PIX</span></button>
+              </div>
+              <button type="button" class="wa-attach-item wa-attach-item--cancel" @click="showFunnelAttachMenu = false">Cancelar</button>
+            </div>
+          </div>
+
+          <!-- Menu ⋮ mais opções -->
+          <div v-if="showFunnelMoreMenu" class="wa-more-menu" @click.self="showFunnelMoreMenu = false">
+            <div class="wa-more-sheet">
+              <div class="wa-more-sheet-head">
+                <span class="wa-more-sheet-title">Opções</span>
+                <button type="button" class="wa-more-x" aria-label="Fechar opções" @click="showFunnelMoreMenu = false">✕</button>
+              </div>
+              <button type="button" class="wa-more-item" @click="onFunnelMoreAction('search')">Pesquisar</button>
+              <button type="button" class="wa-more-item" @click="onFunnelMoreAction('mute')">Silenciar notificações</button>
+              <button type="button" class="wa-more-item" @click="onFunnelMoreAction('clear')">Limpar conversa</button>
+              <button
+                v-if="!leadBlockedWanessa"
+                type="button"
+                class="wa-more-item wa-more-item--danger"
+                @click="onFunnelMoreAction('block')"
+              >Bloquear</button>
+              <button
+                v-else
+                type="button"
+                class="wa-more-item wa-more-item--yes"
+                @click="onFunnelMoreAction('unblock')"
+              >Desbloquear</button>
+              <button type="button" class="wa-more-item wa-more-item--cancel" @click="showFunnelMoreMenu = false">Fechar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Planos low-ticket do chat (SyncPay) -->
+      
+
+      <!-- Chamada entrando -->
+      <div v-if="showIncomingCall" class="vc-incoming" style="position:fixed;inset:0;z-index:40000;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:48px 24px 40px;background:rgba(6,8,12,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)">
+        <div style="text-align:center;margin-top:24px">
+          <p style="margin:0;font-size:13px;letter-spacing:.12em;text-transform:uppercase;opacity:.75;color:#fff">Chamada de vídeo</p>
+          <p style="margin:8px 0 0;font-size:22px;font-weight:700;color:#fff">Wanessa está te ligando…</p>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+          <div style="width:148px;height:148px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.35);box-shadow:0 0 0 10px rgba(37,211,102,.12),0 20px 50px rgba(0,0,0,.45)">
+            <img src="/model.jpg" alt="Wanessa" style="width:100%;height:100%;object-fit:cover" draggable="false" />
+          </div>
+          <p style="margin:0;color:#fff;opacity:.85;font-size:15px">tocando…</p>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:48px;width:100%;max-width:360px;margin-bottom:12px">
+          <button type="button" @click="declineIncomingCall" style="display:flex;flex-direction:column;align-items:center;gap:8px;background:transparent;border:0;color:#fff;cursor:pointer">
+            <span style="width:68px;height:68px;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(239,68,68,.4)">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M16 8l-8 8M8 8l8 8"/></svg>
+            </span>
+            <span style="font-size:13px;opacity:.9">Recusar</span>
+          </button>
+          <button type="button" @click="acceptIncomingCall" style="display:flex;flex-direction:column;align-items:center;gap:8px;background:transparent;border:0;color:#fff;cursor:pointer">
+            <span style="width:68px;height:68px;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(34,197,94,.45)">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.22.35-.61.23-1.01-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+            </span>
+            <span style="font-size:13px;opacity:.9">Atender</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Por que recusou -->
+      <div v-if="showDeclineWhy" class="chat-plans-overlay" style="z-index:40001" @click.self="showDeclineWhy = false">
+        <div class="chat-plans-sheet" role="dialog" @click.stop style="max-width:400px">
+          <div class="chat-plans-head">
+            <div>
+              <p class="chat-plans-kicker">Pode falar</p>
+              <h3>Por que recusou?</h3>
+              <p class="chat-plans-sub">Pode ser sincero, sem julgar 💕</p>
+            </div>
+            <button type="button" class="chat-plans-x" @click="showDeclineWhy = false">✕</button>
+          </div>
+          <div style="padding:0 4px 12px;display:flex;flex-direction:column;gap:10px">
+            <textarea v-model="declineWhyText" rows="3" placeholder="Ex: tá caro, agora não posso, tenho vergonha…" style="width:100%;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.35);color:#fff;padding:10px 12px;font-size:14px;resize:vertical"></textarea>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <button type="button" class="wa-quick wa-quick--no" style="font-size:12px" @click="declineWhyText = 'Tá caro agora'; submitDeclineWhy()">Tá caro</button>
+              <button type="button" class="wa-quick wa-quick--no" style="font-size:12px" @click="declineWhyText = 'Agora não posso'; submitDeclineWhy()">Agora não</button>
+              <button type="button" class="wa-quick wa-quick--no" style="font-size:12px" @click="declineWhyText = 'Tenho vergonha'; submitDeclineWhy()">Vergonha</button>
+            </div>
+            <button type="button" class="wl-btn wl-btn-primary" @click="submitDeclineWhy">Enviar</button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="showCallSalesBalloon" class="call-sales-balloon-overlay" @click.self="closeCallSalesBalloon">
+        <div class="call-sales-balloon" role="dialog" aria-modal="true" @click.stop>
+          <div class="call-sales-balloon-glow" aria-hidden="true"></div>
+          <img src="/model.jpg" alt="" class="call-sales-avatar" draggable="false" />
+          <p class="call-sales-kicker">✦ Ao vivo comigo</p>
+          <h3 class="call-sales-title">Você atendeu… agora escolhe o clima</h3>
+          <p class="call-sales-sub">Videochamada real, no seu ritmo. Escolhe quanto tempo quer ficar comigo e a gente libera o PIX.</p>
+          <div class="call-sales-actions">
+            <button type="button" class="call-sales-btn call-sales-btn--primary" @click="onCallSalesWantLive">Quero te ver ao vivo 🔥</button>
+            <button type="button" class="call-sales-btn call-sales-btn--ghost" @click="closeCallSalesBalloon">Agora não</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Videochamada ao vivo (após pagamento) -->
+      <div v-if="showVideoCallPlayer" class="vc-live" style="position:fixed;inset:0;z-index:40000;background:#0a0a0c;display:flex;flex-direction:column">
+        <div style="position:absolute;top:0;left:0;right:0;padding:16px 16px 8px;display:flex;justify-content:space-between;align-items:center;z-index:2;background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <img src="/model.jpg" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.3)" />
+            <div>
+              <p style="margin:0;color:#fff;font-weight:600;font-size:14px">Wanessa · ao vivo</p>
+              <p style="margin:0;color:#4ade80;font-size:12px">{{ formatCallClock(videoCallSecondsUsed) }} · resta {{ formatCallClock(videoCallSecondsLeft) }}</p>
+            </div>
+          </div>
+          <button type="button" @click="endLiveVideoCall('hangup')" style="border:0;border-radius:999px;padding:8px 14px;background:#ef4444;color:#fff;font-weight:600;cursor:pointer">Encerrar</button>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;background:#000">
+          <video
+            v-if="videoCallVideos[videoCallIndex]"
+            :key="videoCallVideos[videoCallIndex]"
+            :src="videoCallVideos[videoCallIndex]"
+            autoplay
+            playsinline
+            @ended="onVideoCallMediaEnded"
+            style="width:100%;height:100%;max-height:100vh;object-fit:contain;background:#000"
+          ></video>
+          <div v-else style="color:#fff;opacity:.8;text-align:center;padding:24px">
+            <img src="/model.jpg" alt="" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:12px;border:3px solid rgba(255,255,255,.25)" />
+            <p>Videochamada ao vivo</p>
+            <p style="font-size:13px;opacity:.7">Configure os vídeos no painel admin</p>
+          </div>
+        </div>
+        <div style="padding:16px;display:flex;justify-content:center;background:linear-gradient(to top,rgba(0,0,0,.8),transparent)">
+          <button type="button" @click="endLiveVideoCall('hangup')" style="width:64px;height:64px;border-radius:50%;border:0;background:#ef4444;color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(239,68,68,.45)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M16 8l-8 8M8 8l8 8"/></svg>
+          </button>
+        </div>
+      </div>
+
+
+      <!-- Unlock após bloqueio (programa/presencial) -->
+      <!-- Mimo / presente (fluxo separado do bloqueio) -->
+      <div v-if="showMimoGiftModal" class="chat-plans-overlay mimo-gift-overlay" style="z-index:40060" @click.self="closeMimoGiftModal">
+        <div class="mimo-gift-card" @click.stop>
+          <button type="button" class="chat-plans-x mimo-gift-x" aria-label="Fechar" @click="closeMimoGiftModal">✕</button>
+          <img class="mimo-gift-avatar" src="/model.jpg" alt="Wanessa" draggable="false" />
+          <p class="mimo-gift-name">Wanessa</p>
+          <label class="mimo-gift-label" for="mimo-gift-amount">Digite o valor do mimo pra Wanessa</label>
+          <div class="mimo-gift-amount-wrap">
+            <span class="mimo-gift-currency">R$</span>
+            <input
+              id="mimo-gift-amount"
+              v-model="mimoGiftAmount"
+              class="mimo-gift-amount"
+              type="text"
+              inputmode="decimal"
+              placeholder="0,00"
+              autocomplete="off"
+            />
+          </div>
+          <label class="mimo-gift-label mimo-gift-label--msg" for="mimo-gift-msg">Mensagem (opcional)</label>
+          <textarea
+            id="mimo-gift-msg"
+            v-model="mimoGiftMessage"
+            class="mimo-gift-msg"
+            rows="3"
+            maxlength="300"
+            placeholder="Escreva algo… ou deixe em branco"
+          ></textarea>
+          <p v-if="mimoGiftError" class="mimo-gift-error">{{ mimoGiftError }}</p>
+          <button
+            type="button"
+            class="mimo-gift-send"
+            :disabled="mimoGiftLoading"
+            @click="sendMimoGift"
+          >
+            {{ mimoGiftLoading ? 'Gerando PIX…' : 'Enviar mimo' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Lead bloqueou Wanessa: justificativa obrigatória -->
+      <div v-if="showBlockReasonModal" class="chat-plans-overlay" style="z-index:40070" @click.self="closeBlockReasonModal">
+        <div class="block-reason-card" @click.stop>
+          <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeBlockReasonModal">✕</button>
+          <p class="block-reason-title">Por que você quer bloquear essa pessoa?</p>
+          <p class="block-reason-sub">A justificativa é obrigatória para o sistema registrar o bloqueio.</p>
+          <textarea
+            v-model="blockReasonDraft"
+            class="block-reason-input"
+            rows="4"
+            maxlength="400"
+            placeholder="Explique o motivo…"
+          ></textarea>
+          <p v-if="blockReasonError" class="block-reason-error">{{ blockReasonError }}</p>
+          <button type="button" class="block-reason-confirm" @click="confirmLeadBlock">
+            Confirmar bloqueio
+          </button>
+        </div>
+      </div>
+
+
+      <!-- Modal criar enquete -->
+      <div v-if="showPollModal" class="chat-plans-overlay" style="z-index:40080" @click.self="closePollModal">
+        <div class="attach-form-card" @click.stop>
+          <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePollModal">✕</button>
+          <p class="attach-form-title">Criar enquete</p>
+          <label class="attach-form-label">Pergunta da enquete</label>
+          <input v-model="pollQuestion" class="attach-form-input" type="text" maxlength="120" placeholder="Ex: Qual horário prefere?" />
+          <label class="attach-form-label">Opções de resposta</label>
+          <div v-for="(opt, i) in pollOptions" :key="i" class="attach-form-opt-row">
+            <span class="attach-form-opt-num">{{ i + 1 }}</span>
+            <input v-model="pollOptions[i]" class="attach-form-input" type="text" maxlength="80" :placeholder="'Opção ' + (i + 1)" />
+            <button
+              v-if="pollOptions.length > 2"
+              type="button"
+              class="attach-form-opt-del"
+              aria-label="Remover opção"
+              @click="removePollOption(i)"
+            >✕</button>
+          </div>
+          <button
+            v-if="pollOptions.length < 5"
+            type="button"
+            class="attach-form-add"
+            @click="addPollOption"
+          >+ Adicionar mais</button>
+          <p class="attach-form-hint">Máximo 5 respostas</p>
+          <p v-if="pollError" class="attach-form-error">{{ pollError }}</p>
+          <button type="button" class="attach-form-submit" @click="submitPoll">Enviar enquete</button>
+        </div>
+      </div>
+
+      <!-- Modal cadastrar chave PIX -->
+      <div v-if="showPixKeyModal" class="chat-plans-overlay" style="z-index:40080" @click.self="closePixKeyModal">
+        <div class="attach-form-card" @click.stop>
+          <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePixKeyModal">✕</button>
+          <p class="attach-form-title">Cadastrar chave PIX</p>
+          <label class="attach-form-label">Tipo da chave</label>
+          <div class="attach-pix-types">
+            <button
+              v-for="t in pixKeyTypes"
+              :key="t.id"
+              type="button"
+              class="attach-pix-type"
+              :class="{ 'is-on': pixKeyType === t.id }"
+              @click="pixKeyType = t.id"
+            >{{ t.label }}</button>
+          </div>
+          <label class="attach-form-label">Chave</label>
+          <input
+            v-model="pixKeyValue"
+            class="attach-form-input"
+            type="text"
+            maxlength="120"
+            :placeholder="pixKeyPlaceholder"
+          />
+          <p v-if="pixKeyError" class="attach-form-error">{{ pixKeyError }}</p>
+          <button type="button" class="attach-form-submit" @click="submitPixKey">Enviar chave PIX</button>
+        </div>
+      </div>
+
+      <!-- Lead bloqueou Wanessa: SEM overlay — aviso + desbloquear ficam NA CONVERSA (histórico visível) -->
+
+      <!-- Só quando WANESSA/sistema bloqueia o lead → segunda chance com mimo -->
+      <!-- Esconde enquanto o PIX está aberto (evita botão sobreposto no modal) -->
+      <div
+        v-if="funnelPermBlocked && !leadBlockedWanessa && showWaFunnel && !showPixModal && !showPixStatusChecking"
+        class="wa-perm-block-overlay"
+        @click.stop
+      >
+        <div class="wa-perm-block-card">
+          <p class="wa-perm-block-title">Wanessa te bloqueou permanentemente</p>
+          <p class="wa-perm-block-sub">Você não pode digitar, enviar áudio, emoji, mídia nem fazer chamadas.</p>
+          <p class="wa-perm-block-sub">Ainda quer uma segunda chance? Envie um mimo para desbloqueio automático.</p>
+          <button type="button" class="wa-perm-block-btn" :disabled="blockedUnlockLoading" @click="startSegundaChanceMimo">
+            {{ blockedUnlockLoading ? 'Gerando PIX…' : 'Enviar mimo · R$ 29,90' }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="showBlockedUnlock && !showPixModal && !showPixStatusChecking" class="chat-plans-overlay" style="z-index:40050" @click.self="showBlockedUnlock = false">
+        <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
+          <div class="chat-plans-handle" aria-hidden="true"></div>
+          <div class="chat-plans-head">
+            <div>
+              <p class="chat-plans-kicker">Chat bloqueado</p>
+              <h3>Desbloquear conversa</h3>
+              <p class="chat-plans-sub">Você pode liberar o chat de novo por R$ 49,90 e continuar falando comigo 🔥</p>
+            </div>
+            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="showBlockedUnlock = false">✕</button>
+          </div>
+          <button
+            type="button"
+            class="chat-plan-card chat-plan-card--hot"
+            :disabled="blockedUnlockLoading"
+            @click="buyBlockedUnlock"
+          >
+            <div class="chat-plan-left">
+              <span class="chat-plan-badge">Desbloqueio</span>
+              <span class="chat-plan-title">Liberar chat</span>
+              <span class="chat-plan-desc">volta a digitar e conversar</span>
+            </div>
+            <div class="chat-plan-right">
+              <span class="chat-plan-price">R$ 49,90</span>
+              <span class="chat-plan-cta">{{ blockedUnlockLoading ? 'Gerando PIX…' : 'Pagar' }}</span>
+            </div>
+          </button>
+          <p v-if="blockedUnlockError" class="chat-plans-error">{{ blockedUnlockError }}</p>
+          <p class="chat-plans-note">Pagamento via PIX · libera na hora</p>
+        </div>
+      </div>
+
+      
+<div v-if="showChatPlans" class="chat-plans-overlay" @click.self="closeChatPlans">
+        <div class="chat-plans-sheet" role="dialog" aria-modal="true" @click.stop>
+          <div class="chat-plans-handle" aria-hidden="true"></div>
+          <div class="chat-plans-head">
+            <div>
+              <p class="chat-plans-kicker">Chat privado</p>
+              <h3>Desbloqueie a conversa</h3>
+              <p class="chat-plans-sub">Escolhe um plano e fala comigo agora 🔥</p>
+            </div>
+            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closeChatPlans">✕</button>
+          </div>
+          <button
+            v-if="isAdmin"
+            type="button"
+            class="chat-plan-card"
+            style="border-color:rgba(34,197,94,.45);margin-bottom:10px"
+            :disabled="!!chatPayLoading"
+            @click="adminUnlockChat"
+          >
+            <div class="chat-plan-left">
+              <span class="chat-plan-title">🛠 Saldo admin (∞)</span>
+              <span class="chat-plan-desc">Desbloqueia o chat sem PIX (teste)</span>
+            </div>
+            <div class="chat-plan-right">
+              <span class="chat-plan-price" style="color:#4ade80">∞</span>
+              <span class="chat-plan-cta">{{ chatPayLoading === 'admin' ? 'Liberando…' : 'Usar saldo' }}</span>
+            </div>
+          </button>
+          <div class="chat-plans-list">
+            <button
+              v-for="p in chatPlans"
+              :key="p.key"
+              type="button"
+              class="chat-plan-card"
+              :class="{ 'chat-plan-card--hot': p.hot, 'is-loading': chatPayLoading === p.key }"
+              :disabled="!!chatPayLoading"
+              @click="buyChatPlan(p)"
+            >
+              <div class="chat-plan-left">
+                <span class="chat-plan-badge" v-if="p.hot">Mais vendido</span>
+                <span class="chat-plan-title">{{ p.title }}</span>
+                <span class="chat-plan-desc">{{ p.desc }}</span>
+              </div>
+              <div class="chat-plan-right">
+                <span class="chat-plan-price">R$ {{ p.priceLabel }}</span>
+                <span class="chat-plan-cta">{{ chatPayLoading === p.key ? 'Gerando PIX…' : 'Pagar' }}</span>
+              </div>
+            </button>
+          </div>
+          <p v-if="chatPayError" class="chat-plans-error">{{ chatPayError }}</p>
+          <p class="chat-plans-note">Pagamento via PIX · libera na hora</p>
+        </div>
+      </div>
+
+      <!-- Modal PIX gerado -->
+      <div v-if="showPixModal" class="chat-plans-overlay" style="z-index:40120" @click.self="closePixModal">
+        <div class="chat-plans-sheet chat-pix-sheet" role="dialog" aria-modal="true" @click.stop>
+          <div class="chat-plans-handle" aria-hidden="true"></div>
+          <div class="chat-plans-head">
+            <div>
+              <p class="chat-plans-kicker">PIX gerado</p>
+              <h3>{{ selectedChatPlan?.title || 'Chat' }}</h3>
+              <p class="chat-plans-sub">R$ {{ selectedChatPlan?.priceLabel }} · {{ pixModalSubHint }}</p>
+            </div>
+            <button type="button" class="chat-plans-x" aria-label="Fechar" @click="closePixModal">✕</button>
+          </div>
+          <div class="chat-pix-body">
+            <div v-if="pixQrImage && pixIsEmv" class="chat-pix-qr-wrap">
+              <img :src="pixQrImage" alt="QR Code PIX" class="chat-pix-qr" />
+            </div>
+            <p class="chat-pix-hint">Copia e cola PIX:</p>
+            <textarea class="chat-pix-code chat-pix-code--area" readonly rows="3" :value="pixCopyCode" />
+            <div class="chat-pix-copy-row">
+              <button type="button" class="chat-pix-copy-btn chat-pix-copy-btn--full" @click="copyPixCode">{{ pixCopied ? 'Código copiado!' : 'Copiar código PIX' }}</button>
+            </div>
+            <p class="chat-pix-status" :class="{ 'is-ok': pixPaid }">{{ pixStatusText }}</p>
+            <button type="button" class="chat-pix-status-btn" :disabled="pixStatusLoading" @click="checkPixStatus(false)">
+              {{ pixStatusLoading ? 'Consultando…' : 'Consultar status da transação' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Popup loading: consultando status PIX -->
+      <div v-if="showPixStatusChecking" class="chat-plans-overlay pix-status-check-overlay" style="z-index:40100" @click.stop>
+        <div class="pix-status-check-card" role="dialog" aria-modal="true" @click.stop>
+          <div class="pix-status-check-spinner" aria-hidden="true"></div>
+          <p class="pix-status-check-title">Consultando o status da transação no banco</p>
+          <p class="pix-status-check-sub">Aguarde um instante…</p>
+        </div>
+      </div>
+
+      <div v-if="showLogin && !isAdmin" class="wl-overlay" @click.self="showLogin = false">
+        <div class="wl-card" role="dialog" aria-modal="true" @click.stop>
+          <h2>Acesso admin</h2>
+          <div class="wl-pass-wrap" style="position:relative;display:flex;align-items:center">
+            <input
+              ref="passInput"
+              v-model="password"
+              :type="showAdminPass ? 'text' : 'password'"
+              placeholder="Senha"
+              autocomplete="current-password"
+              class="wl-input wl-input-pass" style="padding-right:44px;width:100%"
+              @keyup.enter="doLogin"
+            />
+            <button
+              type="button"
+              class="wl-pass-eye" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;padding:4px;cursor:pointer;color:rgba(255,255,255,0.65);display:flex;align-items:center;justify-content:center"
+              :aria-label="showAdminPass ? 'Ocultar senha' : 'Mostrar senha'"
+              @click="showAdminPass = !showAdminPass"
+            >
+              <svg v-if="!showAdminPass" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+          <p v-if="loginError" class="wl-error">{{ loginError }}</p>
+          <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doLogin">{{ loading ? 'Entrando...' : 'Entrar' }}</button>
+          <button type="button" class="wl-btn wl-btn-ghost" @click="showLogin = false">Cancelar</button>
+        </div>
+      </div>
+    </Teleport>
+    <Teleport to="body">
+      <div v-if="isAdmin && showAdminPanel" class="wl-overlay" @click.self="closeAdmin">
+        <div class="wl-card" role="dialog" aria-modal="true" @click.stop>
+          <div class="wl-head"><h2>Editar apresentação</h2><div class="wl-head-actions" style="display:flex;gap:8px;align-items:center"><button type="button" class="wl-x" style="width:auto;min-width:52px;padding:0 10px;font-size:13px" @click="doLogout">Sair</button><button type="button" class="wl-x" @click="closeAdmin">×</button></div></div>
+          <label class="wl-label">Nome</label>
+          <input v-model="edit.name" type="text" maxlength="80" class="wl-input" />
+          <label class="wl-label">Tagline / Bio</label>
+          <input v-model="edit.bio" type="text" maxlength="200" class="wl-input" />
+          <label class="wl-label">Botão em destaque (RGB)</label>
+          <select v-model="edit.highlight_label" class="wl-input wl-select">
+            <option value="">Nenhum</option>
+            <option v-for="l in edit.links.filter((x) => x.label.trim())" :key="l.label" :value="l.label">{{ l.label }}</option>
+          </select>
+          <label class="wl-label" style="margin-top:14px">Quiz / Funil de entrada</label>
+          <label class="wl-toggle" style="margin-bottom:12px">
+            <input type="checkbox" :checked="edit.quiz_enabled === true" @change="edit.quiz_enabled = ($event.target as HTMLInputElement).checked" />
+            <span>{{ edit.quiz_enabled ? 'Ativado' : 'Desativado (temporário)' }}</span>
+          </label>
+          <div class="wl-links-head"><span class="wl-label" style="margin:0">Links (admin)</span><button type="button" class="wl-btn wl-btn-sm wl-btn-primary" @click="addLink">+ Adicionar</button></div>
+          <div v-for="(l, i) in edit.links" :key="i" class="wl-link-edit" :class="{ 'is-off': l.enabled === false }">
+            <div class="wl-link-row"><input v-model="l.icon" class="wl-input wl-icon" placeholder="🔥" /><input v-model="l.label" class="wl-input" placeholder="Título" /></div>
+            <input v-model="l.url" class="wl-input" placeholder="https://..." />
+            <textarea v-model="l.desc" class="wl-input wl-textarea" placeholder="Texto acima do botão (opcional)" maxlength="300" rows="3" />
+            <div class="wl-link-actions">
+              <label class="wl-toggle"><input type="checkbox" :checked="l.enabled !== false" @change="l.enabled = ($event.target as HTMLInputElement).checked" /><span>{{ l.enabled === false ? 'Desativado' : 'Ativo' }}</span></label>
+              <button type="button" class="wl-btn wl-btn-sm wl-btn-danger" @click="removeLink(i)">Remover</button>
+            </div>
+          </div>
+          <p v-if="saveMsg" class="wl-ok">{{ saveMsg }}</p>
+          <p v-if="saveError" class="wl-error">{{ saveError }}</p>
+          <div class="wl-row">
+            
+          <label class="wl-label">Enquadramento do avatar</label>
+          <div class="wl-avatar-frame">
+            <div class="wl-avatar-frame-preview">
+              <img
+                src="/model.jpg"
+                alt="Preview avatar"
+                draggable="false"
+                :style="{ objectPosition: avatarFocusX + '% ' + avatarFocusY + '%' }"
+              />
+            </div>
+            <div class="wl-avatar-frame-controls">
+              <label class="wl-avatar-slider-label">Horizontal <span>{{ avatarFocusX }}%</span></label>
+              <input v-model.number="avatarFocusX" class="wl-range" type="range" min="0" max="100" step="1" @input="applyAvatarFocus" />
+              <label class="wl-avatar-slider-label">Vertical <span>{{ avatarFocusY }}%</span></label>
+              <input v-model.number="avatarFocusY" class="wl-range" type="range" min="0" max="100" step="1" @input="applyAvatarFocus" />
+              <button type="button" class="wl-btn wl-btn-sm wl-btn-ghost" style="margin-top:8px" @click="resetAvatarFocus">Resetar enquadramento</button>
+            </div>
+          </div>
+          <p class="wl-hint" style="opacity:.7;font-size:12px;margin:4px 0 14px">Arraste os controles para centralizar o rosto no círculo (vale no chat e na foto em tela cheia).</p>
+
+          <label class="wl-label">Vídeos da videochamada (URLs, um por linha)</label>
+          <textarea v-model="editVideoCallUrls" class="wl-input" rows="3" placeholder="https://.../video1.mp4" style="min-height:72px;resize:vertical"></textarea>
+          <p class="wl-hint" style="opacity:.7;font-size:12px;margin:4px 0 12px">Depois do PIX da videochamada, o lead assiste esses vídeos aqui no chat (não vai pro WhatsApp).</p>
+
+          <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doSave">{{ loading ? 'Salvando...' : 'Salvar' }}</button>
+            <button type="button" class="wl-btn wl-btn-ghost" @click="closeAdmin">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </ClientOnly>
 </template>
+
+<script setup lang="ts">
+type LinkItem = { label: string; icon: string; url: string; desc?: string; logo?: string; enabled?: boolean }
+type ChatMsg = { from: 'her' | 'me'; text: string; time: string }
+import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
+import { getDeviceFingerprint } from '~/utils/fingerprint'
+import { IG_PROFILE_SRC as igProfileSrc } from '~/utils/ig-profile'
+import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i18n'
+
+/** Lead veio de /CanalPublico (tráfego do canal) → esconde botão do canal público (checkout direto) */
+const route = useRoute()
+const isAdminRoute = computed(() => {
+  const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
+  return p === '/admin/chat' || p.endsWith('/admin/chat')
+})
+/** Coluna direita = bot Telegram (canal de prévias desligado) */
+/** Coluna direita = bot Telegram (visível pra BR e gringo) */
+const hidePublicChannel = computed(() => false)
+import '~/assets/css/links-page.css'
+
+const DEFAULT_HIGHLIGHT = 'PrivSex'
+const VID_KEY = 'wanessa_vid'
+const VIEW_DAY_KEY = 'wanessa_view_day'
+const CLICK_DAY_PREFIX = 'wanessa_click_'
+const GATE_KEY = 'wanessa_gate_v1'
+
+const privsexUrl = 'https://privsex.com/wanessa'
+const telegramPublicUrl = 'https://t.me/+yA5Y1pAWx5RlMWIx'
+const telegramPublicUrlIntl = 'https://t.me/+2bYvtb_AA0AzMTcx'
+const vipBotUrl = 'https://t.me/wanessaavipbot?start=Pressel'
+const locale = ref<Locale>('pt')
+const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (intl)
+const telegramPublicUrlActive = computed(() => isPt.value ? telegramPublicUrl : telegramPublicUrlIntl)
+function t(key: string) { return tr(locale.value, key) }
+const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeURIComponent(t('waPrefill')))
+
+const PIX_KEY = '47992750967'
+const showWaFunnel = ref(false)
+const isChatLanding = ref(false)
+const showFunnelPhoto = ref(false)
+const chatMediaFullscreenUrl = ref<string | null>(null)
+const chatMediaFullscreenIsVideo = ref(false)
+function openFunnelPhoto() {
+  try {
+    if (typeof leadBlockedWanessa !== 'undefined' && leadBlockedWanessa.value) return
+  } catch {}
+  showFunnelPhoto.value = true
+}
+function closeFunnelPhoto() {
+  showFunnelPhoto.value = false
+}
+
+const funnelInput = ref('')
+
+let typingIdleTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => funnelInput.value,
+  (v) => {
+    if (!showWaFunnel.value) return
+    if (String(v || '').trim()) {
+      try { setLeadActivity('typing') } catch {}
+      if (typingIdleTimer) clearTimeout(typingIdleTimer)
+      typingIdleTimer = setTimeout(() => {
+        try { setLeadActivity(showWaFunnel.value ? 'viewing' : 'idle') } catch {}
+      }, 2500)
+    }
+  },
+)
+
+const funnelShellStyle = ref<Record<string, string>>({})
+const funnelKeyboardOpen = ref(false)
+let funnelKbdPoll: ReturnType<typeof setInterval> | null = null
+let funnelKbdBaseH = 0
+const funnelChatUnlocked = ref(false)
+const funnelBlocked = ref(false) // lead insistiu em programa/encontro presencial
+const funnelPermBlocked = ref(false) // Wanessa/sistema bloqueou o lead → segunda chance com mimo
+const leadBlockedWanessa = ref(false) // lead bloqueou Wanessa (com justificativa) — SEM mimo
+const showBlockReasonModal = ref(false)
+const blockReasonDraft = ref('')
+const blockReasonError = ref('')
+const leadBlockReason = ref('')
+const showBlockedUnlock = ref(false)
+const PERM_BLOCK_KEY = 'wanessa_perm_block_v1'
+const LEAD_BLOCK_KEY = 'wanessa_lead_block_v1'
+const SEGUNDA_CHANCE_PLAN = { key: 'chat_unlock_segunda_chance', title: 'Segunda chance', desc: 'mimo para desbloquear o chat', price: 29.9, priceLabel: '29,90' }
+const showMimoGiftModal = ref(false)
+const mimoGiftAmount = ref('')
+const mimoGiftMessage = ref('')
+const mimoGiftError = ref('')
+const mimoGiftLoading = ref(false)
+const funnelMsgMenuIdx = ref<number | null>(null)
+const funnelEditingIdx = ref<number | null>(null)
+const funnelEditDraft = ref('')
+
+const blockedUnlockLoading = ref(false)
+const blockedUnlockError = ref('')
+const BLOCKED_UNLOCK_PLAN = { key: 'chat_unlock_blocked', title: 'Desbloquear chat', desc: 'libera a conversa de novo', price: 49.9, priceLabel: '49,90' }
+const funnelRecording = ref(false)
+const funnelAudioPreviewUrl = ref('')
+const showFunnelEmojiPicker = ref(false)
+const FUNNEL_EMOJIS = ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','😮‍💨','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👻','👽','🤖','👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','💪','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','💋','💯','🔥','⭐','🌟','✨','⚡','💥','💦','🍑','🍆','🍒','🍓','🌹','🥀','🔞','🥵','🥶','🛏️','🎁','🎉','🎊','👀','🫦','😻','🙈','🙉','🙊']
+const showFunnelAttachMenu = ref(false)
+const showFunnelMoreMenu = ref(false)
+const funnelCameraInput = ref<HTMLInputElement | null>(null)
+const funnelPhotoInput = ref<HTMLInputElement | null>(null)
+const funnelVideoInput = ref<HTMLInputElement | null>(null)
+const funnelAudioInput = ref<HTMLInputElement | null>(null)
+const funnelDocInput = ref<HTMLInputElement | null>(null)
+let funnelMediaRecorder: MediaRecorder | null = null
+let funnelAudioChunks: BlobPart[] = []
+
+function requireFunnelChatOrPay(): boolean {
+  if (funnelChatUnlocked.value) return true
+  openChatUnlockInfo()
+  return false
+}
+
+const chatUnlockReason = ref<'chat' | 'call' | 'media'>('chat')
+
+let _unlockTapAt = 0
+function openChatUnlockInfo(reason: 'chat' | 'call' | 'media' = 'chat') {
+  if (funnelChatUnlocked.value) return
+  if (leadBlockedWanessa.value) return
+  const now = Date.now()
+  if (now - _unlockTapAt < 500) return
+  _unlockTapAt = now
+  chatUnlockReason.value = reason || 'chat'
+  showChatUnlockPix.value = false
+  showChatUnlockInfo.value = true
+  try { track('chat_unlock_info_open', { offer_slug: 'chat_quick', reason }) } catch {}
+}
+
+/** Toque no campo de digitação bloqueado → popup de benefícios */
+function onLockedComposerTap(e?: Event) {
+  if (funnelChatUnlocked.value) return
+  if (leadBlockedWanessa.value) return
+  try { (e?.target as any)?.blur?.() } catch {}
+  openChatUnlockInfo('chat')
+}
+
+/** Só o campo de digitar abre o popup de unlock */
+function onInputUnlockTap(e?: Event) {
+  if (funnelChatUnlocked.value) return
+  if (funnelBlocked.value || leadBlockedWanessa.value) return
+  try { (e?.target as any)?.blur?.() } catch {}
+  openChatUnlockInfo('chat')
+}
+
+function onInputUnlockFocus(e: Event) {
+  if (!funnelChatUnlocked.value) {
+    onInputUnlockTap(e)
+    return
+  }
+  onFunnelInputFocus()
+  if (!funnelBlocked.value) onFunnelComposerInteract()
+}
+
+function closeChatUnlockInfo() {
+  showChatUnlockInfo.value = false
+}
+
+function closeChatUnlockPix() {
+  showChatUnlockPix.value = false
+}
+
+/** Recusou desbloquear → xinga e fecha */
+async function refuseChatUnlock() {
+  showChatUnlockInfo.value = false
+  showChatUnlockPix.value = false
+  try { track('chat_unlock_info_refuse', { offer_slug: 'chat_quick' }) } catch {}
+  // Recusa no 1º passo: leve, sem atacar identidade — deixa porta aberta pro remarketing
+  const msgs = [
+    'Beleza… fica pra depois então 😌|||Quando quiser desbloquear é só R$ 3,00.',
+    'Ok. Se mudar de ideia, o chat continua aqui por R$ 3,00 💬',
+    'Tudo bem. Quem é sério acaba voltando… o desbloqueio é só R$ 3,00 🔥',
+  ]
+  const msg = msgs[Math.floor(Math.random() * msgs.length)]
+  try {
+    await funnelType(msg, 1000)
+  } catch {}
+}
+
+/** Popup 1 aceito → popup 2 (balão + sim amor) */
+function acceptChatUnlock() {
+  showChatUnlockInfo.value = false
+  showChatUnlockPix.value = true
+  try { track('chat_unlock_info_accept', { offer_slug: 'chat_quick' }) } catch {}
+}
+
+/** Popup 2: Sim amor → gera PIX R$ 3 na conversa */
+async function confirmChatUnlockPix() {
+  showChatUnlockPix.value = false
+  funnelStep.value = 'chat_unlock'
+  selectedPack.value = {
+    key: CHAT_MSG_UNLOCK_PLAN.key,
+    label: CHAT_MSG_UNLOCK_PLAN.title,
+    price: CHAT_MSG_UNLOCK_PLAN.priceLabel,
+  }
+  selectedChatPlan.value = CHAT_MSG_UNLOCK_PLAN
+  try { track('chat_unlock_pix_confirm', { offer_slug: 'chat_quick', amount: 3 }) } catch {}
+  try {
+    await funnelType('Fechou, amor 💚|||Vou te mandar o PIX de R$ 3,00 pra liberar o chat…', 900)
+  } catch {}
+  try {
+    await buyChatPlan(CHAT_MSG_UNLOCK_PLAN)
+  } catch (e) {
+    console.warn('[chat-unlock] pix', e)
+    try {
+      await funnelType('Não deu pra gerar o PIX agora. Toca de novo em desbloquear 💚', 900)
+    } catch {}
+  }
+}
+function onFunnelComposerInteract(e?: Event) {
+  if (funnelPermBlocked.value || leadBlockedWanessa.value) {
+    try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
+    return
+  }
+  if (!funnelBlocked.value) return
+  try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
+  blockedUnlockError.value = ''
+  showBlockedUnlock.value = true
+  try { track('chat_blocked_unlock_open', { offer_slug: 'chat_unlock_blocked' }) } catch {}
+}
+function onFunnelComposerKey(e: KeyboardEvent) {
+  // Digitar é livre
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    // send handled elsewhere if needed
+  }
+}
+
+function onFunnelCamera() {
+  if (!requireFunnelChatOrPay()) return
+  funnelCameraInput.value?.click()
+}
+function onFunnelAttach() {
+  if (!requireFunnelChatOrPay()) return
+  showFunnelEmojiPicker.value = false
+  showFunnelAttachMenu.value = true
+}
+function onFunnelEmoji() {
+  if (!requireFunnelChatOrPay()) return
+  if (funnelBlocked.value) {
+    onFunnelComposerInteract()
+    return
+  }
+  showFunnelEmojiPicker.value = !showFunnelEmojiPicker.value
+}
+function insertFunnelEmoji(em: string) {
+  funnelInput.value = (funnelInput.value || '') + em
+}
+function closeFunnelEmojiPicker() {
+  showFunnelEmojiPicker.value = false
+}
+function onFunnelVideoCall() {
+  showFunnelMoreMenu.value = false
+  if (leadBlockedWanessa.value) return
+  if (!funnelChatUnlocked.value) {
+    openChatUnlockInfo('call')
+    return
+  }
+  if (videoCallUnlocked.value || isAdmin.value) {
+    openVideoCallPlayer()
+    return
+  }
+  startIncomingVideoCall()
+}
+function onFunnelVoiceCall() {
+  if (!requireFunnelChatOrPay()) return
+  pushFunnel('me', 'Chamada de voz')
+  setTimeout(() => {
+    funnelType('Chamada de voz também rola… mas ao vivo fica bem mais gostoso. Prefere vídeo ou só áudio? 😏', 900)
+  }, 300)
+}
+function pickFunnelMedia(kind: 'photo' | 'video' | 'audio' | 'doc') {
+  showFunnelAttachMenu.value = false
+  if (kind === 'photo') funnelPhotoInput.value?.click()
+  else if (kind === 'video') funnelVideoInput.value?.click()
+  else if (kind === 'doc') funnelDocInput.value?.click()
+  else funnelAudioInput.value?.click()
+}
+function onFunnelAttachAction(kind: string) {
+  showFunnelAttachMenu.value = false
+  if (!requireFunnelChatOrPay()) return
+  if (kind === 'camera') { onFunnelCamera(); return }
+  if (kind === 'gallery') {
+    // Galeria nativa do celular (fotos e vídeos)
+    pickFunnelMedia('photo')
+    return
+  }
+  if (kind === 'audio') { pickFunnelMedia('audio'); return }
+  if (kind === 'doc') { pickFunnelMedia('doc'); return }
+  if (kind === 'poll') {
+    openPollModal()
+    return
+  }
+  if (kind === 'pix') {
+    openPixKeyModal()
+    return
+  }
+  if (kind === 'contact') {
+    openNativeContactPicker()
+    return
+  }
+}
+
+const showPollModal = ref(false)
+const pollQuestion = ref('')
+const pollOptions = ref<string[]>(['', ''])
+const pollError = ref('')
+
+function openPollModal() {
+  pollQuestion.value = ''
+  pollOptions.value = ['', '']
+  pollError.value = ''
+  showPollModal.value = true
+}
+function closePollModal() {
+  showPollModal.value = false
+  pollError.value = ''
+}
+function addPollOption() {
+  if (pollOptions.value.length >= 5) return
+  pollOptions.value.push('')
+}
+function removePollOption(i: number) {
+  if (pollOptions.value.length <= 2) return
+  pollOptions.value.splice(i, 1)
+}
+function submitPoll() {
+  const q = String(pollQuestion.value || '').trim()
+  if (q.length < 2) {
+    pollError.value = 'Escreva a pergunta da enquete'
+    return
+  }
+  const opts = pollOptions.value.map((o) => String(o || '').trim()).filter(Boolean)
+  if (opts.length < 2) {
+    pollError.value = 'Coloque pelo menos 2 opções'
+    return
+  }
+  if (opts.length > 5) {
+    pollError.value = 'Máximo 5 respostas'
+    return
+  }
+  const lines = opts.map((o, i) => `${i + 1}. ${o}`).join('\n')
+  const text = `📊 Enquete: ${q}\n${lines}`
+  const html = `<div class="wa-poll-card"><p class="wa-poll-q">📊 ${escapeHtml(q)}</p><ul class="wa-poll-opts">${opts.map((o, i) => `<li><span>${i + 1}</span>${escapeHtml(o)}</li>`).join('')}</ul></div>`
+  pushFunnel('me', text, html)
+  showPollModal.value = false
+  try { saveFunnelState() } catch {}
+  try { track('funnel_poll_sent', { offer_slug: 'poll', options: opts.length }) } catch {}
+  setTimeout(() => {
+    funnelType('Recebi sua enquete 👀 Já anotei aqui… me conta o que mais você quer, amor', 900)
+  }, 400)
+}
+
+const showPixKeyModal = ref(false)
+const pixKeyType = ref<'phone' | 'email' | 'cpf' | 'random'>('phone')
+const pixKeyValue = ref('')
+const pixKeyError = ref('')
+const pixKeyTypes = [
+  { id: 'phone' as const, label: 'Telefone' },
+  { id: 'email' as const, label: 'E-mail' },
+  { id: 'cpf' as const, label: 'CPF' },
+  { id: 'random' as const, label: 'Aleatória' },
+]
+const pixKeyPlaceholder = computed(() => {
+  if (pixKeyType.value === 'phone') return 'Ex: 47999999999'
+  if (pixKeyType.value === 'email') return 'Ex: seu@email.com'
+  if (pixKeyType.value === 'cpf') return 'Ex: 000.000.000-00'
+  return 'Cole a chave aleatória'
+})
+
+function openPixKeyModal() {
+  pixKeyType.value = 'phone'
+  pixKeyValue.value = ''
+  pixKeyError.value = ''
+  showPixKeyModal.value = true
+}
+function closePixKeyModal() {
+  showPixKeyModal.value = false
+  pixKeyError.value = ''
+}
+function submitPixKey() {
+  const val = String(pixKeyValue.value || '').trim()
+  if (val.length < 5) {
+    pixKeyError.value = 'Informe a chave PIX'
+    return
+  }
+  const typeLabel =
+    pixKeyType.value === 'phone' ? 'Telefone' :
+    pixKeyType.value === 'email' ? 'E-mail' :
+    pixKeyType.value === 'cpf' ? 'CPF' : 'Aleatória'
+  const text = `Chave PIX (${typeLabel}): ${val}`
+  const html = `<div class="wa-pixkey-card"><p class="wa-pixkey-title">💚 Chave PIX</p><p class="wa-pixkey-type">${escapeHtml(typeLabel)}</p><p class="wa-pixkey-val">${escapeHtml(val)}</p></div>`
+  pushFunnel('me', text, html)
+  showPixKeyModal.value = false
+  try { saveFunnelState() } catch {}
+  try { track('funnel_pix_key_sent', { offer_slug: 'pix_key', type: pixKeyType.value }) } catch {}
+  setTimeout(() => {
+    funnelType('Recebi sua chave PIX 💚 Qualquer coisa eu uso essa pra te enviar, combinado?', 900)
+  }, 400)
+}
+
+async function openNativeContactPicker() {
+  // Contact Picker API (Chrome Android) — abre seletor nativo de contatos
+  try {
+    const navAny = navigator as any
+    if (navAny?.contacts?.select) {
+      const contacts = await navAny.contacts.select(['name', 'tel', 'email'], { multiple: false })
+      const c = contacts && contacts[0]
+      if (c) {
+        const name = Array.isArray(c.name) ? c.name[0] : (c.name || 'Contato')
+        const tel = Array.isArray(c.tel) ? c.tel[0] : (c.tel || '')
+        const email = Array.isArray(c.email) ? c.email[0] : (c.email || '')
+        const parts = [name, tel, email].filter(Boolean)
+        const text = `Contato: ${parts.join(' · ')}`
+        const html = `<div class="wa-contact-card"><p class="wa-contact-name">👤 ${escapeHtml(String(name))}</p>${tel ? `<p class="wa-contact-line">${escapeHtml(String(tel))}</p>` : ''}${email ? `<p class="wa-contact-line">${escapeHtml(String(email))}</p>` : ''}</div>`
+        pushFunnel('me', text, html)
+        try { saveFunnelState() } catch {}
+        setTimeout(() => {
+          funnelType('Recebi o contato 👍 Valeu, amor', 700)
+        }, 300)
+        return
+      }
+    }
+  } catch (e) {
+    // usuário cancelou ou API indisponível
+  }
+  // Fallback: pede nome e telefone (web sem Contact Picker)
+  try {
+    const name = window.prompt('Nome do contato:')
+    if (name == null) return
+    const tel = window.prompt('Telefone do contato:')
+    if (tel == null) return
+    const n = String(name).trim()
+    const t = String(tel).trim()
+    if (!n && !t) return
+    const text = `Contato: ${[n, t].filter(Boolean).join(' · ')}`
+    const html = `<div class="wa-contact-card"><p class="wa-contact-name">👤 ${escapeHtml(n || 'Contato')}</p>${t ? `<p class="wa-contact-line">${escapeHtml(t)}</p>` : ''}</div>`
+    pushFunnel('me', text, html)
+    try { saveFunnelState() } catch {}
+    setTimeout(() => {
+      funnelType('Recebi o contato 👍 Valeu, amor', 700)
+    }, 300)
+  } catch {}
+}
+function onFunnelMoreAction(kind: string) {
+  showFunnelMoreMenu.value = false
+  if (kind === 'search') {
+    openFunnelSearch()
+    return
+  }
+  if (kind === 'clear') {
+    funnelMessages.value = []
+    funnelStep.value = 'greeting'
+    funnelBlocked.value = false
+    selectedPack.value = null
+    funnelInput.value = ''
+    funnelSearchQuery.value = ''
+    try { clearFunnelState() } catch {}
+    try { saveFunnelState() } catch {}
+    setTimeout(() => {
+      funnelType('Conversa limpa. Pode falar de novo quando quiser.', 900)
+    }, 200)
+    return
+  }
+  if (kind === 'block') {
+    // Menu do LEAD → bloqueia Wanessa (justificativa). NÃO é bloqueio da Wanessa nem segunda chance.
+    openBlockReasonModal()
+    return
+  }
+  if (kind === 'unblock') {
+    unblockLeadBlock()
+    return
+  }
+  if (kind === 'mute') {
+    try { funnelType('Notificações silenciadas neste aparelho.', 600) } catch {}
+  }
+}
+
+const showFunnelSearch = ref(false)
+const funnelSearchQuery = ref('')
+const funnelSearchInput = ref<HTMLInputElement | null>(null)
+const funnelSearchMatchCount = computed(() => {
+  const q = funnelSearchQuery.value.trim().toLowerCase()
+  if (!q) return 0
+  return funnelMessages.value.filter((m) => String(m.text || '').toLowerCase().includes(q)).length
+})
+
+function openFunnelSearch() {
+  showFunnelSearch.value = true
+  nextTick(() => {
+    try { funnelSearchInput.value?.focus() } catch {}
+  })
+}
+function closeFunnelSearch() {
+  showFunnelSearch.value = false
+  funnelSearchQuery.value = ''
+}
+function messageMatchesSearch(m: { text?: string }): boolean {
+  const q = funnelSearchQuery.value.trim().toLowerCase()
+  if (!q) return true
+  return String(m.text || '').toLowerCase().includes(q)
+}
+
+const fsVideoEl = ref<HTMLVideoElement | null>(null)
+const fsVideoPlaying = ref(false)
+const fsVideoMuted = ref(false)
+const fsVideoSeek = ref(0)
+const fsVideoTimeLabel = ref('0:00')
+const fsVideoDurLabel = ref('0:00')
+
+function formatFsTime(sec: number) {
+  const s = Math.max(0, Math.floor(sec || 0))
+  const m = Math.floor(s / 60)
+  const r = s % 60
+  return `${m}:${String(r).padStart(2, '0')}`
+}
+
+function openChatMediaFullscreen(url?: string | null, isVideo = false) {
+  const u = String(url || '').trim()
+  if (!u) return
+  chatMediaFullscreenIsVideo.value = !!isVideo
+  chatMediaFullscreenUrl.value = u
+  fsVideoPlaying.value = false
+  fsVideoMuted.value = false
+  fsVideoSeek.value = 0
+  fsVideoTimeLabel.value = '0:00'
+  fsVideoDurLabel.value = '0:00'
+  // sem autoplay — usuário toca play
+}
+
+function closeChatMediaFullscreen() {
+  try {
+    const v = fsVideoEl.value
+    if (v) {
+      v.pause()
+      v.removeAttribute('src')
+      v.load()
+    }
+  } catch {}
+  chatMediaFullscreenUrl.value = null
+  chatMediaFullscreenIsVideo.value = false
+  fsVideoPlaying.value = false
+}
+
+function toggleFsVideoPlay() {
+  const v = fsVideoEl.value
+  if (!v) return
+  if (v.paused) {
+    v.play().then(() => { fsVideoPlaying.value = true }).catch(() => { fsVideoPlaying.value = false })
+  } else {
+    v.pause()
+    fsVideoPlaying.value = false
+  }
+}
+
+function toggleFsMute() {
+  const v = fsVideoEl.value
+  if (!v) return
+  v.muted = !v.muted
+  fsVideoMuted.value = v.muted
+}
+
+function onFsVideoTime() {
+  const v = fsVideoEl.value
+  if (!v) return
+  const dur = v.duration || 0
+  const cur = v.currentTime || 0
+  fsVideoTimeLabel.value = formatFsTime(cur)
+  if (dur > 0) fsVideoSeek.value = Math.round((cur / dur) * 1000)
+  fsVideoPlaying.value = !v.paused
+}
+
+function onFsVideoMeta() {
+  const v = fsVideoEl.value
+  if (!v) return
+  fsVideoDurLabel.value = formatFsTime(v.duration || 0)
+}
+
+function onFsVideoEnded() {
+  fsVideoPlaying.value = false
+  fsVideoSeek.value = 0
+}
+
+function onFsVideoSeek(ev: Event) {
+  const v = fsVideoEl.value
+  if (!v || !v.duration) return
+  const raw = Number((ev.target as HTMLInputElement).value || 0)
+  v.currentTime = (raw / 1000) * v.duration
+  fsVideoSeek.value = raw
+}
+
+function onFunnelMediaHtmlClick(e: Event) {
+  const t = e.target as HTMLElement | null
+  if (!t) return
+  // Desbloquear contato (banner de sistema no chat)
+  const unblockBtn = t.closest?.('[data-action="unblock-lead"]') as HTMLElement | null
+  if (unblockBtn) {
+    e.preventDefault()
+    e.stopPropagation()
+    try { unblockLeadBlock() } catch {}
+    return
+  }
+  // Documento → abrir / baixar
+  const doc = t.closest?.('.wa-media-doc') as HTMLAnchorElement | null
+  if (doc) {
+    e.preventDefault()
+    e.stopPropagation()
+    const url = doc.getAttribute('data-doc-url') || doc.getAttribute('href') || ''
+    const name = doc.getAttribute('data-doc-name') || 'documento'
+    if (!url) return
+    try {
+      // tenta abrir em nova aba (PDF etc.)
+      const w = window.open(url, '_blank')
+      if (!w) {
+        // popup bloqueado → força download
+        const a = document.createElement('a')
+        a.href = url
+        a.download = name
+        a.target = '_blank'
+        a.rel = 'noopener'
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      }
+    } catch {
+      try {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = name
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      } catch {}
+    }
+    return
+  }
+  // Foto → tela cheia
+  const img = t.closest?.('img') as HTMLImageElement | null
+  if (img?.src && !img.closest?.('.wa-video-modern')) {
+    openChatMediaFullscreen(img.src, false)
+    return
+  }
+  // Botão tela cheia do vídeo
+  const fsBtn = t.closest?.('.wa-video-fs-btn') as HTMLElement | null
+  if (fsBtn) {
+    const wrap = fsBtn.closest('.wa-video-modern') as HTMLElement | null
+    const video = wrap?.querySelector('video') as HTMLVideoElement | null
+    const src = video?.currentSrc || video?.src || wrap?.getAttribute('data-src') || ''
+    if (src) openChatMediaFullscreen(src, true)
+    return
+  }
+  // Áudio play/pause
+  const playBtn = t.closest?.('.wa-audio-play') as HTMLElement | null
+  if (playBtn) {
+    const wrap = playBtn.closest('.wa-audio-modern') as HTMLElement | null
+    const audio = wrap?.querySelector('audio') as HTMLAudioElement | null
+    if (!audio) return
+    if (audio.paused) {
+      document.querySelectorAll('.wa-audio-modern audio').forEach((a) => {
+        try { (a as HTMLAudioElement).pause() } catch {}
+      })
+      document.querySelectorAll('.wa-audio-modern .wa-audio-play').forEach((b) => { b.textContent = '▶' })
+      audio.play().catch(() => {})
+      playBtn.textContent = '⏸'
+    } else {
+      audio.pause()
+      playBtn.textContent = '▶'
+    }
+    audio.onended = () => { playBtn.textContent = '▶' }
+    return
+  }
+  // Vídeo play/pause (área do player) — sem autoplay; só no toque
+  const vWrap = t.closest?.('.wa-video-modern') as HTMLElement | null
+  if (vWrap) {
+    // clique no botão de fullscreen já tratado acima
+    if (t.closest?.('.wa-video-fs-btn')) return
+    const video = vWrap.querySelector('video') as HTMLVideoElement | null
+    const btn = vWrap.querySelector('.wa-video-play-btn') as HTMLElement | null
+    const ico = btn?.querySelector('.wa-video-play-ico') as HTMLElement | null
+    if (!video) return
+    if (video.paused) {
+      document.querySelectorAll('.wa-video-modern video').forEach((v) => {
+        try { (v as HTMLVideoElement).pause() } catch {}
+      })
+      document.querySelectorAll('.wa-video-modern').forEach((w) => w.classList.remove('is-playing'))
+      if (ico) ico.textContent = '▶'
+      else if (btn) btn.textContent = '▶'
+      video.play().catch(() => {})
+      vWrap.classList.add('is-playing')
+      video.onended = () => {
+        vWrap.classList.remove('is-playing')
+        if (ico) ico.textContent = '▶'
+        else if (btn) btn.textContent = '▶'
+      }
+    } else {
+      video.pause()
+      vWrap.classList.remove('is-playing')
+      if (ico) ico.textContent = '▶'
+      else if (btn) btn.textContent = '▶'
+    }
+  }
+}
+
+
+const previewAudioPlaying = ref(false)
+const previewAudioLabel = ref('0:00')
+const funnelPreviewAudioEl = ref<HTMLAudioElement | null>(null)
+
+function togglePreviewAudioPlay() {
+  const el = funnelPreviewAudioEl.value
+  if (!el) return
+  if (el.paused) {
+    el.play().catch(() => {})
+    previewAudioPlaying.value = true
+  } else {
+    el.pause()
+    previewAudioPlaying.value = false
+  }
+}
+function onPreviewAudioTime() {
+  const el = funnelPreviewAudioEl.value
+  if (!el) return
+  const t = Math.floor(el.currentTime || 0)
+  previewAudioLabel.value = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`
+}
+
+
+function openBlockReasonModal() {
+  showFunnelMoreMenu.value = false
+  if (leadBlockedWanessa.value) return
+  blockReasonDraft.value = ''
+  blockReasonError.value = ''
+  showBlockReasonModal.value = true
+}
+
+function closeBlockReasonModal() {
+  showBlockReasonModal.value = false
+  blockReasonError.value = ''
+}
+
+function confirmLeadBlock() {
+  const reason = String(blockReasonDraft.value || '').trim()
+  if (reason.length < 5) {
+    blockReasonError.value = 'Escreva o motivo (mín. 5 caracteres) para confirmar o bloqueio.'
+    return
+  }
+  leadBlockedWanessa.value = true
+  leadBlockReason.value = reason.slice(0, 400)
+  funnelBlocked.value = true
+  showBlockReasonModal.value = false
+  showFunnelEmojiPicker.value = false
+  showFunnelAttachMenu.value = false
+  showFunnelMoreMenu.value = false
+  showFunnelPhoto.value = false
+  showFunnelProfile.value = false
+  try {
+    const vid = getOrCreateVisitorId()
+    localStorage.setItem(
+      LEAD_BLOCK_KEY,
+      JSON.stringify({ visitor_id: vid, reason: leadBlockReason.value, at: Date.now() }),
+    )
+  } catch {}
+  try { saveFunnelState() } catch {}
+  try { track('funnel_lead_block', { offer_slug: 'lead_block' }) } catch {}
+  try {
+    // Aviso no chat do lead (estilo sistema)
+    pushFunnel(
+      'me',
+      'Você bloqueou esta pessoa',
+      `<div class="wa-system-banner wa-system-banner--block"><span>Você bloqueou esta pessoa</span><button type="button" class="wa-system-unblock" data-action="unblock-lead">Desbloquear</button></div>`,
+      { skipLog: true },
+    )
+  } catch {}
+  try {
+    logFunnelMessage(
+      'lead',
+      `Lead te bloqueou: ${leadBlockReason.value}`,
+      {
+        event: 'lead_blocked',
+        block_reason: leadBlockReason.value,
+        blocked_by: 'lead',
+      },
+    )
+  } catch {}
+  try { saveFunnelState() } catch {}
+}
+
+function unblockLeadBlock() {
+  // Volta ao estado antes do bloqueio do lead (foto de perfil volta no header)
+  leadBlockedWanessa.value = false
+  leadBlockReason.value = ''
+  blockReasonDraft.value = ''
+  blockReasonError.value = ''
+  showBlockReasonModal.value = false
+  showFunnelMoreMenu.value = false
+  // Só libera o blocked se não for bloqueio permanente da Wanessa
+  if (!funnelPermBlocked.value) {
+    funnelBlocked.value = false
+  }
+  try { localStorage.removeItem(LEAD_BLOCK_KEY) } catch {}
+  try {
+    pushFunnel(
+      'me',
+      'Você desbloqueou esta pessoa',
+      `<div class="wa-system-banner"><span>Você desbloqueou esta pessoa</span></div>`,
+      { skipLog: true },
+    )
+  } catch {}
+  try {
+    logFunnelMessage(
+      'lead',
+      'Lead desbloqueou o contato',
+      { event: 'lead_unblocked', blocked_by: 'lead' },
+    )
+  } catch {}
+  try { track('funnel_lead_unblock', { offer_slug: 'lead_unblock' }) } catch {}
+  try { saveFunnelState() } catch {}
+}
+
+function applyPermanentBlock() {
+  // Só bloqueio do lado Wanessa/sistema → lead (segunda chance com mimo)
+  funnelPermBlocked.value = true
+  funnelBlocked.value = true
+  showFunnelEmojiPicker.value = false
+  showFunnelAttachMenu.value = false
+  showFunnelMoreMenu.value = false
+  try {
+    const vid = getOrCreateVisitorId()
+    localStorage.setItem(PERM_BLOCK_KEY, JSON.stringify({ visitor_id: vid, at: Date.now() }))
+  } catch {}
+  try { saveFunnelState() } catch {}
+  try { track('funnel_perm_block', { offer_slug: 'block' }) } catch {}
+  try { logFunnelMessage('bot', '[bloqueio permanente]', { event: 'perm_block' }) } catch {}
+}
+
+function clearPermanentBlock() {
+  funnelPermBlocked.value = false
+  try { localStorage.removeItem(PERM_BLOCK_KEY) } catch {}
+  try { saveFunnelState() } catch {}
+}
+
+function loadPermanentBlock() {
+  try {
+    const raw = localStorage.getItem(PERM_BLOCK_KEY)
+    if (raw) {
+      const data = JSON.parse(raw)
+      const vid = getOrCreateVisitorId()
+      if (data?.visitor_id && data.visitor_id === vid) {
+        funnelPermBlocked.value = true
+        funnelBlocked.value = true
+      }
+    }
+  } catch {}
+  try {
+    const raw = localStorage.getItem(LEAD_BLOCK_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    const vid = getOrCreateVisitorId()
+    if (data?.visitor_id && data.visitor_id === vid) {
+      leadBlockedWanessa.value = true
+      leadBlockReason.value = String(data.reason || '')
+      funnelBlocked.value = true
+    }
+  } catch {}
+}
+
+function onFunnelGiftMimo() {
+  if (funnelPermBlocked.value || leadBlockedWanessa.value) return
+  mimoGiftError.value = ''
+  mimoGiftAmount.value = ''
+  mimoGiftMessage.value = ''
+  showMimoGiftModal.value = true
+  try { track('funnel_gift_mimo_open', { offer_slug: 'mimo_gift' }) } catch {}
+}
+
+function closeMimoGiftModal() {
+  if (mimoGiftLoading.value) return
+  showMimoGiftModal.value = false
+  mimoGiftError.value = ''
+}
+
+function parseMimoAmount(raw: string): number {
+  const s = String(raw || '').trim().replace(/R\$\s?/gi, '').replace(/\s/g, '')
+  if (!s) return 0
+  // 10,50 or 10.50 or 10
+  if (s.includes(',') && s.includes('.')) {
+    // 1.234,56
+    const n = Number(s.replace(/\./g, '').replace(',', '.'))
+    return Number.isFinite(n) ? n : 0
+  }
+  if (s.includes(',')) {
+    const n = Number(s.replace(',', '.'))
+    return Number.isFinite(n) ? n : 0
+  }
+  const n = Number(s)
+  return Number.isFinite(n) ? n : 0
+}
+
+async function sendMimoGift() {
+  if (mimoGiftLoading.value) return
+  mimoGiftError.value = ''
+  const amount = parseMimoAmount(mimoGiftAmount.value)
+  if (amount < 1) {
+    mimoGiftError.value = 'Digite um valor de pelo menos R$ 1,00'
+    return
+  }
+  if (amount > 5000) {
+    mimoGiftError.value = 'Valor máximo R$ 5.000,00'
+    return
+  }
+  const msg = String(mimoGiftMessage.value || '').trim().slice(0, 300)
+  const priceLabel = amount.toFixed(2).replace('.', ',')
+  mimoGiftLoading.value = true
+  selectedChatPlan.value = {
+    key: 'mimo_gift',
+    title: 'Mimo pra Wanessa',
+    desc: msg || 'presente',
+    price: amount,
+    priceLabel,
+  }
+  selectedPack.value = {
+    key: 'mimo_gift',
+    label: 'Mimo pra Wanessa',
+    price: priceLabel,
+  }
+  try {
+    let visitor_id: string | null = null
+    try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
+    const res = await $fetch<{
+      ok: boolean
+      pix_code?: string
+      qr_image?: string
+      payment_id?: string
+      external_id?: string
+      error?: string
+    }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: 'mimo_gift',
+        amount,
+        title: msg ? `Mimo: ${msg.slice(0, 80)}` : 'Mimo pra Wanessa',
+        visitor_id,
+        source: 'links_mimo_gift',
+        metadata: { message: msg || null },
+      },
+    })
+    if (!res?.ok || !res.pix_code) throw new Error(res?.error || 'Falha ao gerar PIX')
+    pixPaid.value = false
+    pixCopyCode.value = res.pix_code
+    funnelPixCode.value = res.pix_code
+    const isEmv = /^000201/.test(res.pix_code)
+    pixQrImage.value = isEmv
+      ? (res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`)
+      : ''
+    pixPaymentId.value = res.payment_id || ''
+    pixExternalId.value = res.external_id || res.payment_id || ''
+    funnelPaymentId.value = pixPaymentId.value
+    funnelExternalId.value = pixExternalId.value
+    showMimoGiftModal.value = false
+    showPixModal.value = true
+    funnelStep.value = 'awaiting_payment'
+    if (msg) {
+      try { pushFunnel('me', msg) } catch {}
+    }
+    try { pushFunnel('me', `🎁 Mimo de R$ ${priceLabel}`) } catch {}
+    try { track('mimo_gift_checkout', { offer_slug: 'mimo_gift', amount }) } catch {}
+    if (pixExternalId.value || pixPaymentId.value) {
+      if (pixPollTimer) clearInterval(pixPollTimer)
+      let tries = 0
+      pixPollTimer = setInterval(() => {
+        checkPixStatus(true)
+        tries++
+        if (tries > 45 && pixPollTimer) {
+          clearInterval(pixPollTimer)
+          pixPollTimer = null
+        }
+      }, 5000)
+    }
+  } catch (e: any) {
+    mimoGiftError.value = e?.data?.statusMessage || e?.message || 'Não deu pra gerar o PIX agora'
+  } finally {
+    mimoGiftLoading.value = false
+  }
+}
+
+function startSegundaChanceMimo() {
+  if (blockedUnlockLoading.value) return
+  try { track('segunda_chance_mimo_open', { offer_slug: SEGUNDA_CHANCE_PLAN.key }) } catch {}
+  buySegundaChanceMimo()
+}
+
+async function buySegundaChanceMimo() {
+  blockedUnlockError.value = ''
+  blockedUnlockLoading.value = true
+  selectedChatPlan.value = {
+    key: SEGUNDA_CHANCE_PLAN.key,
+    title: SEGUNDA_CHANCE_PLAN.title,
+    desc: SEGUNDA_CHANCE_PLAN.desc,
+    price: SEGUNDA_CHANCE_PLAN.price,
+    priceLabel: SEGUNDA_CHANCE_PLAN.priceLabel,
+  }
+  selectedPack.value = {
+    key: SEGUNDA_CHANCE_PLAN.key,
+    label: SEGUNDA_CHANCE_PLAN.title,
+    price: SEGUNDA_CHANCE_PLAN.priceLabel,
+  }
+  try {
+    let visitor_id: string | null = null
+    try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
+    const res = await $fetch<{
+      ok: boolean
+      pix_code?: string
+      qr_image?: string
+      payment_id?: string
+      external_id?: string
+      error?: string
+    }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: SEGUNDA_CHANCE_PLAN.key,
+        amount: SEGUNDA_CHANCE_PLAN.price,
+        title: SEGUNDA_CHANCE_PLAN.title,
+        visitor_id,
+        source: 'links_segunda_chance',
+      },
+    })
+    if (!res?.ok || !res.pix_code) throw new Error(res?.error || 'Falha ao gerar PIX')
+    pixPaid.value = false
+    pixCopyCode.value = res.pix_code
+    funnelPixCode.value = res.pix_code
+    const isEmv = /^000201/.test(res.pix_code)
+    pixQrImage.value = isEmv
+      ? (res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`)
+      : ''
+    pixPaymentId.value = res.payment_id || ''
+    pixExternalId.value = res.external_id || res.payment_id || ''
+    funnelPaymentId.value = pixPaymentId.value
+    funnelExternalId.value = pixExternalId.value
+    showPixModal.value = true
+    funnelStep.value = 'awaiting_payment'
+    try { track('segunda_chance_checkout', { offer_slug: SEGUNDA_CHANCE_PLAN.key, amount: 29.9 }) } catch {}
+    if (pixExternalId.value || pixPaymentId.value) {
+      if (pixPollTimer) clearInterval(pixPollTimer)
+      let tries = 0
+      pixPollTimer = setInterval(() => {
+        checkPixStatus(true)
+        tries++
+        if (tries > 45 && pixPollTimer) {
+          clearInterval(pixPollTimer)
+          pixPollTimer = null
+        }
+      }, 5000)
+    }
+  } catch (e: any) {
+    blockedUnlockError.value = e?.data?.statusMessage || e?.message || 'Não deu pra gerar o PIX agora'
+    try { alert(blockedUnlockError.value) } catch {}
+  } finally {
+    blockedUnlockLoading.value = false
+  }
+}
+
+function onFunnelMediaPicked(ev: Event, kind: 'photo' | 'video' | 'audio' | 'doc' | 'gallery') {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (funnelBlocked.value) {
+    onFunnelComposerInteract()
+    return
+  }
+  const mime = String(file.type || '').toLowerCase()
+  const name = String(file.name || '').toLowerCase()
+  let resolved: 'photo' | 'video' | 'audio' | 'doc' = 'photo'
+  if (kind === 'doc') resolved = 'doc'
+  else if (mime.startsWith('video/') || /\.(mp4|mov|webm|mkv|m4v|avi)$/i.test(name)) resolved = 'video'
+  else if (mime.startsWith('audio/') || (/\.(mp3|wav|ogg|m4a|aac)$/i.test(name))) resolved = 'audio'
+  else if (mime.startsWith('image/') || /\.(jpe?g|png|gif|webp|heic|bmp)$/i.test(name)) resolved = 'photo'
+  else if (kind === 'video') resolved = 'video'
+  else if (kind === 'audio') resolved = 'audio'
+  else if (kind === 'photo' || kind === 'gallery') resolved = 'photo'
+
+  const url = URL.createObjectURL(file)
+  if (resolved === 'photo') {
+    pushFunnel('me', 'Foto', `<img class="wa-media-img" src="${url}" alt="foto" />`, { mediaKind: 'photo', mediaUrl: url })
+  } else if (resolved === 'video') {
+    pushFunnel(
+      'me',
+      'Video',
+      `<div class="wa-video-modern" data-src="${url}">
+        <video class="wa-media-video" src="${url}" playsinline preload="metadata" controlslist="nodownload" disablepictureinpicture></video>
+        <div class="wa-video-shade"></div>
+        <button type="button" class="wa-video-play-btn" aria-label="Play"><span class="wa-video-play-ico">▶</span></button>
+        <div class="wa-video-footer">
+          <span class="wa-video-badge">Vídeo</span>
+          <button type="button" class="wa-video-fs-btn" aria-label="Tela cheia" title="Tela cheia">⛶</button>
+        </div>
+      </div>`,
+      { mediaKind: 'video', mediaUrl: url },
+    )
+  } else if (resolved === 'doc') {
+    const rawName = String(file.name || 'documento')
+    const safeName = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    const sizeKb = file.size ? (file.size < 1024 * 1024
+      ? `${Math.max(1, Math.round(file.size / 1024))} KB`
+      : `${(file.size / (1024 * 1024)).toFixed(1)} MB`) : ''
+    const mimeSafe = String(file.type || 'application/octet-stream').replace(/"/g, '')
+    pushFunnel(
+      'me',
+      `Documento: ${rawName}`,
+      `<a class="wa-media-doc" href="${url}" data-doc-url="${url}" data-doc-name="${safeName}" data-doc-mime="${mimeSafe}" download="${safeName}" target="_blank" rel="noopener">
+        <span class="wa-media-doc-ico">📄</span>
+        <span class="wa-media-doc-info">
+          <span class="wa-media-doc-name">${safeName}</span>
+          <span class="wa-media-doc-meta">${sizeKb ? sizeKb + ' · ' : ''}Toque para abrir</span>
+        </span>
+      </a>`,
+      { mediaKind: 'doc', mediaUrl: url },
+    )
+  } else {
+    pushFunnel(
+      'me',
+      'Audio',
+      `<div class="wa-audio-modern wa-audio-modern--bubble" data-src="${url}"><button type="button" class="wa-audio-play">▶</button><div class="wa-audio-wave"><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span></div><span class="wa-audio-time">áudio</span><audio src="${url}" preload="metadata"></audio></div>`,
+      { mediaKind: 'audio', mediaUrl: url },
+    )
+  }
+  try { track('funnel_media_sent', { kind: resolved }) } catch {}
+  setTimeout(() => { funnelType('Recebi aqui, amor… me conta o que você quer que eu faça com isso 😏', 800) }, 400)
+}
+async function onFunnelAudio() {
+  if (!requireFunnelChatOrPay()) return
+  if (funnelBlocked.value) {
+    onFunnelComposerInteract()
+    return
+  }
+  // Já gravando → parar (NÃO envia; abre preview para descartar ou enviar)
+  if (funnelRecording.value) {
+    try { funnelMediaRecorder?.stop() } catch {}
+    return
+  }
+  // Se já tem preview, não inicia outra gravação
+  if (funnelAudioPreviewUrl.value) return
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    funnelAudioChunks = []
+    const rec = new MediaRecorder(stream)
+    funnelMediaRecorder = rec
+    rec.ondataavailable = (e) => { if (e.data.size) funnelAudioChunks.push(e.data) }
+    rec.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop())
+      funnelRecording.value = false
+      try { setLeadActivity('idle') } catch {}
+      const blob = new Blob(funnelAudioChunks, { type: 'audio/webm' })
+      if (!blob.size) return
+      try {
+        if (funnelAudioPreviewUrl.value) URL.revokeObjectURL(funnelAudioPreviewUrl.value)
+      } catch {}
+      funnelAudioPreviewUrl.value = URL.createObjectURL(blob)
+    }
+    rec.start()
+    funnelRecording.value = true
+    try { setLeadActivity('recording') } catch {}
+  } catch {
+    funnelAudioInput.value?.click()
+  }
+}
+function discardFunnelAudio() {
+  try {
+    if (funnelAudioPreviewUrl.value) URL.revokeObjectURL(funnelAudioPreviewUrl.value)
+  } catch {}
+  funnelAudioPreviewUrl.value = ''
+  funnelAudioChunks = []
+  funnelMediaRecorder = null
+}
+function sendFunnelAudioPreview() {
+  const url = funnelAudioPreviewUrl.value
+  if (!url) return
+  pushFunnel(
+    'me',
+    'Audio',
+    `<div class="wa-audio-modern wa-audio-modern--bubble" data-src="${url}"><button type="button" class="wa-audio-play">▶</button><div class="wa-audio-wave"><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span></div><span class="wa-audio-time">áudio</span><audio src="${url}" preload="metadata"></audio></div>`,
+    { mediaKind: 'audio', mediaUrl: url },
+  )
+  funnelAudioPreviewUrl.value = ''
+  funnelAudioChunks = []
+  funnelMediaRecorder = null
+  try { track('funnel_media_sent', { kind: 'audio_record' }) } catch {}
+  setTimeout(() => { funnelType('Recebi seu áudio. Ainda não consigo ouvir o conteúdo por aqui. Pode escrever o que você quer?', 900) }, 400)
+}
+
+
+// Chat bloqueado + planos low-ticket (SyncPay)
+const showChatPlans = ref(false)
+const showChatUnlockInfo = ref(false)
+const showChatUnlockPix = ref(false)
+const showPixModal = ref(false)
+const chatPayLoading = ref<string | null>(null)
+const chatPayError = ref('')
+const selectedChatPlan = ref<{ key: string; title: string; desc: string; price: number; priceLabel: string; hot?: boolean } | null>(null)
+
+const pixModalSubHint = computed(() => {
+  const key = String(selectedChatPlan.value?.key || selectedPack.value?.key || '')
+  const title = String(selectedChatPlan.value?.title || selectedPack.value?.label || '').toLowerCase()
+  if (key === 'mimo_gift' || title.includes('mimo')) return 'obrigada pelo mimo 💕'
+  if (key.includes('unlock') || key.includes('blocked') || title.includes('desbloque')) return 'pague e o chat libera'
+  if (key.includes('vid') || title.includes('videochamad') || title.includes('chamada')) return 'pague e a chamada libera'
+  if (key.includes('web') || title.includes('webnamoro')) return 'pague e o webnamoro libera'
+  if (key.includes('chat') || title.includes('chat')) return 'pague e o chat libera'
+  return 'pague para liberar'
+})
+
+const pixCopyCode = ref('')
+const pixQrImage = ref('')
+const pixPaymentId = ref('')
+const pixExternalId = ref('')
+const pixCopied = ref(false)
+const pixStatusText = ref('Aguardando pagamento…')
+const pixStatusLoading = ref(false)
+const showPixStatusChecking = ref(false)
+const pixPaid = ref(false)
+const pixIsEmv = computed(() => /^000201/.test(pixCopyCode.value || ''))
+let pixPollTimer: ReturnType<typeof setInterval> | null = null
+
+const chatPlans = [
+  { key: 'chat_quick', title: 'Desbloquear chat', desc: 'R$ 3,00 libera enviar mensagem', price: 3.0, priceLabel: '3,00', hot: true },
+]
+/** Valor simbólico pra filtrar lead que não valoriza tempo. */
+const CHAT_MSG_UNLOCK_PLAN = chatPlans[0]
+
+function openChatPlans() {
+  chatPayError.value = ''
+  showChatPlans.value = true
+  try { track('chat_lock_open', { offer_slug: 'chat_plans' }) } catch {}
+}
+function closeChatPlans() {
+  if (chatPayLoading.value) return
+  showChatPlans.value = false
+}
+function openPreparedPixForUser() {
+  const code = funnelPixCode.value || pixCopyCode.value
+  if (!code || !/^000201/.test(code)) {
+    funnelType('Ainda não tenho o PIX gerado… escolhe de novo o que você quer que eu gero 💚', 1000)
+    return
+  }
+  ;(window as any).__pixAskedOnce = true
+  ;(window as any).__pixCodeShown = true
+  showPixModal.value = true
+  funnelStep.value = 'awaiting_payment'
+  const price = selectedPack.value?.price || selectedChatPlan.value?.priceLabel || ''
+  funnelType(`Pronto, amor 💚 Aqui está o PIX de R$ ${price}.\n\nPaga e toca em consultar status quando concluir.`, 1200)
+  // também manda no chat
+  showPixCodeInChat(code, price)
+  // poll de pagamento
+  stopFunnelPayPoll()
+  let tries = 0
+  funnelPayPoll = setInterval(() => {
+    tries++
+    if (tries > 90) { stopFunnelPayPoll(); return }
+    checkFunnelPayment(true).catch(() => {})
+  }, 4000)
+}
+
+function pushPixIntoFunnelChat() {
+  // NUNCA joga o código sem o lead pedir. Só pergunta e espera resposta.
+  const code = funnelPixCode.value || pixCopyCode.value
+  const price = selectedPack.value?.price || selectedChatPlan.value?.priceLabel || ''
+  if (!code || !/^000201/.test(code)) return
+
+  // Já mostrou o código → não insiste
+  if ((window as any).__pixCodeShown) return
+
+  // Já perguntou e ainda espera resposta → não repete spam
+  if ((window as any).__pixAskedOnce) return
+
+  ;(window as any).__pixAskedOnce = true
+  pushFunnel(
+    'her',
+    'Posso te passar a chave PIX agora? 💚\n\nMe responde "pode", "manda" ou "sim" que eu te envio o código na hora.\n\nSe não quiser agora, sem problema — a gente continua conversando.'
+  )
+  // Sem setTimeout. Só mostra quando o lead confirmar em sendFunnelFreeText.
+}
+
+function showPixCodeInChat(code: string, price: string) {
+  if ((window as any).__pixCodeShown) return
+  ;(window as any).__pixCodeShown = true
+  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}`
+  const safe = code.replace(/</g, '&lt;')
+  const html =
+    `<div style="line-height:1.4">` +
+    `<b>PIX R$ ${price}</b><br>` +
+    `<img src="${qr}" alt="QR PIX" style="width:180px;height:180px;border-radius:10px;background:#fff;padding:6px;margin:8px 0;display:block" />` +
+    `<span style="opacity:.85">Copia e cola:</span><br>` +
+    `<code style="display:block;word-break:break-all;font-size:0.68em;background:rgba(0,0,0,.22);padding:8px;border-radius:8px;margin-top:4px">${safe}</code>` +
+    `<br><span style="opacity:.9">Toque em <b>Copiar código PIX</b> abaixo 👇</span>` +
+    `</div>`
+  pushFunnel('her', `Aqui está o PIX R$ ${price} 💚`, html)
+}
+
+function closePixModal() {
+  showPixModal.value = false
+  // Se fechou sem autorizar antes, só lembra que pode pedir — não joga código
+  if (!(window as any).__pixCodeShown && (funnelPixCode.value || pixCopyCode.value)) {
+    funnelStep.value = 'pix_ask'
+    funnelType('Quando quiser, toca em "Sim, pode mandar o PIX" que eu te envio a chave 💚', 1000)
+  }
+}
+async function copyPixCode() {
+  const code = String(pixCopyCode.value || funnelPixCode.value || '').trim()
+  if (!code) return
+  try {
+    await navigator.clipboard.writeText(code)
+  } catch {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = code
+      ta.setAttribute('readonly', '')
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    } catch {}
+  }
+  pixCopied.value = true
+  setTimeout(() => { pixCopied.value = false }, 2000)
+}
+
+async function adminUnlockChat() {
+  chatPayError.value = ''
+  chatPayLoading.value = 'admin'
+  try {
+    await $fetch('/api/admin/test-pay', { method: 'POST' })
+  } catch {
+    isAdmin.value = false
+    chatPayError.value = 'Só admin logado pode usar saldo da carteira.'
+    chatPayLoading.value = ''
+    return
+  }
+  isAdmin.value = true
+  funnelChatUnlocked.value = true
+  funnelBlocked.value = false
+    startLiveChatPoll()
+  showChatPlans.value = false
+  chatPayLoading.value = ''
+  try {
+    await funnelType('Chat liberado com saldo admin (∞) ✅ Pode testar à vontade.', 900)
+  } catch {}
+}
+
+
+async function buyBlockedUnlock() {
+  blockedUnlockError.value = ''
+  blockedUnlockLoading.value = true
+  selectedChatPlan.value = {
+    key: BLOCKED_UNLOCK_PLAN.key,
+    title: BLOCKED_UNLOCK_PLAN.title,
+    desc: BLOCKED_UNLOCK_PLAN.desc,
+    price: BLOCKED_UNLOCK_PLAN.price,
+    priceLabel: BLOCKED_UNLOCK_PLAN.priceLabel,
+  }
+  selectedPack.value = {
+    key: BLOCKED_UNLOCK_PLAN.key,
+    label: BLOCKED_UNLOCK_PLAN.title,
+    price: BLOCKED_UNLOCK_PLAN.priceLabel,
+  }
+  try {
+    let visitor_id: string | null = null
+    try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
+    const res = await $fetch<{
+      ok: boolean
+      pix_code?: string
+      qr_image?: string
+      payment_id?: string
+      external_id?: string
+      hint?: string
+      error?: string
+    }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: BLOCKED_UNLOCK_PLAN.key,
+        amount: BLOCKED_UNLOCK_PLAN.price,
+        title: BLOCKED_UNLOCK_PLAN.title,
+        visitor_id,
+        source: 'links_blocked_unlock',
+      },
+    })
+    if (!res?.ok || !res.pix_code) {
+      throw new Error(res?.error || 'Falha ao gerar PIX')
+    }
+    pixPaid.value = false
+    pixCopyCode.value = res.pix_code
+    funnelPixCode.value = res.pix_code
+    const isEmv = /^000201/.test(res.pix_code)
+    pixQrImage.value = isEmv
+      ? (res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`)
+      : ''
+    pixPaymentId.value = res.payment_id || ''
+    pixExternalId.value = res.external_id || res.payment_id || ''
+    funnelPaymentId.value = pixPaymentId.value
+    funnelExternalId.value = pixExternalId.value
+    pixStatusText.value = isEmv
+      ? 'Aguardando pagamento… use o QR ou o copia e cola'
+      : (res.hint || 'Pague o PIX e confirme o status')
+    showBlockedUnlock.value = false
+    showPixModal.value = true
+    funnelStep.value = 'awaiting_payment'
+    try { track('chat_blocked_unlock_checkout', { offer_slug: 'chat_unlock_blocked', amount: 49.9 }) } catch {}
+    // poll
+    if (pixExternalId.value || pixPaymentId.value) {
+      if (pixPollTimer) clearInterval(pixPollTimer)
+      let tries = 0
+      pixPollTimer = setInterval(() => {
+        checkPixStatus(true)
+        tries++
+        if (tries > 45 && pixPollTimer) {
+          clearInterval(pixPollTimer)
+          pixPollTimer = null
+        }
+      }, 5000)
+    }
+  } catch (e: any) {
+    blockedUnlockError.value =
+      e?.data?.statusMessage || e?.data?.message || e?.message || 'Não deu pra gerar o PIX agora'
+  } finally {
+    blockedUnlockLoading.value = false
+  }
+}
+
+async function buyChatPlan(p: typeof chatPlans[number]) {
+  chatPayError.value = ''
+  chatPayLoading.value = p.key
+  selectedChatPlan.value = p
+  try {
+    let visitor_id: string | null = null
+    try { visitor_id = getOrCreateVisitorId() } catch { visitor_id = null }
+    const res = await $fetch<{
+      ok: boolean
+      mode?: string
+      pix_code?: string
+      qr_image?: string
+      payment_id?: string
+      external_id?: string
+      hint?: string
+      amount_label?: string
+      credentials_found?: boolean
+      error?: string
+    }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: p.key,
+        amount: p.price,
+        title: p.title,
+        visitor_id,
+        source: 'links_chat_lock',
+      },
+    })
+    if (!res?.ok || !res.pix_code) {
+      throw new Error(res?.error || 'Falha ao gerar PIX')
+    }
+    pixPaid.value = false
+    pixCopyCode.value = res.pix_code
+    const isEmv = /^000201/.test(res.pix_code)
+    pixQrImage.value = isEmv
+      ? (res.qr_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}`)
+      : ''
+    pixPaymentId.value = res.payment_id || ''
+    pixExternalId.value = res.external_id || res.payment_id || ''
+    pixStatusText.value = isEmv
+      ? 'Aguardando pagamento… use o QR ou o copia e cola'
+      : (res.hint || 'Pague o PIX e confirme o status')
+    showChatPlans.value = false
+    showPixModal.value = true
+    try { track('chat_plan_checkout', { offer_slug: p.key, amount: p.price, mode: res.mode || 'unknown' }) } catch {}
+    if (pixExternalId.value || pixPaymentId.value) {
+      if (pixPollTimer) clearInterval(pixPollTimer)
+      let tries = 0
+      pixPollTimer = setInterval(() => { checkPixStatus(true); tries++; if (tries > 45 && pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null } }, 5000)
+    }
+  } catch (e: any) {
+    const msg =
+      e?.data?.statusMessage ||
+      e?.data?.message ||
+      e?.statusMessage ||
+      e?.message ||
+      'Erro ao gerar cobrança. Tenta de novo.'
+    chatPayError.value = String(msg)
+    console.error('[buyChatPlan]', e)
+  } finally {
+    chatPayLoading.value = null
+  }
+}
+async function checkPixStatus(silent = false) {
+  const id = pixPaymentId.value || pixExternalId.value
+  if (!id) {
+    if (!silent) pixStatusText.value = 'Sem ID de transação para consultar'
+    return
+  }
+  const started = Date.now()
+  if (!silent) {
+    pixStatusLoading.value = true
+    showPixStatusChecking.value = true
+  }
+  try {
+    const st = await $fetch<{ status?: string; message?: string }>('/api/checkout/status', {
+      query: { id },
+    })
+    const status = String(st?.status || '').toLowerCase()
+    if (['approved', 'paid', 'completed'].includes(status)) {
+      pixPaid.value = true
+      pixStatusText.value = 'Pagamento confirmado junto ao Banco Central do Brasil ✅'
+      if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
+      try { track('chat_plan_paid', { offer_slug: selectedChatPlan.value?.key || selectedPack.value?.key || 'chat' }) } catch {}
+      if (funnelStep.value === 'awaiting_payment' || funnelStep.value === 'pix') {
+        stopFunnelPayPoll()
+        showPixModal.value = false
+        onFunnelPaid()
+      }
+    } else if (!silent) {
+      pixStatusText.value = 'Consultamos o status do PIX junto ao Banco Central do Brasil: ainda pendente. Assim que cair, libera na hora.'
+    } else if (status === 'pending') {
+      pixStatusText.value = 'Aguardando confirmação do PIX no Banco Central…'
+    }
+  } catch (e: any) {
+    if (!silent) {
+      pixStatusText.value = e?.data?.statusMessage || e?.message || 'Não foi possível consultar o status agora'
+    }
+  } finally {
+    if (!silent) {
+      // garante que o popup de loading aparece pelo menos ~1.1s
+      const wait = Math.max(0, 1100 - (Date.now() - started))
+      if (wait) await new Promise((r) => setTimeout(r, wait))
+      showPixStatusChecking.value = false
+      pixStatusLoading.value = false
+    }
+  }
+}
+
+
+function isFunnelInputFocused(): boolean {
+  try {
+    const a = document.activeElement as HTMLElement | null
+    if (!a) return false
+    if (a.classList?.contains('wa-input')) return true
+    if (a.closest?.('.wa-funnel-composer')) return true
+    return false
+  } catch {
+    return false
+  }
+}
+
+function applyFunnelShellBox(h: number, top: number) {
+  const hh = Math.max(220, Math.round(h))
+  const tt = Math.max(0, Math.round(top))
+  const next: Record<string, string> = {
+    position: 'fixed',
+    left: '0px',
+    right: '0px',
+    width: '100%',
+    top: tt + 'px',
+    height: hh + 'px',
+    maxHeight: hh + 'px',
+    bottom: 'auto',
+    paddingBottom: '0px',
+    boxSizing: 'border-box',
+  }
+  const cur = funnelShellStyle.value || {}
+  if (cur.height === next.height && cur.top === next.top && cur.paddingBottom === '0px') return
+  funnelShellStyle.value = next
+}
+
+/** Só acompanha visualViewport real. Nunca inventa padding (evita vão preto). */
+function syncFunnelViewport() {
+  try {
+    const vv = window.visualViewport
+    const innerH = window.innerHeight || document.documentElement.clientHeight || 700
+
+    if (!funnelKeyboardOpen.value || !isFunnelInputFocused()) {
+      funnelKeyboardOpen.value = false
+      applyFunnelShellBox(innerH, 0)
+      return
+    }
+
+    if (vv) {
+      const vvH = Math.round(vv.height)
+      const vvTop = Math.round(vv.offsetTop || 0)
+      if (vvH < innerH * 0.92) {
+        applyFunnelShellBox(vvH, vvTop)
+        return
+      }
+    }
+
+    if (funnelKbdBaseH && innerH < funnelKbdBaseH * 0.92) {
+      applyFunnelShellBox(innerH, 0)
+      return
+    }
+
+    applyFunnelShellBox(innerH, 0)
+  } catch {}
+}
+
+function stopFunnelKbdPoll() {
+  if (funnelKbdPoll) {
+    clearInterval(funnelKbdPoll)
+    funnelKbdPoll = null
+  }
+}
+
+function onFunnelOverlayClick() {
+  if (funnelKeyboardOpen.value && isFunnelInputFocused()) return
+  closeWaFunnel()
+}
+
+function onFunnelInputFocus() {
+  try { closeFunnelEmojiPicker() } catch {}
+  try { showFunnelAttachMenu.value = false } catch {}
+  funnelKbdBaseH = window.innerHeight || 700
+  funnelKeyboardOpen.value = true
+  syncFunnelViewport()
+  stopFunnelKbdPoll()
+  let ticks = 0
+  funnelKbdPoll = setInterval(() => {
+    ticks++
+    if (!isFunnelInputFocused()) {
+      funnelKeyboardOpen.value = false
+      stopFunnelKbdPoll()
+      syncFunnelViewport()
+      return
+    }
+    syncFunnelViewport()
+    if (ticks >= 25) stopFunnelKbdPoll()
+  }, 100)
+}
+
+function onFunnelInputBlur() {
+  setTimeout(() => {
+    if (isFunnelInputFocused()) return
+    funnelKeyboardOpen.value = false
+    stopFunnelKbdPoll()
+    syncFunnelViewport()
+    setTimeout(syncFunnelViewport, 200)
+  }, 100)
+}
+
+let funnelBodyScrollY = 0
+
+function lockBodyScrollForFunnel() {
+  try {
+    // evita lock duplo
+    if (document.body.classList.contains('wa-funnel-open')) return
+    funnelBodyScrollY = window.scrollY || window.pageYOffset || 0
+    document.documentElement.classList.add('wa-funnel-open')
+    document.body.classList.add('wa-funnel-open')
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${funnelBodyScrollY}px`
+    document.body.style.left = '0'
+    document.body.style.right = '0'
+    document.body.style.width = '100%'
+  } catch {}
+}
+
+function unlockBodyScrollForFunnel() {
+  try {
+    document.documentElement.classList.remove('wa-funnel-open')
+    document.body.classList.remove('wa-funnel-open')
+    document.documentElement.style.overflow = ''
+    document.body.style.overflow = ''
+    document.body.style.position = ''
+    document.body.style.top = ''
+    document.body.style.left = ''
+    document.body.style.right = ''
+    document.body.style.width = ''
+    document.documentElement.style.touchAction = ''
+    document.body.style.touchAction = ''
+    const y = funnelBodyScrollY || 0
+    // restaura scroll da home
+    window.scrollTo(0, y)
+    // fallback iOS
+    requestAnimationFrame(() => {
+      try { window.scrollTo(0, y) } catch {}
+    })
+  } catch {}
+}
+
+let funnelVvClean: (() => void) | null = null
+function bindFunnelViewport() {
+  unbindFunnelViewport()
+  funnelKeyboardOpen.value = false
+  syncFunnelViewport()
+  const vv = window.visualViewport
+  const handler = () => syncFunnelViewport()
+  if (vv) {
+    vv.addEventListener('resize', handler)
+    vv.addEventListener('scroll', handler)
+  }
+  window.addEventListener('resize', handler)
+  document.addEventListener('focusout', handler)
+  funnelVvClean = () => {
+    if (vv) {
+      vv.removeEventListener('resize', handler)
+      vv.removeEventListener('scroll', handler)
+    }
+    window.removeEventListener('resize', handler)
+    document.removeEventListener('focusout', handler)
+  }
+}
+function unbindFunnelViewport() {
+  stopFunnelKbdPoll()
+  if (funnelVvClean) {
+    funnelVvClean()
+    funnelVvClean = null
+  }
+}
+
+const showFunnelProfile = ref(false)
+const funnelStep = ref<'greeting' | 'menu' | 'packs' | 'video' | 'webnamoro' | 'chat' | 'pix' | 'awaiting_payment' | 'paid' | 'redirect' | 'other' | 'video_consult' | 'video_avulso' | string>('greeting')
+const funnelMessages = ref<{ id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; edited?: boolean; deleted?: boolean }[]>([])
+const funnelTyping = ref(false)
+const funnelChatBox = ref<HTMLElement | null>(null)
+const selectedPack = ref<{ key: string; label: string; price: string } | null>(null)
+const funnelPixCode = ref('')
+const funnelPaymentId = ref('')
+const funnelExternalId = ref('')
+let funnelPayPoll: ReturnType<typeof setInterval> | null = null
+
+function priceToNumber(price: string): number {
+  return Number(String(price).replace(',', '.').replace(/[^0-9.]/g, '')) || 0
+}
+
+function stopFunnelPayPoll() {
+  if (funnelPayPoll) {
+    clearInterval(funnelPayPoll)
+    funnelPayPoll = null
+  }
+}
+
+function pixBubbleHtml(code: string, priceLabel: string) {
+  const safe = String(code).replace(/</g, '&lt;')
+  return (
+    `<div style="line-height:1.45">` +
+    `<b>PIX gerado  R$ ${priceLabel}</b><br>` +
+    `<span style="opacity:.85">Copia e cola no app do banco:</span><br><br>` +
+    `<code style="display:block;word-break:break-all;font-size:0.72em;background:rgba(0,0,0,.25);padding:8px;border-radius:8px">${safe}</code><br>` +
+    `Paga aí e toca em <b>Já paguei</b> que eu libero o próximo passo 💚` +
+    `</div>`
+  )
+}
+
+async function generateFunnelPix() {
+  const pack = selectedPack.value
+  if (!pack) return false
+  const amount = priceToNumber(pack.price)
+  try {
+    const visitor_id = (() => { try { return getOrCreateVisitorId() } catch { return null } })()
+    const res = await $fetch<{
+      ok: boolean
+      pix_code?: string
+      payment_id?: string
+      external_id?: string
+      error?: string
+    }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: pack.key,
+        amount,
+        title: pack.label,
+        visitor_id,
+        source: 'links_wa_funnel',
+      },
+    })
+    if (!res?.ok || !res.pix_code || !/^000201/.test(res.pix_code)) {
+      throw new Error(res?.error || 'Falha ao gerar PIX')
+    }
+    funnelPixCode.value = res.pix_code
+    funnelPaymentId.value = res.payment_id || ''
+    funnelExternalId.value = res.external_id || res.payment_id || ''
+    return true
+  } catch (e: any) {
+    console.error('[funnel pix]', e)
+    await funnelType(
+      'Amor, deu um probleminha pra gerar o PIX agora 😢 Tenta de novo em instantes ou escolhe outra opção.',
+      1200,
+    )
+    return false
+  }
+}
+
+
+
+
+function stopVideoCallTimer() {
+  if (videoCallTimer) {
+    clearInterval(videoCallTimer)
+    videoCallTimer = null
+  }
+}
+
+// --- Som de chamada entrando (ringtone sintetizado, sem arquivo externo) ---
+let incomingRingCtx: AudioContext | null = null
+let incomingRingTimer: ReturnType<typeof setInterval> | null = null
+let incomingRingOsc: OscillatorNode[] = []
+
+function stopIncomingRingtone() {
+  try {
+    if (incomingRingTimer) {
+      clearInterval(incomingRingTimer)
+      incomingRingTimer = null
+    }
+    for (const o of incomingRingOsc) {
+      try { o.stop() } catch {}
+    }
+    incomingRingOsc = []
+    if (incomingRingCtx) {
+      try { incomingRingCtx.close() } catch {}
+      incomingRingCtx = null
+    }
+  } catch {}
+}
+
+function playIncomingRingtone() {
+  stopIncomingRingtone()
+  try {
+    const AC = window.AudioContext || (window as any).webkitAudioContext
+    if (!AC) return
+    const ctx = new AC()
+    incomingRingCtx = ctx
+
+    const ringOnce = () => {
+      if (!incomingRingCtx) return
+      // Tom clássico de telefone: dois tons alternando (440Hz + 480Hz style)
+      const freqs = [440, 480]
+      freqs.forEach((f, i) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.value = f
+        gain.gain.value = 0.0001
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        const t0 = ctx.currentTime + i * 0.02
+        // envelope: sobe, segura, desce (padrão de toque)
+        gain.gain.setValueAtTime(0.0001, t0)
+        gain.gain.exponentialRampToValueAtTime(0.12, t0 + 0.05)
+        gain.gain.setValueAtTime(0.12, t0 + 0.35)
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.45)
+        osc.start(t0)
+        osc.stop(t0 + 0.5)
+        incomingRingOsc.push(osc)
+      })
+    }
+
+    // primeiro toque imediato
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+    ringOnce()
+    // repete a cada ~1.4s enquanto a tela de chamada estiver aberta
+    incomingRingTimer = setInterval(() => {
+      if (!showIncomingCall.value) {
+        stopIncomingRingtone()
+        return
+      }
+      incomingRingOsc = []
+      ringOnce()
+      try {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([180, 80, 180])
+      } catch {}
+    }, 1400)
+  } catch (e) {
+    console.warn('[ringtone]', e)
+  }
+}
+
+function startIncomingVideoCall() {
+  // Lead sem chat liberado não recebe tela de chamada (exceto admin em teste)
+  if (!funnelChatUnlocked.value && !isAdmin.value) {
+    openChatUnlockInfo('call')
+    return
+  }
+  showDeclineWhy.value = false
+  declineWhyText.value = ''
+  videoCallEndedUpsell.value = false
+  showIncomingCall.value = true
+  playIncomingRingtone()
+  try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200])
+  } catch {}
+}
+
+async function acceptIncomingCall() {
+  stopIncomingRingtone()
+  showIncomingCall.value = false
+  if (!funnelChatUnlocked.value && !isAdmin.value) {
+    openChatUnlockInfo('call')
+    return
+  }
+  let credit = loadCallCredit()
+  try {
+    const synced = await syncCallCreditFromServer()
+    if (synced) credit = synced
+  } catch {}
+  if (credit && credit.secondsLeft > 0) {
+    videoCallUnlocked.value = true
+    videoCallPurchasedMin.value = Math.max(1, Math.ceil(credit.secondsLeft / 60))
+    beginLiveVideoCall()
+    return
+  }
+  showCallSalesBalloon.value = true
+  funnelStep.value = 'video_sales_balloon'
+  try { track('call_sales_balloon_open', { offer_slug: 'videochamada' }) } catch {}
+}
+
+function declineIncomingCall() {
+  // Evita spam se o lead ficar apertando recusar
+  if (declineIncomingLock) return
+  declineIncomingLock = true
+  setTimeout(() => { declineIncomingLock = false }, 2500)
+
+  stopIncomingRingtone()
+  showIncomingCall.value = false
+  try { showCallSalesBalloon.value = false } catch {}
+  try { showVideoCallPlayer.value = false } catch {}
+
+  // Marca este convite como recusado — poll não reabre a chamada nem reprocessa
+  const cid = lastIncomingCallMsgId.value
+  if (cid) declinedCallMsgIds.value[cid] = true
+
+  showDeclineWhy.value = true
+  funnelStep.value = 'video_declined'
+  // Só texto — nunca mídia / foto ao recusar
+  funnelType(
+    'Poxa… você recusou minha chamada 🥺|||Fica tranquilo, sem pressão. Me conta o que te segurou?',
+    1200,
+  ).catch(() => {})
+}
+
+async function submitDeclineWhy() {
+  const why = (declineWhyText.value || '').trim()
+  showDeclineWhy.value = false
+  if (why) {
+    pushFunnel('me', why)
+    track('whatsapp_funnel_call_declined', { message: why.slice(0, 160) })
+  }
+  const lower = why.toLowerCase()
+  let reply =
+    'Entendi, amor. Se mudar de ideia é só tocar no ícone de vídeo que eu te ligo de novo 💕\n\nEnquanto isso posso te mostrar packs ou um vídeo avulso bem safado…'
+  if (/caro|pre[cç]o|valor|dinheiro|saldo/.test(lower)) {
+    reply =
+      'Sobre o valor: o de 10 min já dá pra sentir o clima todinho 🔥\n\nMuita gente começa pelo menor e depois aumenta. Quer que eu te mostre de novo os tempos?'
+    funnelStep.value = 'video'
+  } else if (/hora|agora|depois|trabalho|ocupado|momento/.test(lower)) {
+    reply =
+      'Sem problema, amor. Quando liberar você me chama que eu te ligo de novo na hora 😘\n\nPosso te deixar um pack pra você ir se aquecendo enquanto isso?'
+  } else if (/medo|vergonha|insegur|n[aã]o sei/.test(lower)) {
+    reply =
+      'Relaxa… aqui é só nós dois, sem gravação pra fora e no seu ritmo 😌\n\nSe quiser só 10 min pra testar, eu te recebo bem gostoso. Atende na próxima?'
+  } else if (/whats|zap|ligar|telefone/.test(lower)) {
+    reply =
+      'A chamada é aqui mesmo no chat, com vídeo liberado depois do PIX — mais discreto que WhatsApp 🔒\n\nQuer tentar de novo?'
+  }
+  await funnelType(reply, 1600)
+  if (funnelStep.value === 'video') {
+    // opções de preço já no step video
+  } else {
+    funnelStep.value = 'menu'
+  }
+}
+
+function formatCallClock(totalSec: number) {
+  const m = Math.floor(Math.max(0, totalSec) / 60)
+  const s = Math.max(0, totalSec) % 60
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+function beginLiveVideoCall() {
+  const playlist = buildCallPlaylist()
+  if (!playlist.length && !isAdmin.value) {
+    funnelType('Ainda não tem vídeo novo pra essa chamada… tenta de novo em instantes 😘', 1200)
+    return
+  }
+  callPlaylist.value = playlist.length ? playlist : videoCallVideos.value.slice()
+  callPlaylistIndex.value = 0
+  showVideoCallPlayer.value = true
+  videoCallActive.value = true
+  videoCallEndedUpsell.value = false
+  videoCallIndex.value = 0
+  if (callPlaylist.value.length) {
+    const first = callPlaylist.value[0]
+    const idx = videoCallVideos.value.indexOf(first)
+    videoCallIndex.value = idx >= 0 ? idx : 0
+  }
+  const credit = loadCallCredit()
+  const totalSeconds = credit && credit.secondsLeft > 0
+    ? credit.secondsLeft
+    : (videoCallPurchasedMin.value || 10) * 60
+  videoCallSecondsLeft.value = totalSeconds
+  videoCallSecondsUsed.value = 0
+  callSessionStartedAt.value = Date.now()
+  stopVideoCallTimer()
+  videoCallTimer = setInterval(() => {
+    videoCallSecondsUsed.value += 1
+    videoCallSecondsLeft.value = Math.max(0, totalSeconds - videoCallSecondsUsed.value)
+    if (videoCallSecondsLeft.value <= 0) {
+      endLiveVideoCall('timer')
+    }
+  }, 1000)
+  try { track('call_live_start', { seconds: totalSeconds }) } catch {}
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    $fetch('/api/call-credit', {
+      method: 'POST',
+      body: {
+        action: 'start_session',
+        visitor_id,
+        conversation_id: funnelConversationId.value || undefined,
+      },
+    }).catch(() => {})
+  } catch {}
+}
+
+function endLiveVideoCall(reason: 'timer' | 'video_end' | 'hangup' = 'hangup') {
+  stopVideoCallTimer()
+  const usedSec = videoCallSecondsUsed.value || 0
+  try {
+    consumeCallCredit(usedSec)
+    markCurrentCallVideosWatched()
+  } catch {}
+  videoCallActive.value = false
+  showVideoCallPlayer.value = false
+  videoCallEndedUpsell.value = true
+  funnelStep.value = 'video_upsell'
+  const used = formatCallClock(usedSec)
+  const credit = loadCallCredit()
+  const leftMin = credit ? Math.ceil(credit.secondsLeft / 60) : 0
+  if (credit && credit.secondsLeft > 0) {
+    funnelType(
+      `Chamada pausada (${used}). Ainda restam ~${leftMin} min do seu pacote.\n\nQuando quiser continuar, toque em Iniciar videochamada ou atenda quando eu te ligar 🔥`,
+      1600,
+    )
+  } else {
+    videoCallUnlocked.value = false
+    funnelType(
+      reason === 'timer' || reason === 'video_end'
+        ? `Seu tempo de chamada acabou, amor ⏱ (${used})\n\nSe quiser continuar comigo, assina mais minutos:\n\n• +10 min  R$ 99,90\n• +20 min  R$ 149,90\n• +30 min  R$ 229,90\n\nBora prorrogar?`
+        : `Chamada encerrada (${used}). Seu pacote foi consumido — pra me ver de novo é só assinar mais minutos 🔥`,
+      1600,
+    )
+  }
+  try { track('call_live_end', { reason, used_sec: usedSec, left_sec: credit?.secondsLeft || 0 }) } catch {}
+}
+
+function onVideoCallMediaEnded() {
+  try {
+    const url = videoCallVideos.value[videoCallIndex.value]
+    if (url) markVideosWatched([url])
+  } catch {}
+  callPlaylistIndex.value += 1
+  if (callPlaylistIndex.value < callPlaylist.value.length) {
+    const nextUrl = callPlaylist.value[callPlaylistIndex.value]
+    const idx = videoCallVideos.value.indexOf(nextUrl)
+    if (idx >= 0) {
+      videoCallIndex.value = idx
+      return
+    }
+  }
+  endLiveVideoCall('video_end')
+}
+
+function openVideoCallPlayer() {
+  if (!videoCallUnlocked.value && !isAdmin.value) {
+    startIncomingVideoCall()
+    return
+  }
+  if (!videoCallVideos.value.length && !isAdmin.value) {
+    funnelType('Ainda não subi os vídeos da chamada… tenta de novo em instantes 😘', 1000)
+    return
+  }
+  beginLiveVideoCall()
+}
+function closeVideoCallPlayer() {
+  if (videoCallActive.value) {
+    endLiveVideoCall('hangup')
+    return
+  }
+  showVideoCallPlayer.value = false
+}
+function nextVideoCallClip() {
+  if (videoCallIndex.value < videoCallVideos.value.length - 1) {
+    videoCallIndex.value += 1
+  }
+}
+function prevVideoCallClip() {
+  if (videoCallIndex.value > 0) videoCallIndex.value -= 1
+}
+
+async function adminPayWithBalance() {
+  // Botão só aparece com isAdmin no UI — mas isAdmin no browser pode ser forjado.
+  // Liberação SÓ após o servidor validar o cookie httpOnly admin_token.
+  const pack = selectedPack.value
+  if (!pack) {
+    await funnelType('Nenhum produto selecionado pra testar 😅', 800)
+    return
+  }
+  try {
+    await $fetch('/api/admin/test-pay', { method: 'POST' })
+  } catch {
+    isAdmin.value = false
+    await funnelType('Essa opção é só pra admin logado 🔒', 900)
+    return
+  }
+  isAdmin.value = true
+  track('whatsapp_funnel_admin_pay', { offer_slug: pack.key || 'admin' })
+  try {
+    pixPaid.value = true
+    showPixModal.value = false
+  } catch {}
+  funnelChatUnlocked.value = true
+  funnelBlocked.value = false
+    startLiveChatPoll()
+  if ((pack.key || '').startsWith('vid_') || pack.key === 'video_avulso') {
+    videoCallUnlocked.value = true
+  }
+  funnelStep.value = (pack.key || '').startsWith('vid_') ? 'video_call_ready' : 'paid'
+  await funnelType(
+    `✅ Pago com saldo admin (∞)\n\n${pack.label} R$ ${pack.price} liberado em modo teste.`,
+    1000,
+  )
+  if ((pack.key || '').startsWith('vid_')) {
+    await funnelType('Toque em Iniciar videochamada pra testar os vídeos 📹', 900)
+  } else {
+    await funnelType('Pode continuar testando o chat por aqui 😘', 800)
+  }
+}
+
+async function startFunnelCheckout() {
+  const pack = selectedPack.value
+  if (!pack) return
+  // Admin: oferece saldo infinito pra testar sem PIX real
+  if (isAdmin.value) {
+    funnelStep.value = 'pix'
+    await funnelType(
+      `Fechado 🔥 ${pack.label} por R$ ${pack.price}.\n\nVocê está como admin — pode pagar com saldo (∞) pra testar ou gerar PIX real.`,
+      1200,
+    )
+    return
+  }
+  await funnelType(
+    `Fechado 🔥 ${pack.label} por R$ ${pack.price}.\n\nVou abrir o PIX pra você pagar agora. Assim que confirmar eu te falo o próximo passo 💕`,
+    1400,
+  )
+  const ok = await generateFunnelPix()
+  if (!ok) {
+    funnelStep.value = 'menu'
+    return
+  }
+
+  // Prepara o PIX internamente — NÃO abre modal nem joga código na cara
+  selectedChatPlan.value = {
+    key: pack.key,
+    title: pack.label,
+    desc: '',
+    price: priceToNumber(pack.price),
+    priceLabel: pack.price,
+  }
+  pixPaid.value = false
+  pixCopyCode.value = funnelPixCode.value
+  const isEmv = /^000201/.test(funnelPixCode.value)
+  pixQrImage.value = isEmv
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(funnelPixCode.value)}`
+    : ''
+  pixPaymentId.value = funnelPaymentId.value
+  pixExternalId.value = funnelExternalId.value
+  pixStatusText.value = 'Aguardando pagamento… use o QR ou o copia e cola'
+  // guarda pronto, mas só mostra quando o lead autorizar
+  ;(window as any).__pixAskedOnce = false
+  ;(window as any).__pixCodeShown = false
+  funnelStep.value = 'pix_ask'
+  await funnelType(
+    `Fechado: ${pack.label} por R$ ${pack.price} 💕\n\nPosso te mandar a chave PIX agora pra você pagar?\n\nToque no botão abaixo 👇`,
+    1600,
+  )
+
+  stopFunnelPayPoll()
+  let tries = 0
+  funnelPayPoll = setInterval(() => {
+    tries++
+    checkFunnelPayment(true)
+    if (tries > 60) stopFunnelPayPoll()
+  }, 5000)
+  if (pixPollTimer) clearInterval(pixPollTimer)
+  let tries2 = 0
+  pixPollTimer = setInterval(() => {
+    checkPixStatus(true)
+    tries2++
+    if (tries2 > 45 && pixPollTimer) {
+      clearInterval(pixPollTimer)
+      pixPollTimer = null
+    }
+  }, 5000)
+}
+
+async function checkFunnelPayment(silent = false) {
+  const id = funnelPaymentId.value || funnelExternalId.value
+  if (!id) {
+    if (!silent) await funnelType('Ainda não tenho o ID do pagamento… gera o PIX de novo 😘', 1000)
+    return
+  }
+  try {
+    const st = await $fetch<{ status?: string; message?: string }>('/api/checkout/status', { query: { id } })
+    const status = String(st?.status || '').toLowerCase()
+    if (['approved', 'paid', 'completed'].includes(status)) {
+      stopFunnelPayPoll()
+      if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
+      showPixModal.value = false
+      pixPaid.value = true
+      await onFunnelPaid()
+    } else if (!silent) {
+      await funnelType('Consultei o PIX junto ao Banco Central… ainda não caiu, amor. Assim que confirmar eu te libero 👀', 1200)
+    }
+  } catch {
+    if (!silent) await funnelType('Não consegui consultar agora. Tenta de novo em alguns segundos 💚', 1000)
+  }
+}
+
+async function onFunnelPaid() {
+  const pack = selectedPack.value
+  const planKey = String(pack?.key || selectedChatPlan.value?.key || '')
+  funnelStep.value = 'paid'
+  track('whatsapp_funnel_paid', { offer_slug: planKey || 'paid' })
+  const isSegunda = planKey === 'chat_unlock_segunda_chance' || planKey === 'chat_unlock_blocked'
+  const isChat = planKey.startsWith('chat_')
+  const isVideo = planKey.startsWith('vid_')
+  const isPack = planKey.startsWith('pack_')
+  const isWeb = planKey.startsWith('web_')
+
+  await funnelType('Recebi o PIX aqui, meu amor ✅', 1200)
+
+  if (planKey === 'mimo_gift') {
+    showPixModal.value = false
+    await funnelType('Recebi seu mimo, obrigada 🎁💚 Fiquei feliz de verdade…', 1600)
+    funnelStep.value = 'other'
+    return
+  }
+
+  if (isSegunda) {
+    clearPermanentBlock()
+    funnelBlocked.value = false
+    funnelChatUnlocked.value = true
+    startLiveChatPoll()
+    showPixModal.value = false
+    showBlockedUnlock.value = false
+    await funnelType('Segunda chance aceita 💚 Chat liberado de novo. Se comporta, hein…', 1600)
+    funnelStep.value = 'other'
+    return
+  }
+
+  if (isChat) {
+    funnelChatUnlocked.value = true
+    funnelBlocked.value = false
+    startLiveChatPoll()
+    showPixModal.value = false
+    showChatPlans.value = false
+    await funnelType(
+      'Pronto, mensagens liberadas ✅|||Pode me mandar o que quiser agora 😏',
+      1200,
+    )
+    // Se tinha texto pendente (travou no gate de R$ 9,90), processa de novo
+    try {
+      const pending = String((window as any).__pendingLeadText || '').trim()
+      if (pending) {
+        ;(window as any).__pendingLeadText = ''
+        funnelInput.value = pending
+        await sendFunnelFreeText()
+      }
+    } catch {}
+    funnelStep.value = 'other'
+    return
+  }
+
+  if (isVideo) {
+    videoCallUnlocked.value = true
+    const minutes = videoCallPurchasedMin.value || Number(String(selectedPack.value?.key || '').replace('vid_', '')) || 10
+    grantCallCredit(Number(minutes) || 10, selectedPack.value?.key || 'vid_10')
+    await funnelType(
+      `Recebi o PIX, amor 🔥\n\nSua videochamada (${pack?.label || 'ao vivo'}) tá liberada.\n\nVou te ligar agora — atende pra gente começar 😈`,
+      1600,
+    )
+    funnelStep.value = 'video_call_ready'
+    setTimeout(() => {
+      try { startIncomingVideoCall() } catch {}
+    }, 1800)
+  } else if (isPack) {
+    await funnelType(
+      'Recebi o PIX aqui meu amor 🔥 Me chama no WhatsApp que eu já vou te mandar os meus conteúdos. Garanto que você vai amar 😋',
+      2000,
+    )
+  } else if (isWeb) {
+    await funnelType(
+      `Pronto meu amor 💕 Vou te passar meu WhatsApp e você vai poder conversar comigo como sua namoradinha pelo tempo do seu plano (${pack?.label || 'webnamoro'}).\n\nQuero te dar atenção de verdade… me chama no +55 47 992750967 e eu fico só sua 🥰`,
+      2200,
+    )
+  } else {
+    await funnelType(
+      'Recebi o PIX meu amor 💚 Me chama no WhatsApp +55 47 992750967 que eu te atendo agora.',
+      1600,
+    )
+  }
+  funnelStep.value = 'redirect'
+}
+
+let funnelTimer: ReturnType<typeof setTimeout> | null = null
+
+function escapeHtml(s: string) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+function scrollFunnel() {
+  nextTick(() => {
+    const el = funnelChatBox.value
+    if (el) el.scrollTop = el.scrollHeight
+  })
+}
+
+function markLastLeadMessage(status: 'delivered' | 'read') {
+  const order = { sent: 0, delivered: 1, read: 2 }
+  // marca da mais recente para trás até achar um já no status alvo (todas as do lead ficam visualizadas)
+  for (let i = funnelMessages.value.length - 1; i >= 0; i--) {
+    const msg = funnelMessages.value[i]
+    if (msg.from !== 'me') continue
+    const cur = order[msg.status || 'sent'] || 0
+    if (order[status] >= cur) msg.status = status
+    if (status === 'delivered') break // entregue só a última enviada
+  }
+}
+
+function pushFunnel(from: 'her' | 'me', text: string, html?: string, opts?: { skipLog?: boolean; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; mediaUrl?: string; logExtra?: Record<string, any> }) {
+  const cleanText = String(text || '').trim()
+  // Evita repetir a mesma bolha (clique duplo / poll / restore)
+  if (cleanText && !(opts as any)?.mediaUrl) {
+    const last = funnelMessages.value[funnelMessages.value.length - 1]
+    if (last && last.from === from && String(last.text || '').trim() === cleanText) {
+      return last
+    }
+    // mesma mensagem há poucos segundos (não só a última)
+    const now = Date.now()
+    for (let i = funnelMessages.value.length - 1; i >= Math.max(0, funnelMessages.value.length - 8); i--) {
+      const m = funnelMessages.value[i]
+      if (m.from === from && String(m.text || '').trim() === cleanText) {
+        const mid = String(m.id || '')
+        // ids locais m_timestamp — se muito recente, pula
+        if (mid.startsWith('m_')) return m
+      }
+    }
+  }
+  const row: { id: string; from: 'her' | 'me'; text: string; html?: string; time: string; status?: 'sent' | 'delivered' | 'read'; mediaKind?: 'photo' | 'video' | 'audio' | 'doc' | null; edited?: boolean; deleted?: boolean } = {
+    id: `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    from,
+    text: cleanText || text,
+    html,
+    time: nowTime(),
+    mediaKind: (opts as any)?.mediaKind || null,
+  }
+  if (from === 'me') row.status = 'sent'
+  funnelMessages.value.push(row)
+  if (from === 'me') {
+    // entregue
+    setTimeout(() => {
+      markLastLeadMessage('delivered')
+      try { saveFunnelState() } catch {}
+    }, 400 + Math.random() * 500)
+  }
+  if (from === 'her') {
+    // quando ela responde, mensagens do lead ficam visualizadas
+    markLastLeadMessage('read')
+  }
+  scrollFunnel()
+  // grava no Supabase (lead = me, bot = her)
+  if (!opts?.skipLog) {
+    const extra: Record<string, any> = { has_html: !!html, ...(opts?.logExtra || {}) }
+    if ((opts as any)?.mediaKind) extra.media_kind = (opts as any).mediaKind
+    if ((opts as any)?.mediaUrl) extra.media_url = (opts as any).mediaUrl
+    // lead mídia: sobe temp pro Telegram e apaga depois do envio
+    if (from === 'me' && (opts as any)?.mediaUrl && String((opts as any).mediaUrl).startsWith('blob:')) {
+      uploadLeadMediaAndNotify(text, (opts as any).mediaKind, (opts as any).mediaUrl, html)
+    } else {
+      logFunnelMessage(from === 'me' ? 'lead' : 'bot', text, extra)
+    }
+  }
+}
+
+/** Delay humano: lê o tamanho da msg + jitter (evita parecer bot) */
+function humanDelay(text: string, base = 0): number {
+  const len = (text || '').replace(/\s+/g, ' ').trim().length
+  // ~38ms por caractere, piso 1.8s, teto 5.8s + jitter 200–900ms
+  const reading = Math.min(5800, Math.max(1800, Math.round(len * 38)))
+  const jitter = 200 + Math.floor(Math.random() * 700)
+  const extra = base > 0 ? Math.round(base * 0.35) : 0
+  return reading + jitter + extra
+}
+
+function funnelType(text: string, delay = 0, html?: string) {
+  const raw = String(text || '')
+  // Quebra ||| em bolhas separadas (evita texto colado e reenvio estranho)
+  if (!html && (raw.includes('|||') || /\n\n/.test(raw))) {
+    return funnelTypeParts(raw, delay || 900)
+  }
+  markLastLeadMessage('read')
+  return new Promise<void>((resolve) => {
+    funnelTyping.value = true
+    scrollFunnel()
+    if (funnelTimer) clearTimeout(funnelTimer)
+    const wait = humanDelay(raw, delay)
+    funnelTimer = setTimeout(() => {
+      funnelTyping.value = false
+      pushFunnel('her', raw, html)
+      saveFunnelState()
+      resolve()
+    }, wait)
+  })
+}
+
+const funnelOptions = computed(() => {
+  // greeting / bloqueado: sem botões
+  if (funnelBlocked.value || funnelStep.value === 'greeting' || funnelStep.value === 'closed_offline') {
+    return []
+  }
+  // NÃO zera opções ao digitar — evita o chat "encolher"
+  if (funnelStep.value === 'menu') {
+    return [
+      { key: 'video', label: '📹 Videochamada', variant: 'wa-quick--yes' },
+      { key: 'video_avulso', label: '🎬 Vídeo avulso', variant: 'wa-quick--yes' },
+      { key: 'pack', label: '🔥 Pack de conteúdo', variant: 'wa-quick--yes' },
+      { key: 'webnamoro', label: '💕 Webnamoro', variant: 'wa-quick--yes' },
+      { key: 'conversar', label: '💬 Só conversar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'packs') {
+    return [
+      { key: 'pack_basic', label: 'Pack gostinho  R$ 29,90', variant: 'wa-quick--yes' },
+      { key: 'pack_gold', label: 'Pack Gold solo  R$ 79,90', variant: 'wa-quick--yes' },
+      { key: 'pack_combo', label: 'Combo completo  R$ 109,90', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'video') {
+    // Tempo já combinado: não reoferece a lista — só PIX ou mudar tempo
+    if ((selectedPack.value?.key || '').startsWith('vid_')) {
+      return [
+        { key: 'pix_yes', label: 'Sim, pode mandar o PIX', variant: 'wa-quick--yes' },
+        { key: 'change_time', label: 'Mudar tempo', variant: 'wa-quick--no' },
+      ]
+    }
+    return [
+      { key: 'vid_10', label: '10 min  R$ 99,90', variant: 'wa-quick--yes' },
+      { key: 'vid_20', label: '20 min  R$ 149,90', variant: 'wa-quick--yes' },
+      { key: 'vid_30', label: '30 min  R$ 229,90', variant: 'wa-quick--yes' },
+      { key: 'vid_60', label: '1 hora  R$ 399,90', variant: 'wa-quick--yes' },
+      { key: 'vid_90', label: '90 min  R$ 549,90', variant: 'wa-quick--yes' },
+      { key: 'vid_120', label: '2 horas  R$ 699,90', variant: 'wa-quick--yes' },
+      { key: 'vid_180', label: '3 horas  R$ 999,90', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'pix_ask' || funnelStep.value === 'pix_ask_hour') {
+    return [
+      { key: 'pix_yes', label: 'Sim, pode mandar o PIX 💚', variant: 'wa-quick--yes' },
+      { key: 'pix_no', label: 'Ainda não', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'webnamoro') {
+    return [
+      { key: 'web_7', label: '7 dias  R$ 179,90', variant: 'wa-quick--yes' },
+      { key: 'web_15', label: '15 dias  R$ 299,90', variant: 'wa-quick--yes' },
+      { key: 'web_30', label: '30 dias  R$ 499,90', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'chat' || funnelStep.value === 'chat_unlock') {
+    return [
+      { key: 'chat_quick', label: 'Liberar chat  R$ 3,00', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'video_upsell') {
+    return [
+      { key: 'vid_10', label: '+10 min  R$ 99,90', variant: 'wa-quick--yes' },
+      { key: 'vid_20', label: '+20 min  R$ 149,90', variant: 'wa-quick--yes' },
+      { key: 'vid_30', label: '+30 min  R$ 229,90', variant: 'wa-quick--yes' },
+      { key: 'upsell_no', label: 'Agora não', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'video_call_ready') {
+    return [
+      { key: 'start_video_call', label: '📹 Iniciar videochamada', variant: 'wa-quick--yes' },
+    ]
+  }
+
+    if (funnelStep.value === 'pix') {
+    const opts = [
+      { key: 'pix_generate', label: 'Gerar PIX agora 💚', variant: 'wa-quick--yes' },
+      { key: 'pix_no', label: 'Agora não', variant: 'wa-quick--no' },
+    ]
+    if (isAdmin.value) {
+      opts.unshift({ key: 'admin_pay', label: '🛠 Pagar com saldo admin (∞)', variant: 'wa-quick--yes' })
+    }
+    return opts
+  }
+  if (funnelStep.value === 'awaiting_payment') {
+    const opts = [
+      { key: 'pix_copy', label: 'Copiar código PIX 📋', variant: 'wa-quick--yes' },
+      { key: 'pix_check', label: 'Já paguei verificar ✅', variant: 'wa-quick--yes' },
+    ]
+    if (isAdmin.value) {
+      opts.unshift({ key: 'admin_pay', label: '🛠 Pagar com saldo admin (∞)', variant: 'wa-quick--yes' })
+    }
+    return opts
+  }
+  if (funnelStep.value === 'paid' || funnelStep.value === 'redirect') {
+    return [
+      { key: 'go_wa', label: 'Abrir WhatsApp agora →', variant: 'wa-quick--yes' },
+      { key: 'back_menu', label: '← Menu', variant: 'wa-quick--no' },
+    ]
+  }
+  if (funnelStep.value === 'other') {
+    return [
+      { key: 'go_wa', label: 'Falar no WhatsApp →', variant: 'wa-quick--yes' },
+      { key: 'back_menu', label: '← Ver outras opções', variant: 'wa-quick--no' },
+    ]
+  }
+  
+  if (funnelStep.value === 'video_avulso_confirm') {
+    const opts = [
+      { key: 'pix_yes', label: 'Sim, gera o PIX 💚', variant: 'wa-quick--yes' },
+      { key: 'back', label: '← Voltar', variant: 'wa-quick--no' },
+    ]
+    if (isAdmin.value) {
+      opts.unshift({ key: 'admin_pay', label: '🛠 Pagar com saldo admin (∞)', variant: 'wa-quick--yes' })
+    }
+    return opts
+  }
+
+  return []
+})
+
+// Espelha no admin quais botões o lead está vendo em cada etapa do funil
+watch(
+  () => [funnelStep.value, funnelOptions.value.map((o) => o.key).join('|')] as const,
+  ([step, keys]) => {
+    try {
+      if (!showWaFunnel.value) return
+      const opts = funnelOptions.value
+      if (!opts.length) return
+      const labels = opts.map((o) => o.label).join(' · ')
+      logFunnelMessage('system', `[botões] ${step}: ${labels}`, {
+        event: 'options_shown',
+        step,
+        option_keys: opts.map((o) => o.key),
+        option_labels: opts.map((o) => o.label),
+      })
+    } catch {}
+  },
+)
+
+
+const FUNNEL_STORAGE_KEY = 'wanessa_wa_funnel_v1'
+const FUNNEL_SESSION_KEY = 'wanessa_wa_funnel_session'
+const FUNNEL_CONV_KEY = 'wanessa_wa_funnel_conversation'
+
+const funnelConversationId = ref('')
+const funnelAccessToken = ref('')
+
+function getFunnelSessionId(): string {
+  try {
+    let id = sessionStorage.getItem(FUNNEL_SESSION_KEY) || ''
+    if (!id) {
+      id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `fs_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+      sessionStorage.setItem(FUNNEL_SESSION_KEY, id)
+    }
+    return id
+  } catch {
+    return `fs_${Date.now().toString(36)}`
+  }
+}
+
+function loadFunnelConversationLocal() {
+  try {
+    const raw = localStorage.getItem(FUNNEL_CONV_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    if (data?.conversation_id && data?.access_token && data?.visitor_id === getOrCreateVisitorId()) {
+      funnelConversationId.value = data.conversation_id
+      funnelAccessToken.value = data.access_token
+    }
+  } catch {}
+}
+
+function saveFunnelConversationLocal(conversation_id: string, access_token: string) {
+  try {
+    funnelConversationId.value = conversation_id
+    funnelAccessToken.value = access_token
+    localStorage.setItem(
+      FUNNEL_CONV_KEY,
+      JSON.stringify({
+        conversation_id,
+        access_token,
+        visitor_id: getOrCreateVisitorId(),
+        savedAt: Date.now(),
+      }),
+    )
+  } catch {}
+}
+
+/** Garante conversation_id + access_token no client (precisa pra puxar reply do admin). */
+async function ensureFunnelConversation(): Promise<boolean> {
+  try {
+    if (!funnelConversationId.value || !funnelAccessToken.value) loadFunnelConversationLocal()
+    if (funnelConversationId.value && funnelAccessToken.value) return true
+    const visitor_id = getOrCreateVisitorId()
+    const res = await $fetch<{ ok?: boolean; conversation_id?: string; access_token?: string }>('/api/funnel-chat', {
+      method: 'POST',
+      body: {
+        visitor_id,
+        session_id: getFunnelSessionId(),
+        conversation_id: null,
+        access_token: null,
+        creator_slug: 'wanessabsx',
+        direction: 'lead',
+        message: '[sync]',
+        step: funnelStep.value || 'greeting',
+        chat_unlocked: !!funnelChatUnlocked.value,
+        metadata: { event: 'ensure_conversation' },
+      },
+    })
+    if (res?.conversation_id && res?.access_token) {
+      saveFunnelConversationLocal(res.conversation_id, res.access_token)
+      return true
+    }
+  } catch (e) {
+    console.warn('[ensureFunnelConversation]', e)
+  }
+  return !!(funnelConversationId.value && funnelAccessToken.value)
+}
+
+async function uploadLeadMediaAndNotify(label: string, kind: string, blobUrl: string, html?: string) {
+  try {
+    try { setLeadActivity('uploading') } catch {}
+    const res = await fetch(blobUrl)
+    const blob = await res.blob()
+    const buf = await blob.arrayBuffer()
+    // base64
+    let binary = ''
+    const bytes = new Uint8Array(buf)
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+    const b64 = btoa(binary)
+    const up = await $fetch<{ ok?: boolean; url?: string; path?: string }>('/api/media/temp-upload', {
+      method: 'POST',
+      body: {
+        base64: b64,
+        contentType: blob.type || 'application/octet-stream',
+        kind,
+        visitor_id: getOrCreateVisitorId(),
+        conversation_id: funnelConversationId.value || undefined,
+      },
+    })
+    const url = up?.url
+    if (!url) {
+      logFunnelMessage('lead', label || kind, { media_kind: kind, has_html: !!html })
+      return
+    }
+    logFunnelMessage('lead', label || kind, {
+      media_kind: kind,
+      media_url: url,
+      has_html: !!html,
+      temp_path: up.path,
+    })
+    try { setLeadActivity('viewing') } catch {}
+  } catch (e) {
+    try { setLeadActivity('viewing') } catch {}
+    try {
+      logFunnelMessage('lead', label || kind, { media_kind: kind, has_html: !!html, media_upload_failed: true })
+    } catch {}
+  }
+}
+
+function logFunnelMessage(direction: 'lead' | 'bot' | 'system', message: string, extra: Record<string, any> = {}) {
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    if (!funnelConversationId.value) loadFunnelConversationLocal()
+    const unlocked = !!funnelChatUnlocked.value
+    const payload = {
+      visitor_id,
+      session_id: getFunnelSessionId(),
+      conversation_id: funnelConversationId.value || null,
+      access_token: funnelAccessToken.value || null,
+      creator_slug: 'wanessabsx',
+      direction,
+      message: String(message || '').slice(0, 2000),
+      step: funnelStep.value,
+      selected_offer: selectedPack.value?.key || selectedPack.value?.label || null,
+      selected_price: selectedPack.value?.price || null,
+      chat_unlocked: unlocked,
+      unlocked,
+      metadata: { ...extra, chat_unlocked: unlocked },
+    }
+    const json = JSON.stringify(payload)
+    const handleRes = async (res: any) => {
+      try {
+        if (res?.conversation_id && res?.access_token) {
+          saveFunnelConversationLocal(res.conversation_id, res.access_token)
+        }
+      } catch {}
+    }
+    // Sempre fetch (não sendBeacon) pra receber conversation_id/access_token
+    // e o lead conseguir puxar respostas do admin em tempo real
+    fetch('/api/funnel-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: json,
+      keepalive: true,
+    })
+      .then((r) => r.json().catch(() => ({})))
+      .then(handleRes)
+      .catch(() => {})
+  } catch {}
+}
+
+const adminPresenceOnline = ref(false)
+const adminPresenceLabel = ref('visto por último às --:--')
+let presencePollTimer: ReturnType<typeof setInterval> | null = null
+
+function fallbackLastSeenLabel(): string {
+  try {
+    const time = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date())
+    return `visto por último às ${time}`
+  } catch {
+    return 'visto por último às 12:00'
+  }
+}
+
+async function pullAdminPresence() {
+  try {
+    const res = await $fetch<{ online?: boolean; label?: string }>('/api/presence')
+    adminPresenceOnline.value = !!res?.online
+    const lbl = String(res?.label || '').trim()
+    if (res?.online) {
+      adminPresenceLabel.value = 'online'
+    } else if (lbl && lbl !== 'offline' && lbl !== 'online' && !/recentemente/i.test(lbl)) {
+      adminPresenceLabel.value = lbl
+    } else if (lbl && /às\s*\d/i.test(lbl)) {
+      adminPresenceLabel.value = lbl
+    } else {
+      adminPresenceLabel.value = fallbackLastSeenLabel()
+    }
+  } catch {
+    adminPresenceOnline.value = false
+    adminPresenceLabel.value = fallbackLastSeenLabel()
+  }
+}
+
+let leadPresenceTimer: ReturnType<typeof setInterval> | null = null
+let leadPresenceActivity = 'idle'
+let leadPresenceOfflineSent = false
+
+function setLeadActivity(activity: 'idle' | 'typing' | 'recording' | 'uploading' | 'viewing') {
+  leadPresenceActivity = activity
+  try { sendLeadPresence(true) } catch {}
+}
+
+async function sendLeadPresence(online = true) {
+  try {
+    if (!funnelChatUnlocked.value && !showWaFunnel.value) return
+    const visitor_id = getOrCreateVisitorId()
+    if (!visitor_id) return
+    // última msg da Wanessa (bot) pra read receipt
+    let last_read_message_id: string | undefined
+    try {
+      for (let i = funnelMessages.value.length - 1; i >= 0; i--) {
+        const m = funnelMessages.value[i]
+        if (m?.from === 'her' && m.id) {
+          last_read_message_id = m.id
+          break
+        }
+      }
+    } catch {}
+    await $fetch('/api/lead-presence', {
+      method: 'POST',
+      body: {
+        visitor_id,
+        conversation_id: funnelConversationId.value || undefined,
+        online,
+        activity: online ? leadPresenceActivity : 'idle',
+        last_read_message_id,
+      },
+    })
+    leadPresenceOfflineSent = !online
+  } catch {}
+}
+
+function startLeadPresenceHeartbeat() {
+  stopLeadPresenceHeartbeat()
+  leadPresenceActivity = 'viewing'
+  sendLeadPresence(true)
+  leadPresenceTimer = setInterval(() => sendLeadPresence(true), 3000)
+}
+
+function stopLeadPresenceHeartbeat() {
+  if (leadPresenceTimer) {
+    clearInterval(leadPresenceTimer)
+    leadPresenceTimer = null
+  }
+  if (!leadPresenceOfflineSent) {
+    try { sendLeadPresence(false) } catch {}
+  }
+}
+
+function startPresencePoll() {
+  stopPresencePoll()
+  pullAdminPresence()
+  presencePollTimer = setInterval(pullAdminPresence, 2000)
+}
+function stopPresencePoll() {
+  if (presencePollTimer) {
+    clearInterval(presencePollTimer)
+    presencePollTimer = null
+  }
+}
+
+let liveChatPollTimer: ReturnType<typeof setInterval> | null = null
+const seenLiveMsgIds = ref<Record<string, true>>({})
+/** IDs de convite de chamada que o lead já recusou — não reabre nem manda mídia */
+const declinedCallMsgIds = ref<Record<string, true>>({})
+const lastIncomingCallMsgId = ref<string | null>(null)
+let declineIncomingLock = false
+
+function stopLiveChatPoll() {
+  if (liveChatPollTimer) {
+    clearInterval(liveChatPollTimer)
+    liveChatPollTimer = null
+  }
+  stopPresencePoll()
+  stopLeadPresenceHeartbeat()
+}
+
+
+async function persistAndAckTempMedia(url: string, payload?: any) {
+  // tenta espelhar no localStorage (dataURL) e pedir delete no storage temp
+  try {
+    if (url.startsWith('http') && url.includes('chat-media-temp')) {
+      // baixa e guarda dataURL no estado da última mensagem (quando possível)
+      try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        if (blob.size && blob.size < 4.5 * 1024 * 1024) {
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const fr = new FileReader()
+            fr.onload = () => resolve(String(fr.result || ''))
+            fr.onerror = () => reject(new Error('read fail'))
+            fr.readAsDataURL(blob)
+          })
+          const last = funnelMessages.value[funnelMessages.value.length - 1]
+          if (last && last.html && dataUrl) {
+            last.html = last.html.split(url).join(dataUrl)
+            try { saveFunnelState() } catch {}
+          }
+        }
+      } catch {}
+      // apaga do Supabase (já entregue / espelhado)
+      $fetch('/api/media/ack-delivered', {
+        method: 'POST',
+        body: { url, path: payload?.path || undefined },
+      }).catch(() => {})
+    }
+  } catch {}
+}
+
+function applyAdminLivePayload(raw: string, msgId?: string) {
+  const text = String(raw || '').trim()
+  if (!text) return
+  // Payload especial do admin: ⟦ADMIN⟧{...}
+  if (text.startsWith('⟦ADMIN⟧')) {
+    try {
+      const payload = JSON.parse(text.slice('⟦ADMIN⟧'.length))
+      const k = String(payload?.k || '')
+      if (k === 'call') {
+        // Se o lead já recusou ESTE convite, não reabre e não manda nada
+        if (msgId && declinedCallMsgIds.value[msgId]) return
+        if (msgId) lastIncomingCallMsgId.value = msgId
+        if (!funnelChatUnlocked.value && !isAdmin.value) {
+          pushFunnel('her', 'Quero te ligar… libera o chat por R$ 3,00 pra atender 💚', undefined, { skipLog: true })
+          openChatUnlockInfo('call')
+          return
+        }
+        // Só texto + UI de chamada — nunca foto/mídia junto do convite
+        pushFunnel('her', 'Wanessa está te ligando…', undefined, { skipLog: true })
+        try { startIncomingVideoCall() } catch {}
+        return
+      }
+      // Foto/vídeo/áudio só se NÃO for “lixo” de tela de WhatsApp amarrado a recusa de call
+      // (continua permitindo mídia normal do admin)
+      if (k === 'photo' && payload?.u) {
+        const u = String(payload.u)
+        pushFunnel(
+          'her',
+          'Foto',
+          `<img class="wa-media-img" src="${u.replace(/"/g, '&quot;')}" alt="foto" />`,
+          { skipLog: true, mediaKind: 'photo' },
+        )
+        try { persistAndAckTempMedia(u, payload) } catch {}
+        return
+      }
+      if (k === 'video' && payload?.u) {
+        const u = String(payload.u)
+        pushFunnel(
+          'her',
+          'Vídeo',
+          `<div class="wa-video-modern" data-src="${u.replace(/"/g, '&quot;')}">
+            <video class="wa-media-video" src="${u.replace(/"/g, '&quot;')}" playsinline preload="metadata" controlslist="nodownload" disablepictureinpicture></video>
+            <button type="button" class="wa-video-play">▶</button>
+          </div>`,
+          { skipLog: true, mediaKind: 'video' },
+        )
+        try { persistAndAckTempMedia(u, payload) } catch {}
+        return
+      }
+      if (k === 'audio' && payload?.u) {
+        const u = String(payload.u)
+        pushFunnel(
+          'her',
+          'Áudio',
+          `<div class="wa-audio-modern wa-audio-modern--bubble" data-src="${u.replace(/"/g, '&quot;')}"><button type="button" class="wa-audio-play">▶</button><div class="wa-audio-wave"><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span><span class="wa-audio-bar"></span></div><span class="wa-audio-time">áudio</span><audio src="${u.replace(/"/g, '&quot;')}" preload="metadata"></audio></div>`,
+          { skipLog: true, mediaKind: 'audio' },
+        )
+        try { persistAndAckTempMedia(String(payload.u), payload) } catch {}
+        return
+      }
+      if (k === 'poll' && payload?.q && Array.isArray(payload?.o)) {
+        const q = String(payload.q)
+        const opts = payload.o.map((o: any) => String(o || '').trim()).filter(Boolean).slice(0, 5)
+        const lines = opts.map((o: string, i: number) => `${i + 1}. ${o}`).join('\n')
+        const html = `<div class="wa-poll-card"><p class="wa-poll-q">📊 ${q.replace(/</g, '&lt;')}</p><ul class="wa-poll-opts">${opts.map((o: string, i: number) => `<li><span>${i + 1}</span>${String(o).replace(/</g, '&lt;')}</li>`).join('')}</ul></div>`
+        pushFunnel('her', `📊 Enquete: ${q}\n${lines}`, html, { skipLog: true })
+        return
+      }
+    } catch (e) {
+      console.warn('[admin-live] parse', e)
+    }
+  }
+  pushFunnel('her', text, undefined, { skipLog: true })
+}
+
+async function pullLiveAdminReplies() {
+  // Sempre busca respostas do admin enquanto o funil está aberto (não só chat pago liberado)
+  if (!showWaFunnel.value) return
+  if (!funnelConversationId.value || !funnelAccessToken.value) return
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    const res = await $fetch<{
+      ok?: boolean
+      messages?: Array<{ id: string; direction: string; message: string; step?: string; created_at?: string }>
+    }>('/api/funnel-chat', {
+      query: {
+        conversation_id: funnelConversationId.value,
+        access_token: funnelAccessToken.value,
+        visitor_id,
+      },
+    })
+    const list = res?.messages || []
+    for (const m of list) {
+      if (m.direction !== 'bot') continue
+      if (!m.id || seenLiveMsgIds.value[m.id]) continue
+      const text = String(m.message || '').trim()
+      if (!text) continue
+      // Só mensagens do admin (painel / telegram / live), não respostas automáticas do funil
+      const step = String(m.step || '')
+      const isAdminMsg =
+        step === 'live_admin' ||
+        text.startsWith('⟦ADMIN⟧') ||
+        step === 'telegram_admin'
+      if (!isAdminMsg) {
+        // marca como vista pra não reprocessar depois
+        seenLiveMsgIds.value[m.id] = true
+        continue
+      }
+      seenLiveMsgIds.value[m.id] = true
+      const last = funnelMessages.value[funnelMessages.value.length - 1]
+      if (last?.from === 'her' && String(last.text || '').trim() === text) {
+        try { last.id = m.id } catch {}
+        continue
+      }
+      // já existe essa bolha no chat (evita eco do poll)
+      if (funnelMessages.value.some((x) => x.from === 'her' && String(x.text || '').trim() === text)) {
+        continue
+      }
+      applyAdminLivePayload(text, m.id)
+      try {
+        const created = funnelMessages.value[funnelMessages.value.length - 1]
+        if (created?.from === 'her') created.id = m.id
+      } catch {}
+    }
+  } catch {}
+}
+
+function startLiveChatPoll() {
+  stopLiveChatPoll()
+  startPresencePoll()
+  startLeadPresenceHeartbeat()
+  // Sempre escuta respostas do admin enquanto o chat estiver aberto
+  if (funnelChatUnlocked.value) {
+    try { syncCallCreditFromServer() } catch {}
+  }
+  // Garante conversation_id antes do primeiro pull
+  ensureFunnelConversation()
+    .then(() => pullLiveAdminReplies())
+    .catch(() => pullLiveAdminReplies())
+  liveChatPollTimer = setInterval(() => {
+    pullLiveAdminReplies()
+  }, 3000)
+}
+
+
+
+function saveFunnelState() {
+  try {
+    localStorage.setItem(
+      FUNNEL_STORAGE_KEY,
+      JSON.stringify({
+        step: funnelStep.value,
+        messages: funnelMessages.value,
+        selectedPack: selectedPack.value,
+        blocked: funnelBlocked.value,
+        permBlocked: funnelPermBlocked.value,
+        chatUnlocked: !!funnelChatUnlocked.value,
+        open: !!showWaFunnel.value,
+        savedAt: Date.now(),
+      }),
+    )
+  } catch {}
+}
+
+function loadFunnelState(): boolean {
+  try {
+    const raw = localStorage.getItem(FUNNEL_STORAGE_KEY)
+    if (!raw) return false
+    const data = JSON.parse(raw)
+    // expira em 24h
+    if (!data || !data.savedAt || Date.now() - data.savedAt > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(FUNNEL_STORAGE_KEY)
+      return false
+    }
+    if (!Array.isArray(data.messages) || data.messages.length === 0) return false
+    funnelStep.value = data.step || 'menu'
+    funnelMessages.value = data.messages
+    selectedPack.value = data.selectedPack || null
+    funnelBlocked.value = !!data.blocked || data.step === 'closed_offline'
+    // Não restaura unlock do storage — só após PIX nesta sessão
+    funnelChatUnlocked.value = false
+    return true
+  } catch {
+    return false
+  }
+}
+
+function clearFunnelState() {
+  try { localStorage.removeItem(FUNNEL_STORAGE_KEY) } catch {}
+  funnelStep.value = 'greeting'
+  funnelMessages.value = []
+  selectedPack.value = null
+  funnelBlocked.value = false
+}
+
+function openWaFunnel(source = 'whatsapp') {
+  warmSyncPay()
+  loadFunnelConversationLocal()
+  loadPermanentBlock()
+
+  track('whatsapp_funnel_open', { offer_slug: source || 'whatsapp' })
+  try { onCardClick('WhatsApp Funnel', whatsappUrl.value) } catch {}
+  try { logFunnelMessage('lead', '[abriu o chat]', { event: 'open', source }) } catch {}
+  showWaFunnel.value = true
+  try { startLeadPresenceHeartbeat() } catch {}
+  try { startLiveChatPoll() } catch {}
+  funnelKeyboardOpen.value = false
+  lockBodyScrollForFunnel()
+  startPresencePoll()
+  showFunnelPhoto.value = false
+  showFunnelProfile.value = false
+  funnelTyping.value = false
+  nextTick(() => {
+    bindFunnelViewport()
+    syncFunnelViewport()
+  })
+  if (funnelTimer) clearTimeout(funnelTimer)
+
+  const restored = loadFunnelState()
+  try { saveFunnelState() } catch {} // marca open:true
+  if (restored) {
+    nextTick(() => scrollFunnel())
+    return
+  }
+
+  funnelStep.value = 'greeting'
+  funnelMessages.value = []
+  selectedPack.value = null
+  funnelBlocked.value = false
+  nextTick(async () => {
+    // Abertura natural: sem menu, sem pressionar escolha
+    await funnelType('Oi amor 😘|||Me conta o que você quer: pack, videochamada, chat ou um vídeo só seu?', 1400)
+    saveFunnelState()
+  })
+}
+
+function closeWaFunnel() {
+  try { stopLeadPresenceHeartbeat() } catch {}
+  stopLiveChatPoll()
+  stopFunnelPayPoll()
+  if (funnelTimer) clearTimeout(funnelTimer)
+  funnelTyping.value = false
+  unbindFunnelViewport()
+  stopFunnelKbdPoll()
+  funnelKeyboardOpen.value = false
+  // fecha e salva open:false (mantém histórico das msgs)
+  showWaFunnel.value = false
+  showFunnelPhoto.value = false
+  showFunnelProfile.value = false
+  funnelShellStyle.value = {}
+  unlockBodyScrollForFunnel()
+  try { saveFunnelState() } catch {}
+  // Se entrou pela rota /chat/*, ao fechar mostra a home (senão fica tela roxa vazia)
+  if (isChatLanding.value) {
+    isChatLanding.value = false
+    try {
+      if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+        window.history.replaceState({}, '', '/')
+      }
+    } catch {}
+  }
+}
+
+function buildWaLink(prefill: string) {
+  return 'https://wa.me/5547992750967?text=' + encodeURIComponent(prefill)
+}
+
+
+
+function scoreVideoComplexity(text: string): number {
+  let score = 1
+  const t = text.toLowerCase()
+  // duração / quantidade
+  if (/longo|demora|v[aá]rios|mais de|minut|hora/.test(t)) score += 1
+  // elementos
+  if (/brinquedo|consolo|vibrador|plug|algema|corda/.test(t)) score += 1
+  if (/cosplay|fantasia|uniforme|lingerie|salto/.test(t)) score += 1
+  if (/outra|amigo|casal|menage|com ela|com ele/.test(t)) score += 2
+  if (/anal|dp|goz|squirt|fisting/.test(t)) score += 1
+  if (/ao ar livre|carro|banheiro|publico|janela/.test(t)) score += 1
+  if (/nome|gemendo meu|falando meu nome|pedido especial/.test(t)) score += 1
+  if (t.length > 120) score += 1
+  if (t.length > 220) score += 1
+  return Math.min(score, 6)
+}
+
+function suggestVideoAvulsoPrice(complexity: number): number {
+  // sempre > 49.90
+  const bands: [number, number][] = [
+    [54.9, 69.9],   // 1 simples
+    [74.9, 89.9],   // 2
+    [94.9, 119.9],  // 3
+    [129.9, 149.9], // 4
+    [159.9, 179.9], // 5
+    [189.9, 219.9], // 6 muito complexo
+  ]
+  const idx = Math.max(0, Math.min(complexity - 1, bands.length - 1))
+  const [min, max] = bands[idx]
+  // valor "aleatório" mas estável o suficiente dentro da faixa
+  const raw = min + Math.random() * (max - min)
+  // arredonda para .90
+  const base = Math.floor(raw)
+  return base + 0.9
+}
+
+
+
+
+function isOfflineOrProgramaIntent(raw: string): boolean {
+  const t = String(raw || '').toLowerCase()
+  // Oferta ONLINE: nunca bloquear (preço de call, pack, chat, etc.)
+  if (/chamada|videochamad|v[ií]deo\s*call|\bcall\b|\bpack\b|webnamoro|\bchat\b|\bmin\b|minuto|\bhora\b|pix|assinatura|conte[uú]do|ao vivo|online/.test(t)) {
+    return false
+  }
+  // Só bloqueia se for claramente presencial / programa / sair
+  return /encont[rro] presencial|te encontrar pessoal|sair junto|sair comigo|sa[ií]r com (voc[eê]|vc)|presencial|na vida real|fazer programa|(^|[^a-z])programa([^a-z]|$)|(^|[^a-z])gp([^a-z]|$)|acompanhante|cobra pra (sair|transar|fazer)|quanto (voc[eê] )?cobra pra (sair|transar)|te pagar pra (sair|te ver|transar)|pagar pra (sair|te ver)|me encontra|vir (aqui|a[ií]) te|ir (a[ií]|ai) te ver|hotel|motel|airbnb|transar pessoal|sexo presencial|te ver pessoalmente|ficar comigo (pessoal|de verdade)|vem pra c[aá]|valor pra sair|pre[cç]o pra sair/.test(t)
+}
+
+async function blockFunnelForOfflineIntent() {
+  funnelBlocked.value = true
+  funnelStep.value = 'closed_offline'
+  funnelInput.value = ''
+  const msg = 'Ok, não tenho interesse no que você está me oferecendo.'
+  await funnelType(msg, 900)
+  try { logFunnelMessage('bot', msg, { event: 'blocked_offline_intent' }) } catch {}
+  try { track('whatsapp_funnel_blocked', { offer_slug: 'offline_intent' }) } catch {}
+  try { saveFunnelState() } catch {}
+}
+
+
+async function funnelTypeParts(raw: string, baseDelay = 900) {
+  const cleaned = String(raw || '')
+    .replace(/\.{2,}/g, '.') // tira reticências
+    .replace(/\s[-–—]\s/g, ' ') // evita travessão de lista
+    .trim()
+  if (!cleaned) return
+  const parts = cleaned
+    .split(/\|\|\||\n{2,}/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 4)
+  // se ainda for textão num único bloco, quebra por frase
+  const finalParts: string[] = []
+  for (const part of parts) {
+    if (part.length > 160) {
+      const sentences = part.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
+      if (sentences.length > 1) {
+        finalParts.push(...sentences.slice(0, 4))
+        continue
+      }
+    }
+    finalParts.push(part)
+  }
+  const use = finalParts.slice(0, 4)
+  for (let i = 0; i < use.length; i++) {
+    await funnelType(use[i], i === 0 ? baseDelay : 700 + i * 200)
+  }
+}
+
+
+function parseVideoCallChoice(lower: string): { key: string; label: string; price: string; min: number } | null {
+  const t = String(lower || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  // ordem: mais específico primeiro (2h/3h/90min antes de 1h)
+  if (/\b(3|tres|tr[eê]s)\s*horas?\b/.test(t) || /\b180\s*min/.test(t) || /\b3\s*h\b/.test(t)) {
+    return { key: 'vid_180', label: 'Videochamada 3 horas', price: '999,90', min: 180 }
+  }
+  if (/\b(2|duas|dois)\s*horas?\b/.test(t) || /\b120\s*min/.test(t) || /\b2\s*h\b/.test(t)) {
+    return { key: 'vid_120', label: 'Videochamada 2 horas', price: '699,90', min: 120 }
+  }
+  if (/\b90\s*min/.test(t) || /\bhora e meia\b/.test(t) || /\b1[,.]5\s*h/.test(t)) {
+    return { key: 'vid_90', label: 'Videochamada 90 min', price: '549,90', min: 90 }
+  }
+  if (/\b(1|uma)\s*hora\b/.test(t) || /\b60\s*min/.test(t) || /\b1\s*h\b/.test(t) || t.includes('1hr') || t.includes('1 hr') || t.includes('uma hr')) {
+    return { key: 'vid_60', label: 'Videochamada 1 hora', price: '399,90', min: 60 }
+  }
+  const bareDur = (n: string) => new RegExp(
+    '(?:^|\b)(?:so(?:\s+o)?\s+|quero(?:\s+o)?\s+|vou(?:\s+de)?\s+)?' + n + '(?:\s*min(?:utos?)?|min|m)?\b'
+  )
+  if (/\b30\s*min/.test(t) || /\bmeia\s*hora\b/.test(t) || /\b30m\b/.test(t) || /\b30min\b/.test(t) || t.trim() === '30' || bareDur('30').test(t)) {
+    return { key: 'vid_30', label: 'Videochamada 30 min', price: '229,90', min: 30 }
+  }
+  if (/\b20\s*min/.test(t) || /\b20m\b/.test(t) || /\b20min\b/.test(t) || t.trim() === '20' || bareDur('20').test(t)) {
+    return { key: 'vid_20', label: 'Videochamada 20 min', price: '149,90', min: 20 }
+  }
+  if (/\b10\s*min/.test(t) || /\b10m\b/.test(t) || /\b10min\b/.test(t) || t.trim() === '10' || bareDur('10').test(t)) {
+    return { key: 'vid_10', label: 'Videochamada 10 min', price: '99,90', min: 10 }
+  }
+  // "quero o de 20", "o de 10", "vou de 30"
+  if (/\b(de\s*)?20\b/.test(t) && /min|quero|vou|esse|esse de|pega|fecha|bora/.test(t)) {
+    return { key: 'vid_20', label: 'Videochamada 20 min', price: '149,90', min: 20 }
+  }
+  if (/\b(de\s*)?30\b/.test(t) && /min|quero|vou|esse|esse de|pega|fecha|bora/.test(t)) {
+    return { key: 'vid_30', label: 'Videochamada 30 min', price: '229,90', min: 30 }
+  }
+  if (/\b(de\s*)?10\b/.test(t) && /min|quero|vou|esse|esse de|pega|fecha|bora/.test(t)) {
+    return { key: 'vid_10', label: 'Videochamada 10 min', price: '99,90', min: 10 }
+  }
+  return null
+}
+
+
+
+function parseCustomVideoDuration(lower: string) {
+  return parseVideoCallChoice(lower)
+}
+
+function isVideoDurationPriceAsk(lower: string): boolean {
+  const t = String(lower || '').toLowerCase()
+  const choice = parseVideoCallChoice(t)
+  if (!choice) return false
+  const asksPrice = /quanto|custa|pre[cç]o|valor|cobra|fica quanto|qto/.test(t)
+  const wantsDur = /quero|queria|vamos|bora|fecha|fechado|pode ser|topa|faz|fazer/.test(t)
+  const longCustom = choice.min >= 90
+  return asksPrice || wantsDur || longCustom
+}
+
+async function quoteSpecificVideoDuration(choice: { key: string; label: string; price: string; min: number }) {
+  selectedPack.value = { key: choice.key, label: choice.label, price: choice.price }
+  videoCallPurchasedMin.value = choice.min
+  funnelStep.value = 'pix_ask_hour'
+  track('whatsapp_funnel_select', { offer_slug: choice.key, source: 'typed_custom_duration' })
+  await funnelType(
+    `Pra ${choice.label.toLowerCase()} fica R$ ${choice.price}, amor 💕\n\nÉ ao vivo comigo esse tempo todinho. Quer que eu te mande o PIX pra gente marcar?`,
+    1400,
+  )
+}
+
+function recentFunnelText(n = 8): string {
+  return funnelMessages.value
+    .slice(-n)
+    .map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`)
+    .join('\n')
+    .toLowerCase()
+}
+
+function conversationAboutVideoCall(): boolean {
+  const ctx = recentFunnelText(10)
+  return /videochamad|chamada|call|10 min|20 min|30 min|99,?90|149,?90|229,?90|399,?90/.test(ctx)
+}
+
+/** Confirma escolha de tempo mesmo sem repetir "min" (ex: "quero só o de 10 mesmo") */
+function resolveVideoChoiceFromContext(lower: string): { key: string; label: string; price: string; min: number } | null {
+  const direct = parseVideoCallChoice(lower)
+  if (direct) return direct
+  if (!conversationAboutVideoCall()) return null
+  // confirmação vaga apontando para opção já citada
+  const conf = /(quero|vou|fecha|fechado|pega|bora|pode ser|esse|dessa|só|so|mesmo|isso|vamos|manda|pix)/.test(lower)
+  if (!conf && !/\b(10|20|30|60)\b/.test(lower)) return null
+  if (/\b10\b/.test(lower) || /de dez|s[oó] (o )?10|o de 10/.test(lower)) {
+    return { key: 'vid_10', label: 'Videochamada 10 min', price: '99,90', min: 10 }
+  }
+  if (/\b20\b/.test(lower) || /de vinte|s[oó] (o )?20|o de 20/.test(lower)) {
+    return { key: 'vid_20', label: 'Videochamada 20 min', price: '149,90', min: 20 }
+  }
+  if (/\b30\b/.test(lower) || /de trinta|s[oó] (o )?30|o de 30/.test(lower)) {
+    return { key: 'vid_30', label: 'Videochamada 30 min', price: '229,90', min: 30 }
+  }
+  if (/\b(1|uma)\s*hora\b|\b60\b/.test(lower)) {
+    return { key: 'vid_60', label: 'Videochamada 1 hora', price: '399,90', min: 60 }
+  }
+  // "quero só esse" / "pode ser" depois de ela ter falado só de 10 min no último texto dela
+  const lastHer = [...funnelMessages.value].reverse().find((m) => m.from === 'her')
+  if (lastHer && conf) {
+    const ht = String(lastHer.text || '').toLowerCase()
+    if (/10 min|99,?90/.test(ht) && !/20 min|30 min|1 hora/.test(ht)) {
+      return { key: 'vid_10', label: 'Videochamada 10 min', price: '99,90', min: 10 }
+    }
+  }
+  return null
+}
+
+
+let funnelMsgLongPressTimer: ReturnType<typeof setTimeout> | null = null
+function onFunnelMsgTouchStart(i: number, _e: TouchEvent) {
+  if (funnelMsgLongPressTimer) clearTimeout(funnelMsgLongPressTimer)
+  funnelMsgLongPressTimer = setTimeout(() => openFunnelMsgMenu(i), 450)
+}
+function onFunnelMsgTouchEnd() {
+  if (funnelMsgLongPressTimer) {
+    clearTimeout(funnelMsgLongPressTimer)
+    funnelMsgLongPressTimer = null
+  }
+}
+function openFunnelMsgMenu(i: number) {
+  const m = funnelMessages.value[i]
+  if (!m || m.from !== 'me' || m.deleted) return
+  funnelMsgMenuIdx.value = i
+}
+function startFunnelMsgEdit() {
+  const i = funnelMsgMenuIdx.value
+  funnelMsgMenuIdx.value = null
+  if (i === null) return
+  const m = funnelMessages.value[i]
+  if (!m || m.from !== 'me' || m.deleted) return
+  // foto/vídeo/áudio: não edita conteúdo, só apaga pelo outro botão
+  if (m.mediaKind) {
+    return
+  }
+  funnelEditingIdx.value = i
+  funnelEditDraft.value = m.text || ''
+}
+function cancelFunnelMsgEdit() {
+  funnelEditingIdx.value = null
+  funnelEditDraft.value = ''
+}
+function saveFunnelMsgEdit() {
+  const i = funnelEditingIdx.value
+  if (i === null) return
+  const m = funnelMessages.value[i]
+  if (!m || m.from !== 'me' || m.deleted) return
+  const next = (funnelEditDraft.value || '').trim()
+  if (!next) return
+  m.text = next
+  m.html = undefined
+  m.edited = true
+  m.time = nowTime()
+  funnelEditingIdx.value = null
+  funnelEditDraft.value = ''
+  try { saveFunnelState() } catch {}
+}
+function deleteFunnelMsg() {
+  const i = funnelMsgMenuIdx.value
+  funnelMsgMenuIdx.value = null
+  if (i === null) return
+  const m = funnelMessages.value[i]
+  if (!m || m.from !== 'me') return
+  m.deleted = true
+  m.text = ''
+  m.html = undefined
+  m.mediaKind = null
+  try { saveFunnelState() } catch {}
+}
+
+async function sendFunnelFreeText() {
+  if (leadBlockedWanessa.value) return
+  if (funnelTyping.value || funnelActionLock.value) return
+  // Popup só no campo de digitar — enviar sem unlock não digita
+  if (!funnelChatUnlocked.value) {
+    openChatUnlockInfo('chat')
+    return
+  }
+  if (funnelBlocked.value) return
+  if (funnelPermBlocked.value) return
+  const text = (funnelInput.value || '').trim()
+  if (!text) return
+
+  funnelActionLock.value = true
+  setTimeout(() => { funnelActionLock.value = false }, 1500)
+  funnelInput.value = ''
+  pushFunnel('me', text)
+  try { saveFunnelState() } catch {}
+  try { track('whatsapp_funnel_free_text', { offer_slug: 'whatsapp', message: text.slice(0, 120) }) } catch {}
+
+  // Filtro offline/programa ANTES de qualquer resposta (Gemini ou script)
+  if (isOfflineOrProgramaIntent(text)) {
+    await blockFunnelForOfflineIntent()
+    return
+  }
+
+  const lower = text.toLowerCase()
+
+  // EARLY: duração específica + preço (ex: "eu quero 2 horas amor quanto custa")
+  // antes do Gemini, do dump de video_consult e do handler genérico de "quanto custa"
+  {
+    const customChoice = parseVideoCallChoice(lower)
+    if (customChoice && isVideoDurationPriceAsk(lower)) {
+      await quoteSpecificVideoDuration(customChoice)
+      try { saveFunnelState() } catch {}
+      return
+    }
+  }
+
+  // --- Conversação natural com Gemini (greeting + papo + saudações) ---
+  const isGreetingMsg = /^(oi|ol[aá]|oie|oii+|hey|hello|bom dia|boa tarde|boa noite|e a[ií]|tudo bem|td bem|blz|beleza|oi amor|ola amor)\b/i.test(text.trim())
+  if (funnelStep.value === 'greeting' || funnelStep.value === 'papo' || (isGreetingMsg && !['pix', 'awaiting_payment', 'video_avulso', 'video_avulso_confirm', 'pix_ask', 'pix_ask_hour'].includes(String(funnelStep.value)))) {
+    try { logFunnelMessage('lead', text, { event: 'free_text_greeting' }) } catch {}
+    try {
+      const history = [
+        `[step=${funnelStep.value}]`,
+        ...funnelMessages.value.slice(-14).map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`),
+      ]
+      const res = await $fetch<{
+        ok?: boolean
+        intent?: string
+        reply?: string
+        show_menu?: boolean
+        suggest_step?: string | null
+        confidence?: number
+      }>('/api/funnel-intent', {
+        method: 'POST',
+        body: {
+          message: text,
+          history,
+          visitor_id: getOrCreateVisitorId(),
+          step: funnelStep.value,
+        },
+      })
+      const reply = String(res?.reply || '').trim().slice(0, 600)
+      const intent = String(res?.intent || 'unknown')
+      const step = res?.suggest_step ? String(res.suggest_step) : null
+      const showMenu = !!res?.show_menu
+
+      // Só responde se o Gemini devolveu texto. Falha = vácuo (sem mensagem genérica).
+      if (!reply) {
+        console.warn('[funnel intent] Gemini sem reply — lead fica no vácuo')
+        return
+      }
+
+      await funnelTypeParts(reply, 1100)
+
+      if (intent === 'encontros' || step === 'closed_offline') {
+        // Lead quer programa / presencial → encerra e bloqueia digitação
+        funnelBlocked.value = true
+        funnelStep.value = 'closed_offline'
+        funnelInput.value = ''
+        // reply já veio do Gemini/local com a mensagem de recusa
+        try { logFunnelMessage('bot', reply, { event: 'blocked_offline_intent', intent }) } catch {}
+        try { track('whatsapp_funnel_blocked', { offer_slug: 'offline_intent' }) } catch {}
+        try { saveFunnelState() } catch {}
+        return
+      } else if (step === 'video_consult') {
+        const agreed = parseVideoCallChoice(lower)
+        if (agreed || (selectedPack.value?.key || '').startsWith('vid_')) {
+          if (agreed) {
+            selectedPack.value = { key: agreed.key, label: agreed.label, price: agreed.price }
+            videoCallPurchasedMin.value = agreed.min
+          }
+          try { saveFunnelState() } catch {}
+          await startFunnelCheckout()
+          return
+        }
+        funnelStep.value = 'video_consult'
+      } else if (step === 'video_avulso') {
+        funnelStep.value = 'video_avulso'
+      } else if (step === 'packs') {
+        funnelStep.value = 'packs'
+      } else if (step === 'webnamoro') {
+        funnelStep.value = 'webnamoro'
+      } else if (step === 'chat') {
+        funnelStep.value = 'chat'
+      } else if (showMenu || step === 'menu') {
+        funnelStep.value = 'menu'
+      } else if (intent === 'papo' || intent === 'unknown') {
+        // continua ouvindo, sem botões
+        funnelStep.value = 'greeting'
+      } else {
+        funnelStep.value = 'greeting'
+      }
+      try { saveFunnelState() } catch {}
+      try { logFunnelMessage('bot', reply, { event: 'intent_reply', intent, step: funnelStep.value }) } catch {}
+      return
+    } catch (e) {
+      // Gemini/rede falhou — não manda mensagem genérica; deixa o lead no vácuo
+      console.warn('[funnel intent]', e)
+      return
+    }
+  }
+
+  // Se a gente perguntou "posso passar o PIX?" e o lead confirma → mostra o código na hora
+  if (
+    (window as any).__pixAskedOnce &&
+    !(window as any).__pixCodeShown &&
+    (funnelPixCode.value || pixCopyCode.value)
+  ) {
+    const confirmWords = ['pode', 'manda', 'sim', 'quero', 'passa', 'envia', 'ok', 'manda aí', 'pode mandar', 'pode passar']
+    if (confirmWords.some((w) => lower === w || lower.includes(w))) {
+      const code = funnelPixCode.value || pixCopyCode.value
+      const price = selectedPack.value?.price || selectedChatPlan.value?.priceLabel || ''
+      showPixCodeInChat(code, price)
+      return
+    }
+  }
+
+  // Depois da consultoria da videochamada: lead descreveu o que quer → aí sim oferece tempo/preço
+  if (funnelStep.value === 'video_consult') {
+    const choice = resolveVideoChoiceFromContext(lower) || parseVideoCallChoice(lower)
+    if (choice) {
+      selectedPack.value = { key: choice.key, label: choice.label, price: choice.price }
+      videoCallPurchasedMin.value = choice.min
+      track('whatsapp_funnel_select', { offer_slug: choice.key, source: 'video_consult_typed' })
+      await funnelTypeParts(`Fechado: ${choice.label} por R$ ${choice.price}.|||Vou preparar o PIX pra você.`, 1000)
+      await startFunnelCheckout()
+      return
+    }
+    // only if NO duration in message:
+    funnelStep.value = 'video'
+    await funnelType(
+      'Entendi o clima que você quer 😈\n\nPra gente fazer isso ao vivo, escolhe o tempo:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n• 1 hora  R$ 399,90\n• 90 min  R$ 549,90\n• 2 horas  R$ 699,90\n• 3 horas  R$ 999,90\n\nMe fala qual encaixa melhor pra você agora — ou se prefere outro tempo.',
+      1800,
+    )
+    return
+  }
+
+  // Lead digitou o tempo da videochamada (10/20/30/60) em vez de clicar no botão
+  // Também quando a conversa já é sobre chamada (mesmo em greeting/menu)
+  {
+    const choice = resolveVideoChoiceFromContext(lower)
+    if (choice && (funnelStep.value === 'video' || funnelStep.value === 'video_consult' || funnelStep.value === 'video_upsell' || funnelStep.value === 'menu' || funnelStep.value === 'greeting' || conversationAboutVideoCall())) {
+      selectedPack.value = { key: choice.key, label: choice.label, price: choice.price }
+      videoCallPurchasedMin.value = choice.min
+      track('whatsapp_funnel_select', { offer_slug: choice.key, source: 'typed_time' })
+      await funnelTypeParts(
+        `Fechado: ${choice.label} por R$ ${choice.price}.|||Vou preparar o PIX pra você.`,
+        1000,
+      )
+      await startFunnelCheckout()
+      return
+    }
+  }
+
+
+  // Vídeo avulso: lead descreveu o que quer → sugere preço por complexidade
+  if (funnelStep.value === 'video_avulso') {
+    const complexity = scoreVideoComplexity(lower)
+    const price = suggestVideoAvulsoPrice(complexity)
+    const priceLabel = price.toFixed(2).replace('.', ',')
+    selectedPack.value = {
+      key: 'video_avulso',
+      label: 'Vídeo avulso personalizado',
+      price: priceLabel,
+    }
+    track('whatsapp_funnel_video_avulso', {
+      offer_slug: 'video_avulso',
+      metric_value: price,
+      message: text.slice(0, 160),
+    })
+    await funnelType(
+      `Entendi, amor 🔥\n\nPro que você pediu eu faço por R$ ${priceLabel}.\n\nQuer que eu gere o PIX pra você garantir o vídeo?`,
+      1400,
+    )
+    funnelStep.value = 'video_avulso_confirm'
+    return
+  }
+
+  if (funnelStep.value === 'video_avulso_confirm') {
+    if (/sim|quero|pode|gera|pix|pagar|fechado|bora|vai|claro|ss|s/.test(lower)) {
+      await startFunnelCheckout()
+      return
+    }
+    if (/n[aã]o|depois|cancel|voltar|outro/.test(lower)) {
+      funnelStep.value = 'menu'
+      await funnelType('Beleza… me diz o que você prefere então 😘', 900)
+      return
+    }
+    // se mandar mais detalhe, recalcula
+    const complexity = scoreVideoComplexity(lower)
+    const price = suggestVideoAvulsoPrice(complexity)
+    const priceLabel = price.toFixed(2).replace('.', ',')
+    selectedPack.value = {
+      key: 'video_avulso',
+      label: 'Vídeo avulso personalizado',
+      price: priceLabel,
+    }
+    await funnelType(
+      `Atualizei pro que você pediu: R$ ${priceLabel} 💕\n\nGero o PIX?`,
+      1100,
+    )
+    return
+  }
+
+
+  if (/pack|pacote|conte[uú]do|combo|gold/.test(lower)) {
+    funnelStep.value = 'packs'
+    await funnelType(
+      'Tenho packs sim, amor 🔥\n\n• R$ 29,90 gostinho\n• R$ 79,90 Gold solo\n• R$ 109,90 Combo completo\n\nQual você quer? Ou continua falando comigo aqui 😘',
+      1200,
+    )
+    return
+  }
+    if (/v[ií]deo\s*avulso|video\s*personalizado|v[ií]deo\s*sob\s*medida|v[ií]deo\s*custom/.test(lower)) {
+    funnelStep.value = 'video_avulso'
+    await funnelType(
+      'Como você quer seu vídeo avulso, amor? 🎬\n\nMe conta o que você imagina… quanto mais detalhado, mais gostoso eu faço 😏',
+      1200,
+    )
+    return
+  }
+  if (/video|chamada|call|cam/.test(lower)) {
+    startIncomingVideoCall()
+    return
+  }
+  if (/webnamoro|namoro|namorada|exclusiv/.test(lower)) {
+    funnelStep.value = 'webnamoro'
+    await funnelType(
+      'Webnamoro é exclusividade comigo 💕\n\n• 7 dias  R$ 179,90\n• 15 dias  R$ 299,90\n• 30 dias  R$ 499,90\n\nQual pacote te interessa?',
+      1200,
+    )
+    return
+  }
+  if (/pix|pagar|pre[cç]o|valor|quanto/.test(lower)) {
+    if (selectedPack.value) {
+      funnelStep.value = 'pix'
+      await funnelType(
+        `O ${selectedPack.value.label} fica R$ ${selectedPack.value.price}. Posso gerar o PIX aqui na conversa agora?`,
+        1100,
+      )
+    } else {
+      await funnelType(
+        'Depende do que você quer, amor 😘 Pack, videochamada, webnamoro ou chat — me diz qual e eu te passo o valor.',
+        1100,
+      )
+    }
+    return
+  }
+  // saudações (oi, bom dia, etc.) vão pro Gemini abaixo — leads gostam de conexão antes de comprar
+  if (/encont|presencial|sair com|te encontrar|programad|programa com|quanto.*sair|cobra.*sair|me encontra|ficar comigo pessoal|vir aqui|ir a[ií] te ver|hotel|motel|jantar e/.test(lower)) {
+    await blockFunnelForOfflineIntent()
+    return
+  }
+
+  // Resposta real via Gemini (não genérica)
+  try {
+    const history = [
+      `[step=${funnelStep.value}]`,
+      ...funnelMessages.value.slice(-14).map((m) => `${m.from === 'me' ? 'Lead' : 'Wanessa'}: ${m.text}`),
+    ]
+    const res = await $fetch<{
+      ok?: boolean
+      intent?: string
+      reply?: string
+      show_menu?: boolean
+      suggest_step?: string | null
+    }>('/api/funnel-intent', {
+      method: 'POST',
+      body: {
+        message: text,
+        history,
+        visitor_id: getOrCreateVisitorId(),
+        step: funnelStep.value,
+      },
+    })
+    const reply = (res?.reply || '').trim()
+    const intent = String(res?.intent || 'unknown')
+    const step = res?.suggest_step ? String(res.suggest_step) : null
+
+    if (intent === 'encontros' || step === 'closed_offline') {
+      funnelBlocked.value = true
+      funnelStep.value = 'closed_offline'
+      funnelInput.value = ''
+      await funnelType(reply || 'Ok, não tenho interesse no que você está me oferecendo.', 900)
+      try { logFunnelMessage('bot', reply || 'blocked', { event: 'blocked_offline_intent', intent }) } catch {}
+      try { saveFunnelState() } catch {}
+      return
+    }
+
+    // Só responde se o Gemini devolveu texto. Falha = vácuo.
+    if (!reply) {
+      console.warn('[funnel gemini] sem reply — lead fica no vácuo')
+      return
+    }
+    await funnelTypeParts(reply, 1100)
+
+    if (step === 'video_consult') {
+      const agreed = parseVideoCallChoice(lower)
+      if (agreed || (selectedPack.value?.key || '').startsWith('vid_')) {
+        if (agreed) {
+          selectedPack.value = { key: agreed.key, label: agreed.label, price: agreed.price }
+          videoCallPurchasedMin.value = agreed.min
+        }
+        try { saveFunnelState() } catch {}
+        await startFunnelCheckout()
+        return
+      }
+      funnelStep.value = 'video_consult'
+    }
+    else if (step === 'video_avulso') funnelStep.value = 'video_avulso'
+    else if (step === 'packs') funnelStep.value = 'packs'
+    else if (step === 'webnamoro') funnelStep.value = 'webnamoro'
+    else if (step === 'chat') funnelStep.value = 'chat'
+    else if (res?.show_menu || step === 'menu') funnelStep.value = 'menu'
+
+    try { logFunnelMessage('bot', reply || '', { event: 'gemini_reply', intent, step: funnelStep.value }) } catch {}
+    try { saveFunnelState() } catch {}
+  } catch (e) {
+    // Gemini/rede falhou — não manda mensagem genérica; deixa o lead no vácuo
+    console.warn('[funnel gemini fallback]', e)
+  }
+}
+
+const funnelActionLock = ref(false)
+
+async function answerFunnel(opt: { key: string; label: string }) {
+  if (funnelTyping.value || funnelActionLock.value) return
+  funnelActionLock.value = true
+  setTimeout(() => { funnelActionLock.value = false }, 1800)
+  pushFunnel('me', opt.label, undefined, {
+    logExtra: { event: 'option_click', option_key: opt.key, option_label: opt.label, funnel_step: funnelStep.value },
+  })
+  saveFunnelState()
+
+  if (opt.key === 'back' || opt.key === 'back_menu') {
+    const k = selectedPack.value?.key || ''
+    if (funnelStep.value === 'redirect' || funnelStep.value === 'pix') {
+      if (k.startsWith('vid_')) {
+        funnelStep.value = 'video'
+        await funnelType('Beleza… escolhe de novo o tempo da videochamada 🔥', 900)
+      } else if (k.startsWith('web_')) {
+        funnelStep.value = 'webnamoro'
+        await funnelType('Beleza… escolhe de novo o plano de webnamoro 💕', 900)
+      } else if (k.startsWith('chat_')) {
+        funnelStep.value = 'chat'
+        await funnelType('Beleza… escolhe de novo o chat 😘', 900)
+      } else if (k.startsWith('pack_')) {
+        funnelStep.value = 'packs'
+        await funnelType('Beleza… escolhe de novo o pack 🔥', 900)
+      } else {
+        funnelStep.value = 'menu'
+        await funnelType('Beleza… então me conta: o que você quer de mim hoje? 😏', 900)
+      }
+      return
+    }
+    funnelStep.value = 'menu'
+    await funnelType('Beleza… então me conta: o que você quer de mim hoje? 😏', 900)
+    return
+  }
+
+  if (opt.key === 'pack') {
+    track('whatsapp_funnel_pack', { offer_slug: 'pack' })
+    funnelStep.value = 'packs'
+    await funnelType(
+      'Tenho 3 packs pra você, amor:\n\n• R$ 29,90 um gostinho pra me conhecer melhor\n• R$ 79,90 Pack Gold: solos longos, bem safadinha\n• R$ 109,90 Combo completo: solo, transando, com outras mulheres, cosplay e tudo\n\nQual você quer?',
+      1400,
+    )
+    return
+  }
+
+  if (opt.key === 'pack_basic' || opt.key === 'pack_gold' || opt.key === 'pack_combo') {
+    const map: Record<string, { label: string; price: string; desc: string }> = {
+      pack_basic: {
+        label: 'Pack gostinho',
+        price: '29,90',
+        desc: 'conteúdos pra você me conhecer melhor, um gostinho delicioso',
+      },
+      pack_gold: {
+        label: 'Pack Gold',
+        price: '79,90',
+        desc: 'solos de maior duração, bem íntimos e safados',
+      },
+      pack_combo: {
+        label: 'Combo completo',
+        price: '109,90',
+        desc: 'todos os conteúdos: solo, transando, com outras mulheres, cosplay e muito mais',
+      },
+    }
+    const p = map[opt.key]
+    selectedPack.value = { key: opt.key, label: p.label, price: p.price }
+    track('whatsapp_funnel_pack_select', { offer_slug: opt.key, metric_value: Number(p.price.replace(',', '.')) })
+    await startFunnelCheckout()
+    return
+  }
+
+  if (opt.key === 'upsell_no') {
+    showDeclineWhy.value = true
+    declineWhyText.value = ''
+    await funnelType('Tudo bem, amor. Me conta rapidinho o que te fez parar? Assim eu te atendo melhor da próxima 💕', 1200)
+    return
+  }
+
+  if (opt.key === 'start_video_call') {
+    openVideoCallPlayer()
+    return
+  }
+
+  if (opt.key === 'admin_pay') {
+    await adminPayWithBalance()
+    return
+  }
+
+  if (opt.key === 'change_time') {
+    selectedPack.value = null
+    videoCallPurchasedMin.value = 0
+    funnelStep.value = 'video'
+    await funnelType(
+      'Beleza, escolhe o tempo de novo:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n• 1 hora  R$ 399,90\n• 90 min  R$ 549,90\n• 2 horas  R$ 699,90\n• 3 horas  R$ 999,90',
+      1000,
+    )
+    return
+  }
+
+  if (opt.key === 'pix_yes') {
+    track('whatsapp_funnel_pix', { offer_slug: selectedPack.value?.key || 'pack' })
+    // Código já gerado → só libera na tela/chat. Senão gera (ex.: confirmou 1h).
+    if (funnelPixCode.value || pixCopyCode.value) {
+      openPreparedPixForUser()
+    } else {
+      await startFunnelCheckout()
+    }
+    return
+  }
+  if (opt.key === 'pix_no') {
+    await funnelType(
+      'Tranquilo 💚 Sem pressa.\n\nQuando quiser pagar, é só tocar em pedir o PIX que eu mando a chave. Pode continuar falando comigo.',
+      1400,
+    )
+    return
+  }
+  if (opt.key === 'pix_generate') {
+    track('whatsapp_funnel_pix', { offer_slug: selectedPack.value?.key || 'pack' })
+    await startFunnelCheckout()
+    return
+  }
+
+  if (opt.key === 'pix_check') {
+    await checkFunnelPayment(false)
+    return
+  }
+
+  if (opt.key === 'pix_copy') {
+    const code = String(funnelPixCode.value || pixCopyCode.value || '').trim()
+    if (code) {
+      try {
+        await navigator.clipboard.writeText(code)
+      } catch {
+        try {
+          const ta = document.createElement('textarea')
+          ta.value = code
+          document.body.appendChild(ta)
+          ta.select()
+          document.execCommand('copy')
+          document.body.removeChild(ta)
+        } catch {}
+      }
+      pixCopied.value = true
+      setTimeout(() => { pixCopied.value = false }, 2000)
+      // feedback instantâneo no botão/UI — sem esperar mensagem da Wanessa
+    }
+    return
+  }
+
+  if (opt.key === 'pix_regen') {
+    await startFunnelCheckout()
+    return
+  }
+
+  if (opt.key === 'pix_no') {
+    const k = selectedPack.value?.key || ''
+    if (k.startsWith('vid_')) funnelStep.value = 'video'
+    else if (k.startsWith('web_')) funnelStep.value = 'webnamoro'
+    else if (k.startsWith('chat_')) funnelStep.value = 'chat'
+    else funnelStep.value = 'packs'
+    await funnelType('Sem pressa… quando quiser, é só escolher de novo 😘', 1000)
+    return
+  }
+
+    if (opt.key === 'video') {
+    track('whatsapp_funnel_intent', { offer_slug: 'videochamada' })
+    startIncomingVideoCall()
+    return
+  }
+
+
+  
+  if (opt.key === 'video_avulso') {
+    track('whatsapp_funnel_intent', { offer_slug: 'video_avulso' })
+    funnelStep.value = 'video_avulso'
+    await funnelType(
+      'Como você quer seu vídeo avulso, amor? 🎬\n\nMe conta o que você imagina… quanto mais detalhado, mais gostoso eu faço 😏',
+      1200,
+    )
+    return
+  }
+
+if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30' || opt.key === 'vid_60' || opt.key === 'vid_90' || opt.key === 'vid_120' || opt.key === 'vid_180') {
+    const map: Record<string, { label: string; price: string; desc: string; min: number }> = {
+      vid_10: { label: 'Videochamada 10 min', price: '99,90', desc: 'chamada ao vivo rápida e safada', min: 10 },
+      vid_20: { label: 'Videochamada 20 min', price: '149,90', desc: 'tempo pra gozar com calma', min: 20 },
+      vid_30: { label: 'Videochamada 30 min', price: '229,90', desc: 'sessão completa comigo', min: 30 },
+      vid_60: { label: 'Videochamada 1 hora', price: '399,90', desc: 'uma hora inteira só nossa', min: 60 },
+      vid_90: { label: 'Videochamada 90 min', price: '549,90', desc: 'hora e meia ao vivo comigo', min: 90 },
+      vid_120: { label: 'Videochamada 2 horas', price: '699,90', desc: 'duas horas só nossas', min: 120 },
+      vid_180: { label: 'Videochamada 3 horas', price: '999,90', desc: 'três horas de chamada ao vivo', min: 180 },
+    }
+    const p = map[opt.key]
+    selectedPack.value = { key: opt.key, label: p.label, price: p.price }
+    videoCallPurchasedMin.value = p.min
+    track('whatsapp_funnel_select', { offer_slug: opt.key })
+    funnelStep.value = 'pix_ask'
+    await funnelType(
+      `Fechado: ${p.label} por R$ ${p.price} 🔥\n\nPosso te mandar a chave PIX copia e cola aqui na conversa agora?`,
+      1100,
+    )
+    return
+  }
+
+  if (opt.key === 'webnamoro') {
+    track('whatsapp_funnel_intent', { offer_slug: 'webnamoro' })
+    funnelStep.value = 'webnamoro'
+    await funnelType(
+      'Webnamoro é pra quem quer exclusividade comigo 💕\n\n• 7 dias  R$ 179,90 (chat diário + áudios + 1 call curta)\n• 15 dias  R$ 299,90 (+ calls e conteúdo exclusivo)\n• 30 dias  R$ 499,90 (namorada virtual completa)\n\nQual pacote você quer?',
+      1400,
+    )
+    return
+  }
+
+  if (opt.key === 'web_7' || opt.key === 'web_15' || opt.key === 'web_30') {
+    const map: Record<string, { label: string; price: string; desc: string }> = {
+      web_7: { label: 'Webnamoro 7 dias', price: '179,90', desc: 'chat diário, áudios e 1 call curta' },
+      web_15: { label: 'Webnamoro 15 dias', price: '299,90', desc: 'calls + conteúdo exclusivo' },
+      web_30: { label: 'Webnamoro 30 dias', price: '499,90', desc: 'experiência completa de namorada virtual' },
+    }
+    const p = map[opt.key]
+    selectedPack.value = { key: opt.key, label: p.label, price: p.price }
+    track('whatsapp_funnel_select', { offer_slug: opt.key })
+    await startFunnelCheckout()
+    return
+  }
+
+  if (opt.key === 'conversar') {
+    track('whatsapp_funnel_intent', { offer_slug: 'conversar' })
+    funnelStep.value = 'chat_unlock'
+    openChatUnlockInfo()
+    return
+  }
+
+  if (opt.key === 'chat_quick' || opt.key === 'chat_basic' || opt.key === 'chat_midia') {
+    track('whatsapp_funnel_select', { offer_slug: 'chat_quick' })
+    openChatUnlockInfo()
+    return
+  }
+
+  if (opt.key === 'go_wa') {
+    const pack = selectedPack.value
+    let prefill = 'Oi Wanessa! Vim do site e quero falar com você.'
+    if (pack) {
+      prefill = `Oi Wanessa! Já paguei o ${pack.label} (R$ ${pack.price}) no PIX do site. Pode me liberar?`
+    }
+    track('whatsapp_funnel_redirect', { offer_slug: pack?.key || 'whatsapp' })
+    const url = buildWaLink(prefill)
+    stopFunnelPayPoll()
+    clearFunnelState()
+    window.open(url, '_blank', 'noopener,noreferrer')
+    showWaFunnel.value = false
+    showFunnelPhoto.value = false
+    showFunnelProfile.value = false
+    if (funnelTimer) clearTimeout(funnelTimer)
+    funnelTyping.value = false
+  }
+}
+
+const telegramPrivateUrl = 'https://t.me/wanessabsx'
+const logoPriv = LOGO_PRIVSEX
+const logoTg = LOGO_TG_BLUE
+const logoTgPurple = LOGO_TG_PURPLE
+const gallery = ['/model.jpg', '/hero-1.jpg', '/hero-2.jpg', '/hero-3.jpg']
+const photoIndex = ref(0)
+let photoTimer: ReturnType<typeof setInterval> | null = null
+
+/** Presença regional (IP): mostra km plausíveis na mesma cidade/região do lead */
+const nearPresenceReady = ref(false)
+const nearPresenceText = ref('')
+function hashSeed(s: string): number {
+  let h = 2166136261
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+async function loadNearPresence() {
+  try {
+    // IP geo leve (sem chave). Fallback silencioso se falhar.
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null
+    const t = ctrl ? setTimeout(() => ctrl.abort(), 3500) : null
+    const res = await fetch('https://ipapi.co/json/', {
+      signal: ctrl?.signal,
+      headers: { Accept: 'application/json' },
+    })
+    if (t) clearTimeout(t)
+    if (!res.ok) throw new Error('geo fail')
+    const data = await res.json()
+    if (data?.error) throw new Error(String(data.reason || 'geo'))
+    const city = String(data.city || '').trim()
+    const region = String(data.region || data.region_code || '').trim()
+    const country = String(data.country_name || data.country || '').trim()
+    const place = city || region || country
+    let seed = 'anon'
+    try { seed = getOrCreateVisitorId() || seed } catch {}
+    seed += '|' + place
+    const h = hashSeed(seed)
+    // 3–27 km na mesma região (parece real, estável por visitante)
+    const km = 3 + (h % 25)
+    const online = (h % 10) !== 0 // ~90% "online agora"
+    if (isPt.value) {
+      if (place) {
+        nearPresenceText.value = online
+          ? `Online · a ~${km} km de você · ${place}`
+          : `Visto por último perto de você · ${place}`
+      } else {
+        nearPresenceText.value = online ? 'Online perto de você' : 'Esteve online perto de você'
+      }
+    } else {
+      if (place) {
+        nearPresenceText.value = online
+          ? `Online · ~${km} km from you · ${place}`
+          : `Last seen near you · ${place}`
+      } else {
+        nearPresenceText.value = online ? 'Online near you' : 'Last seen near you'
+      }
+    }
+    nearPresenceReady.value = true
+  } catch {
+    // fallback mínimo (sem vazar erro)
+    try {
+      nearPresenceText.value = isPt.value ? 'Online agora' : 'Online now'
+      nearPresenceReady.value = true
+    } catch {}
+  }
+}
+
+const gate = ref<1 | 2 | 3 | 4 | 'pass' | 'reject' | null>(null)
+const quizAnswers = ref<Record<string, string>>({})
+const gateReady = ref(false)
+const chatMessages = ref<ChatMsg[]>([])
+const isTyping = ref(false)
+const chatBox = ref<HTMLElement | null>(null)
+let typingTimer: ReturnType<typeof setTimeout> | null = null
+
+function nowTime() {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+function scrollChat() {
+  nextTick(() => {
+    const el = chatBox.value
+    if (el) el.scrollTop = el.scrollHeight
+  })
+}
+function pushMsg(from: 'her' | 'me', text: string) {
+  chatMessages.value.push({ from, text, time: nowTime() })
+  scrollChat()
+}
+function typeThenAsk(text: string, delay = 0) {
+  isTyping.value = true
+  scrollChat()
+  if (typingTimer) clearTimeout(typingTimer)
+  const wait = humanDelay(text, delay)
+  typingTimer = setTimeout(() => {
+    isTyping.value = false
+    pushMsg('her', text)
+  }, wait)
+}
+const questionText = (g: 1 | 2 | 3 | 4) => {
+  if (g === 1) return t('q1')
+  if (g === 2) return t('q2')
+  if (g === 3) return t('qPay')
+  return t('q3')
+}
+const quizOptions = computed(() => {
+  if (gate.value === 1) return [{ key: 'yes', label: t('q1yes'), variant: 'wa-quick--yes' }, { key: 'no', label: t('q1no'), variant: 'wa-quick--no' }]
+  if (gate.value === 2) return [{ key: 'yes', label: t('q2yes'), variant: 'wa-quick--yes' }, { key: 'no', label: t('q2no'), variant: 'wa-quick--no' }]
+  if (gate.value === 3) return [{ key: 'yes', label: t('qPayYes'), variant: 'wa-quick--yes' }, { key: 'no', label: t('qPayNo'), variant: 'wa-quick--no' }]
+  if (gate.value === 4) return [
+    { key: 'assinar', label: t('q3assinar'), variant: 'wa-quick--yes' },
+    { key: 'precos', label: t('q3precos'), variant: 'wa-quick--yes' },
+    { key: 'olhando', label: t('q3olhando'), variant: 'wa-quick--no' },
+  ]
+  return []
+})
+function setGate(next: 1 | 2 | 3 | 4 | 'pass' | 'reject', persistServer = false) {
+  gate.value = next
+  try { localStorage.setItem(GATE_KEY, String(next)) } catch {}
+  if (persistServer && (next === 'pass' || next === 'reject')) {
+    const visitor_id = getOrCreateVisitorId()
+    getDeviceFingerprint().then((fingerprint) => {
+      try {
+        fetch('/api/quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visitor_id, fingerprint, status: next, answers: { ...quizAnswers.value } }),
+          keepalive: true,
+        }).catch(() => {})
+      } catch {}
+    })
+  }
+}
+function answerQuiz(key: string) {
+  if (isTyping.value) return
+  const label = quizOptions.value.find((o) => o.key === key)?.label || key
+  pushMsg('me', label)
+  if (gate.value === 1) {
+    // Nunca assinou NAO bloqueia — lead novo tambem pode comprar; so registra
+    quizAnswers.value.q1 = key === 'yes' ? 'assinou_sim' : 'assinou_nao'
+    setGate(2)
+    typeThenAsk(questionText(2), 1100)
+    return
+  }
+  if (gate.value === 2) {
+    // Nao conhecer pelo Instagram NAO bloqueia — so registra
+    quizAnswers.value.q2 = key === 'yes' ? 'conhece_sim' : 'conhece_nao'
+    setGate(3)
+    typeThenAsk(questionText(3), 1100)
+    return
+  }
+  if (gate.value === 3) {
+    // Disposto a pagar? Sim -> segue | Nao -> bloqueia
+    quizAnswers.value.q_pay = key === 'yes' ? 'pago_sim' : 'pago_nao'
+    if (key === 'no') {
+      setGate('reject', true)
+      typeThenAsk(t('rejectPay'), 1400)
+    } else {
+      setGate(4)
+      typeThenAsk(questionText(4), 1100)
+    }
+    return
+  }
+  if (gate.value === 4) {
+    const intentMap: Record<string, string> = {
+      assinar: 'intent_assinar_hoje',
+      precos: 'intent_ver_precos',
+      olhando: 'intent_so_olhando',
+    }
+    quizAnswers.value.q3 = intentMap[key] || key
+    try { localStorage.setItem('wanessa_intent', quizAnswers.value.q3) } catch {}
+    if (key === 'olhando') {
+      setGate('reject', true)
+      typeThenAsk(t('rejectCurious'), 1400)
+    } else if (key === 'assinar') {
+      pushMsg('her', t('passAssinar'))
+      setTimeout(() => setGate('pass', true), 800)
+    } else {
+      pushMsg('her', t('passPrecos'))
+      setTimeout(() => setGate('pass', true), 800)
+    }
+  }
+}
+const DEFAULT_LINKS: LinkItem[] = [
+  { label: 'PrivSex', icon: '🔥', url: privsexUrl, enabled: true },
+  { label: 'Telegram Bot', icon: '⭐', url: vipBotUrl, enabled: true },
+]
+const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
+const configReady = ref(false)
+const showLogin = ref(false)
+const isAdmin = ref(false)
+const showAdminPanel = ref(false)
+const videoCallVideos = ref<string[]>([])
+const showVideoCallPlayer = ref(false)
+const videoCallIndex = ref(0)
+const videoCallUnlocked = ref(false)
+const showCallSalesBalloon = ref(false)
+const callPlaylist = ref<string[]>([])
+const callPlaylistIndex = ref(0)
+const callSessionStartedAt = ref(0)
+
+const CALL_CREDIT_KEY = 'wanessa_call_credit_v1'
+const CALL_WATCHED_KEY = 'wanessa_call_watched_v1'
+
+type CallCredit = {
+  id?: string
+  secondsLeft: number
+  secondsBought: number
+  planKey: string
+  paymentAt: number
+  visitor_id?: string
+}
+
+function callCreditStorageKey() {
+  try { return CALL_CREDIT_KEY + '_' + (getOrCreateVisitorId() || 'anon') } catch { return CALL_CREDIT_KEY + '_anon' }
+}
+function callWatchedStorageKey() {
+  try { return CALL_WATCHED_KEY + '_' + (getOrCreateVisitorId() || 'anon') } catch { return CALL_WATCHED_KEY + '_anon' }
+}
+
+function loadCallCreditLocal(): CallCredit | null {
+  try {
+    const raw = localStorage.getItem(callCreditStorageKey())
+    if (!raw) return null
+    const data = JSON.parse(raw)
+    if (!data || typeof data.secondsLeft !== 'number' || data.secondsLeft <= 0) return null
+    return data as CallCredit
+  } catch { return null }
+}
+
+function saveCallCreditLocal(credit: CallCredit | null) {
+  try {
+    if (!credit || credit.secondsLeft <= 0) { localStorage.removeItem(callCreditStorageKey()); return }
+    localStorage.setItem(callCreditStorageKey(), JSON.stringify(credit))
+  } catch {}
+}
+
+function loadCallCredit(): CallCredit | null {
+  return loadCallCreditLocal()
+}
+
+async function syncCallCreditFromServer() {
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    if (!visitor_id) return null
+    const res = await $fetch<{
+      ok?: boolean
+      credit?: { id?: string; seconds_left?: number; seconds_bought?: number; plan_key?: string; last_payment_at?: string } | null
+      watched?: string[]
+    }>('/api/call-credit', { query: { visitor_id } })
+    if (Array.isArray(res?.watched)) {
+      try { localStorage.setItem(callWatchedStorageKey(), JSON.stringify(res.watched)) } catch {}
+    }
+    if (res?.credit && (res.credit.seconds_left || 0) > 0) {
+      const credit: CallCredit = {
+        id: res.credit.id,
+        secondsLeft: Number(res.credit.seconds_left) || 0,
+        secondsBought: Number(res.credit.seconds_bought) || 0,
+        planKey: String(res.credit.plan_key || 'vid_10'),
+        paymentAt: res.credit.last_payment_at ? Date.parse(res.credit.last_payment_at) : Date.now(),
+        visitor_id,
+      }
+      saveCallCreditLocal(credit)
+      videoCallUnlocked.value = true
+      videoCallPurchasedMin.value = Math.max(1, Math.ceil(credit.secondsLeft / 60))
+      return credit
+    }
+    if (!res?.credit || (res.credit.seconds_left || 0) <= 0) saveCallCreditLocal(null)
+    return loadCallCreditLocal()
+  } catch {
+    return loadCallCreditLocal()
+  }
+}
+
+function grantCallCredit(minutes: number, planKey: string) {
+  const secs = Math.max(1, Math.floor(Number(minutes) || 10)) * 60
+  const prev = loadCallCreditLocal()
+  const credit: CallCredit = {
+    secondsLeft: (prev?.secondsLeft || 0) + secs,
+    secondsBought: (prev?.secondsBought || 0) + secs,
+    planKey,
+    paymentAt: Date.now(),
+  }
+  try { credit.visitor_id = getOrCreateVisitorId() } catch {}
+  saveCallCreditLocal(credit)
+  videoCallUnlocked.value = true
+  videoCallPurchasedMin.value = Math.ceil(credit.secondsLeft / 60)
+  try { track('call_credit_grant', { minutes, plan_key: planKey, seconds_left: credit.secondsLeft }) } catch {}
+  try {
+    logFunnelMessage('bot', `Crédito de chamada: +${minutes} min (${planKey})`, {
+      event: 'call_credit_grant', minutes, plan_key: planKey, seconds_left: credit.secondsLeft,
+    })
+  } catch {}
+  try {
+    $fetch('/api/call-credit', {
+      method: 'POST',
+      body: {
+        action: 'grant',
+        visitor_id: getOrCreateVisitorId(),
+        minutes,
+        plan_key: planKey,
+        conversation_id: funnelConversationId.value || undefined,
+      },
+    }).catch(() => {})
+  } catch {}
+}
+
+function consumeCallCredit(usedSeconds: number) {
+  const used = Math.max(0, Math.floor(usedSeconds || 0))
+  const credit = loadCallCreditLocal()
+  let left = 0
+  if (!credit) {
+    videoCallUnlocked.value = false
+  } else {
+    credit.secondsLeft = Math.max(0, credit.secondsLeft - used)
+    left = credit.secondsLeft
+    saveCallCreditLocal(credit.secondsLeft > 0 ? credit : null)
+    if (credit.secondsLeft <= 0) videoCallUnlocked.value = false
+    try {
+      logFunnelMessage('bot', `Chamada consumida: ${used}s · restam ${credit.secondsLeft}s`, {
+        event: 'call_credit_consume', used_sec: used, seconds_left: credit.secondsLeft,
+      })
+    } catch {}
+    try { track('call_credit_consume', { used_sec: used, seconds_left: credit.secondsLeft }) } catch {}
+  }
+  const watchedUrls: string[] = []
+  try {
+    for (let i = 0; i <= callPlaylistIndex.value && i < callPlaylist.value.length; i++) watchedUrls.push(callPlaylist.value[i])
+    const cur = videoCallVideos.value[videoCallIndex.value]
+    if (cur) watchedUrls.push(cur)
+  } catch {}
+  try {
+    $fetch('/api/call-credit', {
+      method: 'POST',
+      body: {
+        action: 'consume',
+        visitor_id: getOrCreateVisitorId(),
+        seconds_used: used,
+        end_reason: 'session',
+        conversation_id: funnelConversationId.value || undefined,
+        video_urls: watchedUrls,
+        started_at: callSessionStartedAt.value ? new Date(callSessionStartedAt.value).toISOString() : undefined,
+      },
+    }).catch(() => {})
+  } catch {}
+}
+
+function loadWatchedVideos(): string[] {
+  try {
+    const raw = localStorage.getItem(callWatchedStorageKey())
+    if (!raw) return []
+    const arr = JSON.parse(raw)
+    return Array.isArray(arr) ? arr.map(String) : []
+  } catch { return [] }
+}
+
+function markVideosWatched(urls: string[]) {
+  const set = new Set(loadWatchedVideos())
+  for (const u of urls) if (u) set.add(u)
+  try { localStorage.setItem(callWatchedStorageKey(), JSON.stringify([...set])) } catch {}
+  try {
+    const list = urls.filter(Boolean)
+    if (list.length) {
+      $fetch('/api/call-credit', {
+        method: 'POST',
+        body: { action: 'mark_watched', visitor_id: getOrCreateVisitorId(), video_urls: list, fully: true },
+      }).catch(() => {})
+    }
+  } catch {}
+}
+
+function markCurrentCallVideosWatched() {
+  const watched: string[] = []
+  for (let i = 0; i <= callPlaylistIndex.value && i < callPlaylist.value.length; i++) watched.push(callPlaylist.value[i])
+  const cur = videoCallVideos.value[videoCallIndex.value]
+  if (cur) watched.push(cur)
+  markVideosWatched(watched)
+}
+
+function buildCallPlaylist(): string[] {
+  const watched = new Set(loadWatchedVideos())
+  return videoCallVideos.value.filter(Boolean).filter((u) => !watched.has(u))
+}
+
+function closeCallSalesBalloon() {
+  showCallSalesBalloon.value = false
+}
+
+async function onCallSalesWantLive() {
+  showCallSalesBalloon.value = false
+  funnelStep.value = 'video'
+  await funnelType(
+    'Perfeito… escolhe o tempo da nossa chamada 🔥\n\nQuanto mais minutos, mais fundo a gente vai.',
+    1200,
+  )
+}
+
+const editVideoCallUrls = ref('')
+const AVATAR_FOCUS_KEY = 'wanessa_avatar_focus_v1'
+const avatarFocusX = ref(50)
+const avatarFocusY = ref(20)
+
+function applyAvatarFocus() {
+  const x = Math.min(100, Math.max(0, Number(avatarFocusX.value) || 50))
+  const y = Math.min(100, Math.max(0, Number(avatarFocusY.value) || 20))
+  avatarFocusX.value = x
+  avatarFocusY.value = y
+  try {
+    document.documentElement.style.setProperty('--avatar-focus-x', x + '%')
+    document.documentElement.style.setProperty('--avatar-focus-y', y + '%')
+  } catch {}
+  try {
+    localStorage.setItem(AVATAR_FOCUS_KEY, JSON.stringify({ x, y }))
+  } catch {}
+}
+
+function resetAvatarFocus() {
+  avatarFocusX.value = 50
+  avatarFocusY.value = 20
+  applyAvatarFocus()
+}
+
+function loadAvatarFocus() {
+  try {
+    const raw = localStorage.getItem(AVATAR_FOCUS_KEY)
+    if (raw) {
+      const d = JSON.parse(raw)
+      if (d && typeof d.x === 'number') avatarFocusX.value = d.x
+      if (d && typeof d.y === 'number') avatarFocusY.value = d.y
+    }
+  } catch {}
+  applyAvatarFocus()
+}
+
+const showIncomingCall = ref(false)
+const showDeclineWhy = ref(false)
+const declineWhyText = ref('')
+const videoCallActive = ref(false)
+const videoCallSecondsLeft = ref(0)
+const videoCallSecondsUsed = ref(0)
+const videoCallPurchasedMin = ref(10)
+let videoCallTimer: ReturnType<typeof setInterval> | null = null
+const videoCallEndedUpsell = ref(false)
+const password = ref('')
+const showAdminPass = ref(false)
+const loginError = ref('')
+const saveMsg = ref('')
+const saveError = ref('')
+const loading = ref(false)
+const passInput = ref<HTMLInputElement | null>(null)
+const edit = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
+function getOrCreateVisitorId(): string {
+  if (typeof window === 'undefined') return ''
+  try {
+    let id = localStorage.getItem(VID_KEY) || ''
+    if (!id || id.length < 8) {
+      id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`
+      localStorage.setItem(VID_KEY, id)
+    }
+    document.cookie = `vid=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax;Secure`
+    return id
+  } catch { return `v_${Date.now().toString(36)}` }
+}
+function todayKey() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function alreadyViewedToday() { try { return localStorage.getItem(VIEW_DAY_KEY) === todayKey() } catch { return false } }
+function markViewedToday() { try { localStorage.setItem(VIEW_DAY_KEY, todayKey()) } catch {} }
+function alreadyClickedToday(slug: string) { try { return localStorage.getItem(CLICK_DAY_PREFIX + slug) === todayKey() } catch { return false } }
+function markClickedToday(slug: string) { try { localStorage.setItem(CLICK_DAY_PREFIX + slug, todayKey()) } catch {} }
+function readUtms() {
+  if (typeof window === 'undefined') return {}
+  const p = new URLSearchParams(window.location.search)
+  return { utm_source: p.get('utm_source'), utm_medium: p.get('utm_medium'), utm_campaign: p.get('utm_campaign'), utm_content: p.get('utm_content'), utm_term: p.get('utm_term'), src: p.get('src'), sck: p.get('sck') }
+}
+function offerFromLabel(label: string) {
+  const lower = label.toLowerCase()
+  if (/pr[eé]via|canal|público/i.test(lower)) return 'previa_telegram'
+  if (/vip/i.test(lower)) return 'telegram_vip'
+  if (/priv/i.test(lower)) return 'privsex'
+  if (/whats/i.test(lower)) return 'whatsapp'
+  if (/telegram.*priv|conteúdo no telegram/i.test(lower)) return 'telegram_privado'
+  return label.toLowerCase().replace(/\s+/g, '_').slice(0, 40)
+}
+function track(eventName: string, extra: Record<string, any> = {}) {
+  const visitor_id = getOrCreateVisitorId()
+  const payload = { event_name: eventName, path: '/links/wanessa', visitor_id, ...readUtms(), ...extra }
+  const json = JSON.stringify(payload)
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([json], { type: 'application/json' })
+      if (navigator.sendBeacon('/api/track', blob)) return
+    }
+    fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true }).catch(() => {})
+  } catch {}
+}
+function onCardClick(label: string, url: string) {
+  const slug = offerFromLabel(label)
+  if (alreadyClickedToday(slug)) return
+  markClickedToday(slug)
+  track('outbound_click', { label, url, offer_slug: slug })
+}
+function attachLogo(l: LinkItem): LinkItem {
+  const lab = (l.label || '').toLowerCase()
+  let logo: string | undefined
+  if (/pr[eé]via|canal|público/i.test(lab)) logo = LOGO_TG_BLUE
+  else if (/vip/i.test(lab)) logo = LOGO_TG_PURPLE
+  else if (/priv/i.test(lab)) logo = LOGO_PRIVSEX
+  return { ...l, logo, enabled: l.enabled !== false }
+}
+function applyServerConfig(data: any) {
+  if (!data) return
+  config.name = data.name || config.name
+  const incomingBio = (data.bio || '').trim()
+  const isGeneric = /creator|conteúdo\s*&?\s*links|content\s*&?\s*links|língua\s*bifurcada|resto\s*tu\s*descobre/i.test(incomingBio)
+  config.bio = !incomingBio || isGeneric ? '' : incomingBio
+  config.highlight_label = String(data.highlight_label || '').trim() || DEFAULT_HIGHLIGHT
+  config.quiz_enabled = data.quiz_enabled === true
+  if (Array.isArray(data.links) && data.links.length) {
+    config.links = data.links.filter((l: any) => l && l.label).map((l: any) => attachLogo({ label: String(l.label || ''), icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled: l.enabled !== false }))
+  } else config.links = DEFAULT_LINKS.map(attachLogo)
+}
+const { data: remoteConfig } = await useAsyncData('link-page-config', () => $fetch<any>('/api/config').catch(() => null))
+if (remoteConfig.value) applyServerConfig(remoteConfig.value)
+else config.links = DEFAULT_LINKS.map(attachLogo)
+configReady.value = true
+async function warmSyncPay() {
+  try { await $fetch('/api/checkout/warm') } catch {}
+}
+onMounted(async () => {
+  // garante que a home sempre começa scrollável (lock residual do chat)
+  try { unlockBodyScrollForFunnel() } catch {}
+  loadAvatarFocus()
+  // restaura sessão admin se o cookie ainda for válido (não bloqueia o chat)
+  restoreAdminSession()
+  // 1) PRIMEIRO: landing do chat / chamada (Telegram / ads / previas) — antes de qualquer await
+  let openChatDirect = false
+  let openChamadaDirect = false
+  let chatSlug = 'wanessabsx'
+  try {
+    const path = (window.location.pathname || '').replace(/\/+$/, '') || '/'
+    // /chat sozinho → mesma landing de /chat/wanessabsx
+    if (path === '/chat') {
+      openChatDirect = true
+      chatSlug = 'wanessabsx'
+    } else {
+      const m = path.match(/\/chat\/([^/]+)/i)
+      if (m) {
+        chatSlug = decodeURIComponent(m[1] || '').toLowerCase()
+        if (chatSlug === 'wanessabsx' || chatSlug === 'wanessa') openChatDirect = true
+      }
+    }
+    // /chamada → canal de previas: abre funil + popup de ligação entrando
+    if (path === '/chamada') {
+      openChatDirect = true
+      openChamadaDirect = true
+      chatSlug = 'chamada'
+    }
+    const q = new URLSearchParams(window.location.search || '')
+    const cq = (q.get('chat') || q.get('open') || '').toLowerCase()
+    if (cq === 'wanessabsx' || cq === 'wanessa' || cq === '1' || cq === 'true' || cq === 'whatsapp') {
+      openChatDirect = true
+      if (cq !== '1' && cq !== 'true' && cq !== 'whatsapp') chatSlug = cq
+    }
+    // hash fallback #chat
+    if ((window.location.hash || '').toLowerCase().includes('chat')) openChatDirect = true
+  } catch {}
+
+  if (openChatDirect) {
+    isChatLanding.value = true
+    gate.value = 'pass'
+    gateReady.value = true
+    try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
+    try { track('page_view', { offer_slug: openChamadaDirect ? 'chamada' : ('chat_' + chatSlug) }) } catch {}
+    loadFunnelConversationLocal()
+    openWaFunnel(openChamadaDirect ? 'chamada' : ('chat_' + chatSlug))
+    // reforço (Telegram WebView às vezes atrasa o paint)
+    setTimeout(() => {
+      if (!showWaFunnel.value) openWaFunnel(openChamadaDirect ? 'chamada' : ('chat_' + chatSlug))
+    }, 300)
+    setTimeout(() => {
+      if (!showWaFunnel.value) openWaFunnel(openChamadaDirect ? 'chamada' : ('chat_' + chatSlug))
+    }, 1000)
+    // Canal previas: já abre o popup de videochamada entrando
+    if (openChamadaDirect) {
+      setTimeout(() => {
+        try { startIncomingVideoCall() } catch {}
+      }, 450)
+      setTimeout(() => {
+        try {
+          if (!showIncomingCall.value) startIncomingVideoCall()
+        } catch {}
+      }, 1200)
+    }
+  } else {
+    // Reload na home: se o chat estava aberto, reabre com o histórico
+    try {
+      const raw = localStorage.getItem(FUNNEL_STORAGE_KEY)
+      if (raw) {
+        const data = JSON.parse(raw)
+        if (data?.open && Array.isArray(data.messages) && data.messages.length > 0) {
+          gate.value = 'pass'
+          gateReady.value = true
+          try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
+          nextTick(() => openWaFunnel('reload_restore'))
+        }
+      }
+    } catch {}
+  }
+
+  warmSyncPay()
+
+  locale.value = detectLocale()
+  try { document.documentElement.lang = locale.value } catch {}
+  const visitor_id = getOrCreateVisitorId()
+  if (!alreadyViewedToday() && !openChatDirect) {
+    markViewedToday()
+    track('page_view', { offer_slug: 'wanessa_links' })
+  }
+
+  if (!openChatDirect) {
+    let restored: string | null = null
+    try { restored = localStorage.getItem(GATE_KEY) } catch {}
+    if (restored === 'pass' || restored === 'reject') gate.value = restored
+    else if (restored === '1' || restored === '2' || restored === '3' || restored === '4') gate.value = Number(restored) as 1 | 2 | 3 | 4
+    else if (restored === '4') gate.value = 1
+    try {
+      const fingerprint = await getDeviceFingerprint()
+      if (gate.value !== 'pass' && gate.value !== 'reject') {
+        try {
+          const res = await $fetch<{ status: string | null }>('/api/quiz', { query: { visitor_id, fingerprint } })
+          if (res?.status === 'pass' || res?.status === 'reject') {
+            gate.value = res.status
+            try { localStorage.setItem(GATE_KEY, res.status) } catch {}
+          }
+        } catch {}
+      } else if (visitor_id && (gate.value === 'pass' || gate.value === 'reject')) {
+        try {
+          fetch('/api/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitor_id, fingerprint, status: gate.value }), keepalive: true }).catch(() => {})
+        } catch {}
+      }
+    } catch {}
+    if (!config.quiz_enabled) {
+      gate.value = 'pass'
+      try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
+    }
+    if (gate.value == null) gate.value = 1
+    gateReady.value = true
+    if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
+      chatMessages.value = []
+      typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
+    } else if (gate.value === 'reject') {
+      chatMessages.value = []
+      pushMsg('her', t('rejectIg'))
+    }
+  }
+
+  photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 5500)
+})
+onUnmounted(() => {
+  if (photoTimer) clearInterval(photoTimer)
+  if (typingTimer) clearTimeout(typingTimer)
+})
+function openLogin() {
+  if (isAdmin.value) {
+    openEdit()
+    return
+  }
+  password.value = ''
+  showAdminPass.value = false
+  loginError.value = ''
+  showLogin.value = true
+  nextTick(() => passInput.value?.focus())
+}
+function openEdit() {
+  showAdminPanel.value = true
+  loadAvatarFocus()
+  editVideoCallUrls.value = videoCallVideos.value.join('\n')
+  edit.name = config.name; edit.bio = config.bio; edit.highlight_label = config.highlight_label || DEFAULT_HIGHLIGHT
+  edit.quiz_enabled = config.quiz_enabled === true
+  edit.links = config.links.map((l) => ({ label: l.label, icon: l.icon, url: l.url, desc: l.desc || '', enabled: l.enabled !== false }))
+  if (!edit.links.length) edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true })
+}
+function closeAdmin() {
+  // fecha só o painel — sessão admin continua até Sair
+  showAdminPanel.value = false
+  saveMsg.value = ''
+  saveError.value = ''
+}
+async function doLogout() {
+  try {
+    await $fetch('/api/admin/logout', { method: 'POST' })
+  } catch {}
+  isAdmin.value = false
+  showAdminPanel.value = false
+  saveMsg.value = ''
+  saveError.value = ''
+}
+
+function addLink() { edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true }) }
+function removeLink(i: number) { edit.links.splice(i, 1) }
+
+
+async function loadVideoCallVideos() {
+  // 1) fonte principal: Supabase via /api/call-videos (painel /moderador)
+  try {
+    const res = await $fetch<{ videos?: { url?: string; is_active?: boolean }[] }>('/api/call-videos')
+    const urls = (res?.videos || [])
+      .filter((v) => v && v.url && v.is_active !== false)
+      .map((v) => String(v.url).trim())
+      .filter(Boolean)
+    if (urls.length) {
+      videoCallVideos.value = urls
+      try { localStorage.setItem('wanessa_video_call_urls', JSON.stringify(urls)) } catch {}
+      return
+    }
+  } catch {}
+  // 2) fallback local
+  try {
+    const raw = localStorage.getItem('wanessa_video_call_urls')
+    if (raw) {
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr)) videoCallVideos.value = arr.filter((u: any) => typeof u === 'string' && u.trim())
+    }
+  } catch {}
+}
+function saveVideoCallVideos() {
+  const urls = editVideoCallUrls.value
+    .split(/\n|,/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  videoCallVideos.value = urls
+  try { localStorage.setItem('wanessa_video_call_urls', JSON.stringify(urls)) } catch {}
+  // espelha no moderador (se admin logado)
+  try {
+    for (const url of urls) {
+      $fetch('/api/call-videos', { method: 'POST', body: { action: 'add', url } }).catch(() => {})
+    }
+  } catch {}
+}
+
+async function restoreAdminSession() {
+  try {
+    await $fetch('/api/admin/session')
+    isAdmin.value = true
+  } catch {
+    isAdmin.value = false
+  }
+}
+
+async function doLogin() {
+  loginError.value = ''; loading.value = true
+  try {
+    await $fetch('/api/admin/login', { method: 'POST', body: { password: password.value } })
+    password.value = ''; showLogin.value = false; isAdmin.value = true; openEdit()
+  } catch (e: any) { loginError.value = e?.data?.statusMessage || e?.statusMessage || 'Senha inválida' }
+  finally { loading.value = false }
+}
+async function doSave() {
+  saveMsg.value = ''; saveError.value = ''; loading.value = true
+  try {
+    const payload = {
+      name: edit.name || config.name || '', bio: edit.bio, avatar_url: '',
+      highlight_label: (edit.highlight_label || '').trim() || DEFAULT_HIGHLIGHT,
+      quiz_enabled: edit.quiz_enabled === true,
+      links: edit.links.filter((l) => l.label.trim()).map((l) => ({ label: l.label.trim(), icon: l.icon || '🔗', url: l.url || '#', desc: (l.desc || '').trim(), enabled: l.enabled !== false })),
+    }
+    await $fetch('/api/admin/update', { method: 'POST', body: payload })
+    config.name = payload.name; config.bio = payload.bio; config.highlight_label = payload.highlight_label
+    config.quiz_enabled = payload.quiz_enabled
+    config.links = payload.links.map((l) => attachLogo(l))
+    saveMsg.value = 'Salvo!'; setTimeout(() => { saveMsg.value = '' }, 2500)
+  } catch (e: any) { saveError.value = e?.data?.statusMessage || 'Erro ao salvar' }
+  finally { loading.value = false }
+}
+useHead({
+  title: 'Wanessa',
+  meta: [{ name: 'description', content: 'Acesso restrito — privacidade e alto nível.' }, { name: 'theme-color', content: '#12081a' }],
+})
+</script>
+<style scoped>
+
+.cu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40130;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.cu-card {
+  position: relative;
+  width: min(100%, 360px);
+  border-radius: 20px;
+  padding: 22px 18px 16px;
+  background: linear-gradient(165deg, #1a1524 0%, #121018 100%);
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  animation: cuPop .28s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes cuPop {
+  from { opacity: 0; transform: translateY(12px) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+.cu-x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  color: #aaa;
+  font-size: 14px;
+  cursor: pointer;
+}
+.cu-title {
+  margin: 0 28px 12px 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+.cu-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.cu-body p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #c8c5d0;
+}
+.cu-body strong { color: #fff; font-weight: 700; }
+.cu-actions {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.cu-btn {
+  flex: 1;
+  border: 0;
+  border-radius: 14px;
+  padding: 13px 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1.25;
+}
+.cu-btn--yes {
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(37,211,102,.28);
+}
+.cu-btn--no {
+  background: rgba(255,255,255,.06);
+  color: #b0a8b8;
+  border: 1px solid rgba(255,255,255,.1);
+}
+.cu-btn--wide { width: 100%; flex: none; padding: 14px 16px; font-size: 1rem; }
+.cu-btn:disabled { opacity: .65; cursor: wait; }
+.cu-btn-link {
+  margin-top: 10px;
+  border: 0;
+  background: transparent;
+  color: #7a7385;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.cu-pix-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 320px);
+  animation: cuPop .32s cubic-bezier(.2,.9,.3,1);
+}
+.cu-avatar-ring {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, #25d366, #a855f7, #ec4899);
+  box-shadow: 0 0 0 6px rgba(37,211,102,.12), 0 12px 40px rgba(0,0,0,.45);
+  margin-bottom: 14px;
+  animation: cuPulse 2s ease-in-out infinite;
+}
+@keyframes cuPulse {
+  0%, 100% { box-shadow: 0 0 0 6px rgba(37,211,102,.12), 0 12px 40px rgba(0,0,0,.45); }
+  50% { box-shadow: 0 0 0 10px rgba(37,211,102,.2), 0 12px 40px rgba(0,0,0,.45); }
+}
+.cu-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.cu-balloon {
+  position: relative;
+  background: #1f2c34;
+  border-radius: 18px 18px 18px 4px;
+  padding: 14px 16px;
+  max-width: 100%;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  animation: cuFloat 2.4s ease-in-out infinite;
+}
+@keyframes cuFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.cu-balloon-text {
+  margin: 0;
+  color: #e9edef;
+  font-size: 0.98rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+.cu-balloon-tail {
+  position: absolute;
+  left: 18px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  background: #1f2c34;
+  transform: rotate(45deg);
+  border-right: 1px solid rgba(255,255,255,.08);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.cu-pix-hint {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: #8696a0;
+}
+
+
+
+.wa-unlock-bar {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 22px;
+  padding: 12px 16px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  box-shadow: 0 4px 16px rgba(37,211,102,.35);
+  white-space: nowrap;
+}
+.wa-unlock-bar:active {
+  transform: scale(0.98);
+  opacity: 0.92;
+}
+.wa-send, .wa-composer-icon {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+</style>
