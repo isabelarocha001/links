@@ -41,6 +41,10 @@ const listLoading = ref(false)
 const listError = ref('')
 const filter = ref<'all' | 'new' | 'open'>('all')
 const searchQuery = ref('')
+const unlockQuery = ref('')
+const unlockLoading = ref(false)
+const unlockMsg = ref('')
+const unlockErr = ref('')
 
 const selectedId = ref<string | null>(null)
 const messages = ref<ChatMsg[]>([])
@@ -129,6 +133,52 @@ function onOpenConfig() {
   } else {
     console.warn('[admin] openAdminConfig não disponível — provide ausente no app.vue')
   }
+}
+
+async function unlockChatPaid() {
+  unlockMsg.value = ''
+  unlockErr.value = ''
+  const q = unlockQuery.value.trim()
+  if (!q) {
+    unlockErr.value = 'Digite o ID do visitante ou o nome do lead'
+    return
+  }
+  unlockLoading.value = true
+  try {
+    const body: Record<string, string> = {}
+    // UUID-like or long id → visitor_id; senão busca por nome
+    if (q.length >= 8 && !/\s/.test(q) && (/^[0-9a-f-]{8,}$/i.test(q) || q.startsWith('v_'))) {
+      body.visitor_id = q
+    } else {
+      body.name = q
+    }
+    // Se tem conversa selecionada e campo vazio parcialmente, preferir visitor da seleção
+    const sel = conversations.value.find((c) => c.id === selectedId.value)
+    if (sel?.visitor_id && (q === sel.visitor_id || q === (sel.title || ''))) {
+      body.visitor_id = String(sel.visitor_id)
+      delete body.name
+    }
+    const res = await $fetch<{ ok?: boolean; visitor_id?: string; message?: string }>('/api/admin/unlock-chat', {
+      method: 'POST',
+      body,
+    })
+    unlockMsg.value = res?.message || `Chat liberado${res?.visitor_id ? ' · ' + res.visitor_id.slice(0, 12) : ''}`
+    unlockQuery.value = ''
+  } catch (e: any) {
+    unlockErr.value = e?.data?.statusMessage || e?.statusMessage || 'Erro ao liberar'
+  } finally {
+    unlockLoading.value = false
+  }
+}
+
+function unlockSelectedLead() {
+  const sel = conversations.value.find((c) => c.id === selectedId.value)
+  if (!sel?.visitor_id) {
+    unlockErr.value = 'Selecione uma conversa na lista'
+    return
+  }
+  unlockQuery.value = String(sel.visitor_id)
+  unlockChatPaid()
 }
 
 async function doLogout() {
@@ -660,6 +710,35 @@ if (typeof window !== 'undefined') {
                 <span v-if="newCount" class="ac-tab-count">{{ newCount }}</span>
               </button>
               <button type="button" class="ac-tab" :class="{ active: filter === 'open' }" @click="filter = 'open'">Abertas</button>
+            </div>
+
+            <div class="ac-unlock">
+              <p class="ac-unlock-label">Liberar chat pago (teste)</p>
+              <div class="ac-unlock-row">
+                <input
+                  v-model="unlockQuery"
+                  class="ac-search"
+                  type="text"
+                  placeholder="ID do visitante ou nome do lead"
+                  autocomplete="off"
+                  @keyup.enter="unlockChatPaid"
+                />
+                <button type="button" class="ac-btn-primary ac-unlock-btn" :disabled="unlockLoading" @click="unlockChatPaid">
+                  {{ unlockLoading ? '…' : 'Liberar' }}
+                </button>
+              </div>
+              <button
+                v-if="selectedId"
+                type="button"
+                class="ac-link-btn"
+                style="margin-top:6px"
+                :disabled="unlockLoading"
+                @click="unlockSelectedLead"
+              >
+                Liberar lead selecionado
+              </button>
+              <p v-if="unlockMsg" class="ac-ok">{{ unlockMsg }}</p>
+              <p v-if="unlockErr" class="ac-err">{{ unlockErr }}</p>
             </div>
 
             <div class="ac-list">
@@ -1420,4 +1499,36 @@ if (typeof window !== 'undefined') {
   margin-top: 4px;
 }
 
+
+.ac-unlock {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.ac-unlock-label {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(243,240,247,0.45);
+}
+.ac-unlock-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ac-unlock-row .ac-search {
+  flex: 1;
+  margin: 0;
+}
+.ac-unlock-btn {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+.ac-ok {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  color: #4ade80;
+}
 </style>
