@@ -4,20 +4,33 @@
 
 | URL | O que faz |
 |-----|-----------|
-| `/chat` | Abre o funil WhatsApp direto (slug padrão wanessabsx) |
-| `/chat/wanessabsx` | Abre o funil WhatsApp direto (pula quiz se slug ok) |
+| `/chat` | Abre o funil WhatsApp direto (slug padrão) |
+| `/chat/wanessabsx` | Funil direto (pula quiz se slug ok) |
 | `/chat/wanessa` | Idem |
-| `/chamada` | Canal de prévias: abre funil + popup de videochamada entrando |
+| `/chamada` | Canal de prévias: funil + popup de videochamada |
+| `/CanalPublico` | Landing de tráfego do canal (esconde botão canal) |
 | `/?chat=1` ou `/?open=whatsapp` | Abre funil na home |
 | `/#chat` | Fallback hash |
 
-Páginas shell: `pages/chat/index.vue`, `pages/chat/[slug].vue`, `pages/chamada.vue`  
-Lógica: `app.vue` → `onMounted` → `openWaFunnel(...)` (+ `startIncomingVideoCall` em `/chamada`)
+Páginas shell: `pages/chat/index.vue`, `pages/chat/[slug].vue`, `pages/chamada.vue`, `pages/CanalPublico.vue`  
+Lógica real do funil: **`app.vue`**
 
-## Admin (protegido)
+## Admin
 
 | URL | O que faz |
 |-----|-----------|
-| `/admin/chat` | Inbox de conversas — **404 se não logado** na home |
+| `/admin/chat` | Inbox de conversas (`AdminChatInbox.vue`) |
 
-Login só pelo cadeado na home; depois acessa `/admin/chat` com cookie de sessão.
+Ver também: [ADMIN_CHAT.md](./ADMIN_CHAT.md)
+
+## APIs de chat (lead)
+
+| Método | Path | Uso |
+|--------|------|-----|
+| POST | `/api/funnel-chat` | Lead envia msg / evento |
+| GET | `/api/funnel-chat` | Lead busca respostas do admin |
+| GET | `/api/chat-unlock` | Lead verifica se chat foi liberado |
+| POST | `/api/checkout/pix` | Gera PIX (chat R$ 9,90, packs, call…) |
+| GET | `/api/checkout/status` | Poll status do pagamento |
+| POST | `/api/lead-presence` | Lead reporta typing/online |
+| GET | `/api/presence` | Lead vê se admin está online |

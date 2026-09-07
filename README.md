@@ -69,3 +69,12 @@ links/
 ├── package.json
 └── README.md
 ```
+
+## Documentação
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| [docs/CODEMAP.md](docs/CODEMAP.md) | Mapa do código e bloqueios/preços |
+| [docs/ADMIN_CHAT.md](docs/ADMIN_CHAT.md) | Inbox `/admin/chat` |
+| [docs/CHAT_ROUTES.md](docs/CHAT_ROUTES.md) | Rotas de chat |
+| [docs/CSS_RESTORE.md](docs/CSS_RESTORE.md) | Restaurar CSS truncado |
