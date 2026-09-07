@@ -2827,12 +2827,10 @@ async function startUnifiedCheckout(opts: {
       if (!res?.ok || !res.client_secret) {
         throw new Error('Stripe session failed')
       }
-      const config = useRuntimeConfig()
-      const pk =
-        res.publishable_key ||
-        String((config.public as any)?.stripePublishableKey || '').trim()
-      if (!pk) {
-        throw new Error('Missing Stripe publishable key')
+      // pk só vem do backend (app_secrets) — sem env Vercel no front
+      const pk = String(res.publishable_key || '').trim()
+      if (!pk || !pk.startsWith('pk_')) {
+        throw new Error('Missing Stripe publishable key (app_secrets)')
       }
       const StripeCtor = await loadStripeJs()
       const stripe = StripeCtor(pk)

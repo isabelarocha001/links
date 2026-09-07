@@ -27,54 +27,29 @@ const PLAN_FALLBACK: Record<string, { title: string; amount: number }> = {
   chat_unlock_blocked: { title: 'Unlock chat again', amount: 49.9 },
 }
 
+/** Lê chaves Stripe só do Supabase `app_secrets` (sem env Vercel). */
 async function loadStripeSecret(): Promise<string> {
-  const config = useRuntimeConfig() as any
-  const env = process.env as Record<string, string | undefined>
-  let key = String(
-    config.stripeSecretKey ||
-      env.STRIPE_SECRET_KEY ||
-      env.NUXT_STRIPE_SECRET_KEY ||
-      '',
-  ).trim()
-  if (!key) {
-    try {
-      const supabase = useServiceSupabase()
-      const { data } = await supabase
-        .from('app_secrets')
-        .select('key, value')
-        .in('key', ['STRIPE_SECRET_KEY', 'NUXT_STRIPE_SECRET_KEY'])
-      for (const row of data || []) {
-        if (row.value) {
-          key = String(row.value).trim()
-          break
-        }
-      }
-    } catch {}
+  const supabase = useServiceSupabase()
+  const { data } = await supabase
+    .from('app_secrets')
+    .select('key, value')
+    .in('key', ['STRIPE_SECRET_KEY', 'NUXT_STRIPE_SECRET_KEY'])
+  for (const row of data || []) {
+    const v = row?.value ? String(row.value).trim() : ''
+    if (v.startsWith('sk_')) return v
   }
-  return key
+  return ''
 }
 
 async function loadStripePublishable(): Promise<string> {
-  const config = useRuntimeConfig() as any
-  const env = process.env as Record<string, string | undefined>
-  let key = String(
-    config.public?.stripePublishableKey ||
-      env.STRIPE_PUBLISHABLE_KEY ||
-      env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-      '',
-  ).trim()
-  if (!key) {
-    try {
-      const supabase = useServiceSupabase()
-      const { data } = await supabase
-        .from('app_secrets')
-        .select('value')
-        .eq('key', 'STRIPE_PUBLISHABLE_KEY')
-        .maybeSingle()
-      if (data?.value) key = String(data.value).trim()
-    } catch {}
-  }
-  return key
+  const supabase = useServiceSupabase()
+  const { data } = await supabase
+    .from('app_secrets')
+    .select('value')
+    .eq('key', 'STRIPE_PUBLISHABLE_KEY')
+    .maybeSingle()
+  const v = data?.value ? String(data.value).trim() : ''
+  return v.startsWith('pk_') ? v : ''
 }
 
 export default defineEventHandler(async (event) => {
@@ -86,7 +61,7 @@ export default defineEventHandler(async (event) => {
   if (!secret) {
     throw createError({
       statusCode: 503,
-      statusMessage: 'Stripe não configurado. Defina STRIPE_SECRET_KEY na Vercel ou app_secrets.',
+      statusMessage: 'Stripe não configurado. Cadastre STRIPE_SECRET_KEY em app_secrets (Supabase).',
     })
   }
 
@@ -181,6 +156,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const publishable = await loadStripePublishable()
+  if (!publishable) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Stripe publishable key ausente em app_secrets (STRIPE_PUBLISHABLE_KEY).',
+    })
+  }
 
   return {
     ok: true,
@@ -191,6 +172,6 @@ export default defineEventHandler(async (event) => {
     amount: finalAmount,
     currency,
     plan_key: planKey,
-    publishable_key: publishable || null,
+    publishable_key: publishable,
   }
 })

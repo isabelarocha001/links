@@ -18,13 +18,7 @@ export default defineNuxtConfig({
     syncpayClientSecret: process.env.SYNCPAY_CLIENT_SECRET || '',
     syncpayWebhookUrl: process.env.SYNCPAY_WEBHOOK_URL || '',
     syncpayWebhookSecret: process.env.SYNCPAY_WEBHOOK_SECRET || '',
-    stripeSecretKey: process.env.STRIPE_SECRET_KEY || process.env.NUXT_STRIPE_SECRET_KEY || '',
-    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || process.env.NUXT_STRIPE_WEBHOOK_SECRET || '',
     public: {
-      stripePublishableKey:
-        process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-        process.env.STRIPE_PUBLISHABLE_KEY ||
-        '',
       supabaseUrl:
         process.env.SUPABASE_URL || 'https://sgolmmhbufosmtigaakx.supabase.co',
       supabaseAnonKey:

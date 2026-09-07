@@ -1,34 +1,24 @@
-# Stripe (cartão / gringa)
+# Stripe (cartão / gringa) — 100% via Supabase
 
-## Fluxo
+Sem variáveis na Vercel. Tudo em `app_secrets`.
 
-- **Brasil (`isPt`)**: PIX via SyncPay (como antes)
-- **Internacional**: Stripe Checkout **embedded** no popup da conversa (não abre página externa)
+## Chaves (tabela `app_secrets`)
 
-## APIs
+| key | value |
+|-----|--------|
+| `STRIPE_SECRET_KEY` | `sk_live_...` |
+| `STRIPE_PUBLISHABLE_KEY` | `pk_live_...` |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...` (opcional até configurar webhook) |
 
-| Path | Uso |
-|------|-----|
-| `POST /api/checkout/stripe-session` | Cria session `ui_mode=embedded` |
-| `POST /api/webhooks/stripe` | `checkout.session.completed` → payment approved + chat_unlocked |
+O front **nunca** lê a secret. Fluxo:
 
-## Env (Vercel) — recomendado
+1. Lead gringo → `POST /api/checkout/stripe-session`
+2. API lê `sk_` + `pk_` no Supabase, cria session embedded
+3. API devolve `client_secret` + `publishable_key` ao front
+4. Front monta Stripe.js no popup da conversa
 
-```
-STRIPE_SECRET_KEY=sk_live_...
-NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-```
+## Webhook
 
-Também pode ficar em `app_secrets` (Supabase): `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`.
-
-## Webhook no Dashboard Stripe
-
-1. Developers → Webhooks → Add endpoint  
-2. URL: `https://SEU_DOMINIO/api/webhooks/stripe`  
-3. Eventos: `checkout.session.completed`, `checkout.session.async_payment_succeeded`  
-4. Copiar signing secret → `STRIPE_WEBHOOK_SECRET`
-
-## Segurança
-
-Nunca versionar `sk_live` no Git. Se a chave vazou em chat, rotacione no Dashboard Stripe.
+URL: `https://SEU_DOMINIO/api/webhooks/stripe`  
+Eventos: `checkout.session.completed`, `checkout.session.async_payment_succeeded`  
+Signing secret → gravar em `app_secrets` como `STRIPE_WEBHOOK_SECRET`.

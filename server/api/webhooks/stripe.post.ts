@@ -10,24 +10,19 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { useServiceSupabase } from '../../utils/supabase'
 
+/** Secrets só do Supabase app_secrets (sem env Vercel). */
 async function loadSecrets() {
-  const config = useRuntimeConfig() as any
-  const env = process.env as Record<string, string | undefined>
-  let secret = String(config.stripeSecretKey || env.STRIPE_SECRET_KEY || env.NUXT_STRIPE_SECRET_KEY || '').trim()
-  let whsec = String(config.stripeWebhookSecret || env.STRIPE_WEBHOOK_SECRET || env.NUXT_STRIPE_WEBHOOK_SECRET || '').trim()
-  if (!secret || !whsec) {
-    try {
-      const supabase = useServiceSupabase()
-      const keys = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'NUXT_STRIPE_SECRET_KEY', 'NUXT_STRIPE_WEBHOOK_SECRET']
-      const { data } = await supabase.from('app_secrets').select('key, value').in('key', keys)
-      for (const row of data || []) {
-        const k = String(row.key || '')
-        const v = row.value ? String(row.value).trim() : ''
-        if (!v) continue
-        if (!secret && k.includes('SECRET_KEY')) secret = v
-        if (!whsec && k.includes('WEBHOOK')) whsec = v
-      }
-    } catch {}
+  const supabase = useServiceSupabase()
+  const keys = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'NUXT_STRIPE_SECRET_KEY', 'NUXT_STRIPE_WEBHOOK_SECRET']
+  const { data } = await supabase.from('app_secrets').select('key, value').in('key', keys)
+  let secret = ''
+  let whsec = ''
+  for (const row of data || []) {
+    const k = String(row.key || '')
+    const v = row.value ? String(row.value).trim() : ''
+    if (!v) continue
+    if (!secret && (k === 'STRIPE_SECRET_KEY' || k === 'NUXT_STRIPE_SECRET_KEY') && v.startsWith('sk_')) secret = v
+    if (!whsec && k.includes('WEBHOOK') && v.startsWith('whsec_')) whsec = v
   }
   return { secret, whsec }
 }
