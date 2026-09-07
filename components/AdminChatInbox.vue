@@ -32,6 +32,9 @@ const password = ref('')
 const loginError = ref('')
 const loginLoading = ref(false)
 
+const openAdminConfig = inject<(() => void) | undefined>('openAdminConfig', undefined)
+const setAdminSession = inject<((v: boolean) => void) | undefined>('setAdminSession', undefined)
+
 const conversations = ref<ConvItem[]>([])
 const newCount = ref(0)
 const listLoading = ref(false)
@@ -89,9 +92,11 @@ async function checkSession() {
   try {
     await $fetch('/api/admin/session')
     authed.value = true
+    setAdminSession?.(true)
   } catch {
     // Sem sessão: mostra formulário de login nesta rota
     authed.value = false
+    setAdminSession?.(false)
   } finally {
     authChecking.value = false
   }
@@ -107,12 +112,22 @@ async function doLogin() {
     })
     password.value = ''
     authed.value = true
+    setAdminSession?.(true)
     await afterAuth()
   } catch (e: any) {
     loginError.value = e?.data?.statusMessage || e?.statusMessage || 'Senha inválida'
     authed.value = false
   } finally {
     loginLoading.value = false
+  }
+}
+
+function onOpenConfig() {
+  setAdminSession?.(true)
+  if (typeof openAdminConfig === 'function') {
+    openAdminConfig()
+  } else {
+    console.warn('[admin] openAdminConfig não disponível — provide ausente no app.vue')
   }
 }
 
@@ -616,7 +631,7 @@ if (typeof window !== 'undefined') {
             {{ presenceOk ? 'Online' : 'Offline' }}
           </span>
           <button type="button" class="ac-link-btn" @click="loadConversations">Atualizar</button>
-          <button type="button" class="ac-link-btn ac-link-btn--cfg" @click="openAdminConfig?.()">⚙ Configurações</button>
+          <button type="button" class="ac-link-btn ac-link-btn--cfg" @click="onOpenConfig">⚙ Configurações</button>
           <button type="button" class="ac-link-btn" @click="doLogout">Sair</button>
         </div>
       </header>
