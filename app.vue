@@ -1200,6 +1200,22 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * app.vue — página principal de links + funil de chat WhatsApp simulado
+ *
+ * Áreas principais:
+ *   1) Gate/quiz de qualificação (antes de ver os cards)
+ *   2) Cards PrivSex + Telegram (VIP bot / canal público)
+ *   3) Funil WA (showWaFunnel): conversa, ofertas, PIX, videochamada
+ *   4) Bloqueios: chat pago (R$ 9,90), programa (R$ 49,90), permanente (mimo R$ 29,90)
+ *   5) AdminChatInbox injetado em /admin/chat
+ *
+ * Preços de chat (manter sincronizados com server/api/checkout/pix.post.ts):
+ *   chat_quick / CHAT_MSG_UNLOCK_PLAN = R$ 9,90
+ */
+// =============================================================================
+// TIPOS + IMPORTS
+// =============================================================================
 type LinkItem = { label: string; icon: string; url: string; desc?: string; logo?: string; enabled?: boolean }
 type ChatMsg = { from: 'her' | 'me'; text: string; time: string }
 import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
@@ -1217,6 +1233,9 @@ const isAdminRoute = computed(() => {
 const hidePublicChannel = computed(() => false)
 import '~/assets/css/links-page.css'
 
+// =============================================================================
+// URLS / CONSTANTES DE PRODUTO
+// =============================================================================
 const DEFAULT_HIGHLIGHT = 'PrivSex'
 const VID_KEY = 'wanessa_vid'
 const VIEW_DAY_KEY = 'wanessa_view_day'
@@ -1234,6 +1253,9 @@ function t(key: string) { return tr(locale.value, key) }
 const whatsappUrl = computed(() => 'https://wa.me/5547992750967?text=' + encodeURIComponent(t('waPrefill')))
 
 const PIX_KEY = '47992750967'
+// =============================================================================
+// ESTADO DO FUNIL WHATSAPP (chat simulado)
+// =============================================================================
 const showWaFunnel = ref(false)
 const isChatLanding = ref(false)
 const showFunnelPhoto = ref(false)
@@ -1270,6 +1292,13 @@ const funnelShellStyle = ref<Record<string, string>>({})
 const funnelKeyboardOpen = ref(false)
 let funnelKbdPoll: ReturnType<typeof setInterval> | null = null
 let funnelKbdBaseH = 0
+// =============================================================================
+// BLOQUEIOS DO CHAT
+// funnelChatUnlocked = pagou o chat (R$ 9,90)
+// funnelBlocked = pediu encontro/programa (unlock R$ 49,90)
+// funnelPermBlocked = Wanessa bloqueou o lead (segunda chance mimo R$ 29,90)
+// leadBlockedWanessa = lead bloqueou Wanessa (sem mimo)
+// =============================================================================
 const funnelChatUnlocked = ref(false)
 const funnelBlocked = ref(false) // lead insistiu em programa/encontro presencial
 const funnelPermBlocked = ref(false) // Wanessa/sistema bloqueou o lead → segunda chance com mimo
@@ -1282,6 +1311,7 @@ const leadBlockReason = ref('')
 const showBlockedUnlock = ref(false)
 const PERM_BLOCK_KEY = 'wanessa_perm_block_v1'
 const LEAD_BLOCK_KEY = 'wanessa_lead_block_v1'
+// --- Planos de desbloqueio (segunda chance / bloqueado) ---
 const SEGUNDA_CHANCE_PLAN = { key: 'chat_unlock_segunda_chance', title: 'Segunda chance', desc: 'mimo para desbloquear o chat', price: 29.9, priceLabel: '29,90' }
 const showMimoGiftModal = ref(false)
 const mimoGiftAmount = ref('')
@@ -1294,6 +1324,7 @@ const funnelEditDraft = ref('')
 
 const blockedUnlockLoading = ref(false)
 const blockedUnlockError = ref('')
+// --- Plano desbloqueio após bloqueio por programa ---
 const BLOCKED_UNLOCK_PLAN = { key: 'chat_unlock_blocked', title: 'Desbloquear chat', desc: 'libera a conversa de novo', price: 49.9, priceLabel: '49,90' }
 const funnelRecording = ref(false)
 const funnelAudioPreviewUrl = ref('')
@@ -1323,6 +1354,10 @@ function requireFunnelChatOrPay(): boolean {
 const chatUnlockReason = ref<'chat' | 'call' | 'media'>('chat')
 
 let _unlockTapAt = 0
+// =============================================================================
+// POPUPS DE DESBLOQUEIO DO CHAT (R$ 9,90)
+// openChatUnlockInfo → se funnelPermBlocked, reabre card de bloqueio permanente
+// =============================================================================
 function openChatUnlockInfo(reason: 'chat' | 'call' | 'media' = 'chat') {
   if (funnelChatUnlocked.value) return
   // Bloqueio permanente da Wanessa → só o card de mimo, nunca o popup de chat pago
@@ -1430,6 +1465,9 @@ async function confirmChatUnlockPix() {
     } catch {}
   }
 }
+// =============================================================================
+// INTERAÇÃO NO COMPOSER (toques com chat bloqueado)
+// =============================================================================
 function onFunnelComposerInteract(e?: Event) {
   if (funnelPermBlocked.value) {
     try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
@@ -2213,6 +2251,9 @@ async function sendMimoGift() {
   }
 }
 
+// =============================================================================
+// SEGUNDA CHANCE (mimo R$ 29,90 após bloqueio permanente)
+// =============================================================================
 function startSegundaChanceMimo() {
   if (blockedUnlockLoading.value) return
   try { track('segunda_chance_mimo_open', { offer_slug: SEGUNDA_CHANCE_PLAN.key }) } catch {}
@@ -2451,6 +2492,10 @@ const pixPaid = ref(false)
 const pixIsEmv = computed(() => /^000201/.test(pixCopyCode.value || ''))
 let pixPollTimer: ReturnType<typeof setInterval> | null = null
 
+// =============================================================================
+// PLANOS DE CHAT PAGO
+// chat_quick = R$ 9,90 — desbloqueia envio de mensagem
+// =============================================================================
 const chatPlans = [
   { key: 'chat_quick', title: 'Desbloquear chat', desc: 'R$ 9,90 libera enviar mensagem', price: 9.9, priceLabel: '9,90', hot: true },
 ]
@@ -2579,6 +2624,9 @@ async function adminUnlockChat() {
 }
 
 
+// =============================================================================
+// DESBLOQUEIO APÓS BLOQUEIO POR PROGRAMA (R$ 49,90)
+// =============================================================================
 async function buyBlockedUnlock() {
   blockedUnlockError.value = ''
   blockedUnlockLoading.value = true
@@ -2657,6 +2705,9 @@ async function buyBlockedUnlock() {
   }
 }
 
+// =============================================================================
+// CHECKOUT PIX DOS PLANOS DE CHAT
+// =============================================================================
 async function buyChatPlan(p: typeof chatPlans[number]) {
   chatPayError.value = ''
   chatPayLoading.value = p.key
@@ -4323,6 +4374,9 @@ async function checkServerChatUnlock() {
   return false
 }
 
+// =============================================================================
+// ABRIR / FECHAR FUNIL WHATSAPP
+// =============================================================================
 function openWaFunnel(source = 'whatsapp') {
   warmSyncPay()
   loadFunnelConversationLocal()
@@ -5011,6 +5065,9 @@ async function sendFunnelFreeText() {
 
 const funnelActionLock = ref(false)
 
+// =============================================================================
+// RESPOSTAS DO FUNIL (botões / fluxo de ofertas)
+// =============================================================================
 async function answerFunnel(opt: { key: string; label: string }) {
   if (funnelTyping.value || funnelActionLock.value) return
   funnelActionLock.value = true
@@ -5767,6 +5824,9 @@ function offerFromLabel(label: string) {
   if (/telegram.*priv|conteúdo no telegram/i.test(lower)) return 'telegram_privado'
   return label.toLowerCase().replace(/\s+/g, '_').slice(0, 40)
 }
+// =============================================================================
+// ANALYTICS
+// =============================================================================
 function track(eventName: string, extra: Record<string, any> = {}) {
   const visitor_id = getOrCreateVisitorId()
   const payload = { event_name: eventName, path: '/links/wanessa', visitor_id, ...readUtms(), ...extra }
@@ -5817,6 +5877,9 @@ configReady.value = true
 async function warmSyncPay() {
   try { await $fetch('/api/checkout/warm') } catch {}
 }
+// =============================================================================
+// LIFECYCLE (mounted / route)
+// =============================================================================
 onMounted(async () => {
   // Em /admin/chat: sincroniza sessão admin com o painel de config
   if (isAdminRoute.value) {

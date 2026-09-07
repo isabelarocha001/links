@@ -3,6 +3,13 @@ import { useServiceSupabase } from '../utils/supabase'
 /**
  * GET /api/chat-unlock?visitor_id=
  * Lead consulta se o chat pago foi liberado (PIX ou admin).
+ *
+ * Query: visitor_id (obrigatório)
+ * Ordem de checagem:
+ *   1) metadata.chat_unlocked na conversa
+ *   2) payment approved com plan_key de chat / admin_grant
+ *
+ * Retorno: { unlocked: boolean, source?: string }
  */
 export default defineEventHandler(async (event) => {
   const q = getQuery(event)

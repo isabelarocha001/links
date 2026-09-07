@@ -1,3 +1,15 @@
+/**
+ * i18n — textos da página de links (cards, quiz gate, bio, CTAs).
+ *
+ * detectLocale(): idioma do navegador (pt/en/es/fr/de/it)
+ * isBrazilAudience(): true só para pt-BR (Portugal = internacional)
+ * t(locale, key): busca tradução; fallback pt → key
+ *
+ * Chaves importantes dos cards:
+ *   vipTitle / vipDesc  → card bot/Telegram VIP (BR)
+ *   pubTitle / pubDesc  → canal público
+ *   privTitle / privDesc → PrivSex
+ */
 export type Locale = 'pt' | 'en' | 'es' | 'fr' | 'de' | 'it'
 
 export function detectLocale(): Locale {
@@ -33,6 +45,7 @@ export function isBrazilAudience(): boolean {
 
 type Dict = Record<string, string>
 
+// --- PT-BR (Brasil) ---
 const pt: Dict = {
   waName: 'Criadora de conteúdo · Wanessa',
   waTyping: 'digitando…',
@@ -82,6 +95,7 @@ const pt: Dict = {
   waPrefill: 'Quero mais informações sobre o seu conteúdo VIP',
 }
 
+// --- English ---
 const en: Dict = {
   waName: 'Content creator · Wanessa',
   waTyping: 'typing…',
@@ -131,6 +145,7 @@ const en: Dict = {
   waPrefill: 'I want more information about your VIP content',
 }
 
+// --- Español (herda en + overrides) ---
 const es: Dict = {
   ...en,
   waName: 'Creadora de contenido · Wanessa',
@@ -174,6 +189,7 @@ const es: Dict = {
   waPrefill: 'Quiero más información sobre tu contenido VIP',
 }
 
+// --- Français ---
 const fr: Dict = {
   ...en,
   waName: 'Créatrice de contenu · Wanessa',
@@ -216,6 +232,7 @@ const fr: Dict = {
   waPrefill: 'Je veux plus d’informations sur ton contenu VIP',
 }
 
+// --- Deutsch ---
 const de: Dict = {
   ...en,
   waName: 'Content Creatorin · Wanessa',
@@ -259,6 +276,7 @@ const de: Dict = {
   waPrefill: 'Ich möchte mehr Infos zu deinem VIP-Content',
 }
 
+// --- Italiano ---
 const it: Dict = {
   ...en,
   waName: 'Content creator · Wanessa',

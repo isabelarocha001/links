@@ -1,3 +1,17 @@
+/**
+ * GET /api/admin/conversations
+ * Lista conversas do funil WhatsApp para o inbox admin (/admin/chat).
+ *
+ * Auth: cookie admin_token
+ * Query: limit (1–100), status (open|closed opcional)
+ *
+ * Retorna por conversa:
+ *   id, visitor_id, title, status, last_message, is_new,
+ *   lead_blocked, block_reason, chat_unlocked, chat_unlocked_at
+ * Contadores: new_count, unlocked_count
+ *
+ * chat_unlocked vem de metadata.chat_unlocked (pago PIX ou grant admin).
+ */
 import { useServiceSupabase, verifyAdminToken } from '~~/server/utils/supabase'
 
 export default defineEventHandler(async (event) => {

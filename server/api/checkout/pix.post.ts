@@ -1,5 +1,22 @@
+/**
+ * POST /api/checkout/pix
+ * Gera cobrança PIX via SyncPay para planos do funil (chat, packs, videochamada, webnamoro).
+ *
+ * Body: { plan_key?, amount?, title?, visitor_id?, source? }
+ * PLAN_FALLBACK: valores padrão quando amount não vem no body.
+ *   chat_quick = R$ 9,90 (desbloqueio de chat)
+ *
+ * Fluxo:
+ *   1) resolve credenciais SyncPay (env / runtimeConfig / app_secrets)
+ *   2) auth-token → cash-in
+ *   3) grava payment pending no Supabase
+ *   4) retorna pix_code + qr_image
+ *
+ * Sem credenciais SyncPay válidas → 503 (não gera QR falso).
+ */
 import { useServiceSupabase, getClientIp } from '../../utils/supabase'
 
+// Valores default por plan_key (chat_quick = desbloqueio do chat pago)
 const PLAN_FALLBACK: Record<string, { title: string; amount: number }> = {
   chat_quick: { title: 'Chat rápido 10 min', amount: 9.9 },
   chat_basic: { title: 'Chat 30 min', amount: 19.9 },

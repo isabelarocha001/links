@@ -1,7 +1,19 @@
 <script setup lang="ts">
 /**
- * Inbox admin — só com sessão autenticada (cookie admin_token).
- * Heartbeat de presença a cada 15s → lead vê "online" / "visto por último às HH:MM".
+ * AdminChatInbox — inbox de conversas do funil em /admin/chat
+ *
+ * Auth: cookie admin_token (login nesta própria página se não autenticado)
+ * Presença: heartbeat POST /api/admin/presence (lead vê online / visto por último)
+ *
+ * Abas de filtro:
+ *   all | new (não lidas) | open | unlocked (chat pago / desbloqueado)
+ *
+ * Recursos:
+ *   - Lista conversas + preview da última msg
+ *   - Abrir histórico e responder (direction=bot, step=live_admin)
+ *   - Liberar chat pago manualmente (POST /api/admin/unlock-chat)
+ *   - Enviar foto/vídeo/áudio, enquete, convite de chamada
+ *   - Badge "💚 pago" quando metadata.chat_unlocked
  */
 type ConvItem = {
   id: string
@@ -28,6 +40,7 @@ type ChatMsg = {
   metadata?: Record<string, any> | null
 }
 
+// --- Auth / login admin ---
 const authed = ref(false)
 const authChecking = ref(true)
 const password = ref('')
@@ -37,6 +50,7 @@ const loginLoading = ref(false)
 const openAdminConfig = inject<(() => void) | undefined>('openAdminConfig', undefined)
 const setAdminSession = inject<((v: boolean) => void) | undefined>('setAdminSession', undefined)
 
+// --- Estado da lista de conversas ---
 const conversations = ref<ConvItem[]>([])
 const newCount = ref(0)
 const unlockedCount = ref(0)
@@ -49,6 +63,7 @@ const unlockLoading = ref(false)
 const unlockMsg = ref('')
 const unlockErr = ref('')
 
+// --- Conversa aberta + mensagens ---
 const selectedId = ref<string | null>(null)
 const messages = ref<ChatMsg[]>([])
 const messagesLoading = ref(false)
@@ -65,6 +80,7 @@ let presenceTimer: ReturnType<typeof setInterval> | null = null
 let listTimer: ReturnType<typeof setInterval> | null = null
 let msgTimer: ReturnType<typeof setInterval> | null = null
 
+// --- Filtros (todas / não lidas / abertas / chat pago) ---
 const filteredConversations = computed(() => {
   let list = conversations.value
   if (filter.value === 'new') list = list.filter((c) => c.is_new)
@@ -95,6 +111,7 @@ const selectedBlockReason = computed(() => {
   return String(c?.block_reason || '')
 })
 
+// --- Sessão: check / login / logout ---
 async function checkSession() {
   authChecking.value = true
   try {
@@ -139,6 +156,7 @@ function onOpenConfig() {
   }
 }
 
+// --- Liberar chat pago (admin grant) ---
 async function unlockChatPaid() {
   unlockMsg.value = ''
   unlockErr.value = ''
@@ -206,6 +224,7 @@ async function doLogout() {
   }
 }
 
+// --- Presença admin (heartbeat) ---
 async function sendPresence(offline = false) {
   try {
     const res = await $fetch<{ ok?: boolean }>('/api/admin/presence', {
@@ -231,6 +250,7 @@ function stopPresence() {
   }
 }
 
+// --- Poll da lista de conversas ---
 async function loadConversations() {
   listLoading.value = true
   listError.value = ''
@@ -256,6 +276,7 @@ async function loadConversations() {
 }
 
 
+// --- Presença do lead na conversa aberta ---
 async function pullLeadPresence() {
   if (!selectedId.value) {
     leadPresenceOnline.value = false
@@ -298,6 +319,7 @@ function stopLeadPresencePoll() {
   }
 }
 
+// --- Abrir conversa + carregar msgs ---
 async function openConversation(id: string) {
   selectedId.value = id
   messages.value = []
@@ -306,6 +328,7 @@ async function openConversation(id: string) {
   startLeadPresencePoll()
 }
 
+// --- Mensagens + scroll inteligente ---
 async function loadMessages(opts?: { forceScroll?: boolean }) {
   if (!selectedId.value) return
   const wasEmpty = !messages.value.length
@@ -441,6 +464,7 @@ function bubbleClass(m: ChatMsg) {
   return 'bot'
 }
 
+// --- Resumo do funil (step/offer/price) ---
 const funnelSummary = computed(() => {
   const list = messages.value || []
   if (!list.length) return null
@@ -462,6 +486,7 @@ const funnelSummary = computed(() => {
 })
 
 
+// --- Ações admin: call / mídia / enquete ---
 async function sendAdminAction(body: Record<string, any>) {
   if (!selectedId.value || actionBusy.value) return
   actionBusy.value = true
@@ -543,6 +568,7 @@ function submitAdminPoll() {
 }
 
 
+// --- Resposta de texto do admin ---
 async function sendReply() {
   const text = replyText.value.trim()
   if (!text || !selectedId.value || replySending.value) return
@@ -652,7 +678,8 @@ if (typeof window !== 'undefined') {
 
 <template>
   <div class="ac">
-    <div v-if="authChecking" class="ac-shell ac-shell--center">
+    <!-- Loading sessão -->
+            <div v-if="authChecking" class="ac-shell ac-shell--center">
       <p class="ac-muted">Verificando sessão…</p>
     </div>
 
@@ -709,7 +736,8 @@ if (typeof window !== 'undefined') {
               />
             </div>
 
-            <div class="ac-tabs">
+            <div <!-- Abas: Todas | Não lidas | Abertas | Chat pago -->
+            class="ac-tabs">
               <button type="button" class="ac-tab" :class="{ active: filter === 'all' }" @click="filter = 'all'">Todas</button>
               <button type="button" class="ac-tab" :class="{ active: filter === 'new' }" @click="filter = 'new'">
                 Não lidas
@@ -722,7 +750,8 @@ if (typeof window !== 'undefined') {
               </button>
             </div>
 
-            <div class="ac-unlock">
+            <div <!-- Liberar chat pago por visitor_id / nome -->
+            class="ac-unlock">
               <p class="ac-unlock-label">Liberar chat pago (teste)</p>
               <div class="ac-unlock-row">
                 <input
@@ -756,7 +785,8 @@ if (typeof window !== 'undefined') {
               <p v-if="listError" class="ac-err pad">{{ listError }}</p>
 
               <button
-                v-for="c in filteredConversations"
+                <!-- Lista de conversas -->
+            v-for="c in filteredConversations"
                 :key="c.id"
                 type="button"
                 class="ac-item"
@@ -836,7 +866,8 @@ if (typeof window !== 'undefined') {
             </div>
           </div>
 
-          <div id="admin-msg-list" class="ac-msgs">
+          <div <!-- Histórico de mensagens da conversa selecionada -->
+            id="admin-msg-list" class="ac-msgs">
             <p v-if="messagesLoading && !messages.length" class="ac-muted pad">Carregando msgs…</p>
             <div
               v-for="(m, i) in messages"

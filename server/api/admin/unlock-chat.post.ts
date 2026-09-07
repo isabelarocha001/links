@@ -4,6 +4,12 @@ import { useServiceSupabase, verifyAdminToken } from '~~/server/utils/supabase'
  * POST /api/admin/unlock-chat
  * body: { visitor_id?: string, name?: string, query?: string }
  * Libera o chat pago para um lead (teste admin ou liberação manual).
+ *
+ * Efeitos:
+ *   1) metadata.chat_unlocked = true nas conversas do visitor
+ *   2) insere payment approved (plan_key chat_unlock) para /api/chat-unlock
+ *
+ * Body: { visitor_id?: string, name?: string, query?: string }
  */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
