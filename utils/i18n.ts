@@ -66,7 +66,7 @@ const pt: Dict = {
   pubTitle: 'Canal Público',
   pubDesc: 'Teasers dos meus conteúdos pagos.',
   pubEnter: 'Entrar →',
-  vipTitle: 'Bot pra assinar o VIP no Telegram',
+  vipTitle: 'Telegram (Canal Privado VIP)',
   vipDesc: 'Assinatura instantânea · acesso imediato ao conteúdo',
   directLabel: 'Contato direto',
   waTitle: 'WhatsApp',
