@@ -2556,7 +2556,17 @@ const showStripeModal = ref(false)
 const stripeMountEl = ref<HTMLElement | null>(null)
 const stripeLoading = ref(false)
 const stripeError = ref('')
+const stripePaying = ref(false)
+const stripeAmountLabel = ref('')
+const stripeCurrency = ref('usd')
 let stripeCheckout: any = null
+let stripeCardNumber: any = null
+let stripeCardExpiry: any = null
+let stripeCardCvc: any = null
+let stripeElements: any = null
+let stripeInstance: any = null
+let stripeClientSecret = ''
+let stripePendingPlanKey = ''
 
 const chatPayLoading = ref<string | null>(null)
 const chatPayError = ref('')
