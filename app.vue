@@ -115,20 +115,35 @@
             <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
           </div>
           <div class="card-col" v-if="!hidePublicChannel">
-            <a class="lux-card lux-card--right" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
-              <div class="card-glow"></div>
-              <div class="card-top">
-                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
-                <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
-              </div>
-              <h2 class="card-title">{{ t('vipTitle') }}</h2>
-              <p class="card-desc">{{ t('vipDesc') }}</p>
-            </a>
-            <a class="card-enter" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">{{ t('pubEnter') }}</a>
+            <!-- Canal público ativo no admin → direita = canal; senão → direita = bot Telegram -->
+            <template v-if="publicChannelEnabled">
+              <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
+                <div class="card-glow"></div>
+                <div class="card-top">
+                  <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
+                  <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
+                </div>
+                <h2 class="card-title">{{ t('pubTitle') }}</h2>
+                <p class="card-desc">{{ t('pubDesc') }}</p>
+              </a>
+              <a class="card-enter" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">{{ t('pubEnter') }}</a>
+            </template>
+            <template v-else>
+              <a class="lux-card lux-card--right" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
+                <div class="card-glow"></div>
+                <div class="card-top">
+                  <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
+                  <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
+                </div>
+                <h2 class="card-title">{{ t('vipTitle') }}</h2>
+                <p class="card-desc">{{ t('vipDesc') }}</p>
+              </a>
+              <a class="card-enter" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">{{ t('pubEnter') }}</a>
+            </template>
           </div>
         </section>
-        <!-- Bot Telegram VIP temporariamente desativado -->
-        <section class="vip-block" v-if="false && configReady && isPt">
+        <!-- Bot Telegram no rodapé quando canal público está na direita -->
+        <section class="vip-block" v-if="publicChannelEnabled && configReady && isPt">
           <a class="vip-card" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">
             <div class="vip-shine"></div>
             <div class="vip-content">
@@ -1194,8 +1209,7 @@ const isAdminRoute = computed(() => {
   const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
   return p === '/admin/chat' || p.endsWith('/admin/chat')
 })
-/** Coluna direita = bot Telegram (canal de prévias desligado) */
-/** Coluna direita = bot Telegram (visível pra BR e gringo) */
+/** Coluna direita sempre visível; conteúdo troca entre bot e canal público */
 const hidePublicChannel = computed(() => false)
 import '~/assets/css/links-page.css'
 
@@ -5395,9 +5409,18 @@ function answerQuiz(key: string) {
 const DEFAULT_LINKS: LinkItem[] = [
   { label: 'PrivSex', icon: '🔥', url: privsexUrl, enabled: true },
   { label: 'Telegram Bot', icon: '⭐', url: vipBotUrl, enabled: true },
+  { label: 'Canal de prévias', icon: '📱', url: telegramPublicUrl, enabled: false },
 ]
 const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
 const configReady = ref(false)
+/** Canal público ativo no painel admin (link "Canal de prévias" / similar habilitado) */
+const publicChannelEnabled = computed(() => {
+  return config.links.some((l) => {
+    if (l.enabled === false) return false
+    const label = String(l.label || '').toLowerCase()
+    return /pr[eé]via|canal\s*p[uú]blico|telegram\s*p[uú]blico|canal\s*de\s*pr/i.test(label)
+  })
+})
 const showLogin = ref(false)
 const isAdmin = ref(false)
 const showAdminPanel = ref(false)
