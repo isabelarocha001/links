@@ -1507,8 +1507,11 @@ async function refuseChatUnlock() {
 function acceptChatUnlock() {
   showChatUnlockInfo.value = false
   try { track('chat_unlock_info_accept', { offer_slug: 'chat_quick' }) } catch {}
-  // Gringa: pula balão de PIX e abre Stripe direto
+  // Gringa: abre formulário de cartão direto (sem balão PIX)
   if (preferStripeCheckout()) {
+    showStripeModal.value = true
+    stripeLoading.value = true
+    stripeError.value = ''
     void confirmChatUnlockPix()
     return
   }
@@ -2812,9 +2815,18 @@ async function buyBlockedUnlock() {
 /** BR → PIX; gringa → Stripe Checkout embutido no popup */
 function preferStripeCheckout() {
   try {
-    return !isPt.value
+    // isPt = Brasil (idioma principal pt-BR)
+    if (isPt.value) return false
+    return true
   } catch {
-    return false
+    // fallback: idioma principal do browser
+    try {
+      const lang = String(navigator.language || '').toLowerCase()
+      if (lang.startsWith('pt-br') || lang === 'pt') return false
+      return true
+    } catch {
+      return true
+    }
   }
 }
 

@@ -28,17 +28,21 @@ export function detectLocale(): Locale {
 }
 
 /** BR market only: pt-BR (or bare "pt"). Portugal (pt-PT) is international. */
+/**
+ * Brasil = idioma PRINCIPAL do navegador é pt-BR (ou pt sem região).
+ * Não usa navigator.languages inteira: se o lead tem en-US como principal
+ * e pt-BR só na lista, deve ser tratado como gringo (Stripe), não PIX.
+ */
 export function isBrazilAudience(): boolean {
   if (typeof navigator === 'undefined') return true
-  const list = [...(navigator.languages || []), navigator.language || 'pt-BR'].map((x) =>
-    String(x || '').toLowerCase().replace(/_/g, '-'),
-  )
-  for (const tag of list) {
-    if (tag === 'pt-pt' || tag.startsWith('pt-pt-')) return false
-    if (tag === 'pt-br' || tag.startsWith('pt-br-')) return true
-  }
-  for (const tag of list) {
-    if (tag === 'pt' || tag.startsWith('pt-')) return true
+  const primary = String(navigator.language || 'pt-BR').toLowerCase().replace(/_/g, '-')
+  if (primary === 'pt-pt' || primary.startsWith('pt-pt-')) return false
+  if (primary === 'pt-br' || primary.startsWith('pt-br-')) return true
+  if (primary === 'pt' || primary === 'pt-') return true
+  // só "pt" genérico sem região
+  if (primary.startsWith('pt-') && !primary.startsWith('pt-pt')) {
+    // pt-AO etc. → tratar como BR/PIX por padrão
+    return true
   }
   return false
 }
