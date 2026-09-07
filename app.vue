@@ -1311,6 +1311,11 @@ let funnelAudioChunks: BlobPart[] = []
 
 function requireFunnelChatOrPay(): boolean {
   if (funnelChatUnlocked.value) return true
+  if (funnelPermBlocked.value) {
+    permBlockCardDismissed.value = false
+    return false
+  }
+  if (leadBlockedWanessa.value) return false
   openChatUnlockInfo()
   return false
 }
@@ -1320,6 +1325,11 @@ const chatUnlockReason = ref<'chat' | 'call' | 'media'>('chat')
 let _unlockTapAt = 0
 function openChatUnlockInfo(reason: 'chat' | 'call' | 'media' = 'chat') {
   if (funnelChatUnlocked.value) return
+  // Bloqueio permanente da Wanessa → só o card de mimo, nunca o popup de chat pago
+  if (funnelPermBlocked.value) {
+    permBlockCardDismissed.value = false
+    return
+  }
   if (leadBlockedWanessa.value) return
   const now = Date.now()
   if (now - _unlockTapAt < 500) return
@@ -1333,6 +1343,11 @@ function openChatUnlockInfo(reason: 'chat' | 'call' | 'media' = 'chat') {
 /** Toque no campo de digitação bloqueado → popup de benefícios */
 function onLockedComposerTap(e?: Event) {
   if (funnelChatUnlocked.value) return
+  if (funnelPermBlocked.value) {
+    try { (e?.target as any)?.blur?.() } catch {}
+    permBlockCardDismissed.value = false
+    return
+  }
   if (leadBlockedWanessa.value) return
   try { (e?.target as any)?.blur?.() } catch {}
   openChatUnlockInfo('chat')
@@ -1341,6 +1356,11 @@ function onLockedComposerTap(e?: Event) {
 /** Só o campo de digitar abre o popup de unlock */
 function onInputUnlockTap(e?: Event) {
   if (funnelChatUnlocked.value) return
+  if (funnelPermBlocked.value) {
+    try { (e?.target as any)?.blur?.() } catch {}
+    permBlockCardDismissed.value = false
+    return
+  }
   if (funnelBlocked.value || leadBlockedWanessa.value) return
   try { (e?.target as any)?.blur?.() } catch {}
   openChatUnlockInfo('chat')
@@ -1411,7 +1431,13 @@ async function confirmChatUnlockPix() {
   }
 }
 function onFunnelComposerInteract(e?: Event) {
-  if (funnelPermBlocked.value || leadBlockedWanessa.value) {
+  if (funnelPermBlocked.value) {
+    try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
+    // Reabre o card de bloqueio permanente (em vez do popup de chat pago)
+    permBlockCardDismissed.value = false
+    return
+  }
+  if (leadBlockedWanessa.value) {
     try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
     return
   }
