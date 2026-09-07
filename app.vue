@@ -1163,8 +1163,6 @@
           </div>
           <p v-if="saveMsg" class="wl-ok">{{ saveMsg }}</p>
           <p v-if="saveError" class="wl-error">{{ saveError }}</p>
-          <div class="wl-row">
-            
           <label class="wl-label">Enquadramento do avatar</label>
           <div class="wl-avatar-frame">
             <div class="wl-avatar-frame-preview">
@@ -1189,7 +1187,10 @@
           <textarea v-model="editVideoCallUrls" class="wl-input" rows="3" placeholder="https://.../video1.mp4" style="min-height:72px;resize:vertical"></textarea>
           <p class="wl-hint" style="opacity:.7;font-size:12px;margin:4px 0 12px">Depois do PIX da videochamada, o lead assiste esses vídeos aqui no chat (não vai pro WhatsApp).</p>
 
-          <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doSave">{{ loading ? 'Salvando...' : 'Salvar' }}</button>
+          <p v-if="saveMsg" class="wl-ok">{{ saveMsg }}</p>
+          <p v-if="saveError" class="wl-error">{{ saveError }}</p>
+          <div class="wl-row wl-row--sticky">
+            <button type="button" class="wl-btn wl-btn-primary" :disabled="loading" @click="doSave">{{ loading ? 'Salvando...' : 'Salvar' }}</button>
             <button type="button" class="wl-btn wl-btn-ghost" @click="closeAdmin">Fechar</button>
           </div>
         </div>
@@ -5412,6 +5413,7 @@ const DEFAULT_LINKS: LinkItem[] = [
   { label: 'PrivSex', icon: '🔥', url: privsexUrl, enabled: true },
   { label: 'Telegram Bot', icon: '⭐', url: vipBotUrl, enabled: true },
   { label: 'Canal de prévias', icon: '📱', url: telegramPublicUrl, enabled: false },
+  { label: 'WhatsApp', icon: '💬', url: 'https://wa.me/5547992750967', enabled: true },
 ]
 const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
 const configReady = ref(false)
@@ -5924,7 +5926,20 @@ function openEdit() {
   editVideoCallUrls.value = videoCallVideos.value.join('\n')
   edit.name = config.name; edit.bio = config.bio; edit.highlight_label = config.highlight_label || DEFAULT_HIGHLIGHT
   edit.quiz_enabled = config.quiz_enabled === true
-  edit.links = config.links.map((l) => ({ label: l.label, icon: l.icon, url: l.url, desc: l.desc || '', enabled: l.enabled !== false }))
+  edit.links = config.links.map((l) => ({
+    label: l.label,
+    icon: l.icon,
+    url: l.url,
+    desc: l.desc || '',
+    enabled: l.enabled === false ? false : true,
+  }))
+  for (const def of DEFAULT_LINKS) {
+    const key = def.label.toLowerCase()
+    const exists = edit.links.some((l) => String(l.label || '').toLowerCase() === key)
+    if (!exists) {
+      edit.links.push({ label: def.label, icon: def.icon, url: def.url, desc: '', enabled: def.enabled !== false })
+    }
+  }
   if (!edit.links.length) edit.links.push({ label: '', icon: '🔗', url: '', desc: '', enabled: true })
 }
 function closeAdmin() {
@@ -6013,16 +6028,29 @@ async function doSave() {
   saveMsg.value = ''; saveError.value = ''; loading.value = true
   try {
     const payload = {
-      name: edit.name || config.name || '', bio: edit.bio, avatar_url: '',
+      name: (edit.name || config.name || 'Wanessa').trim() || 'Wanessa',
+      bio: edit.bio,
+      avatar_url: '',
       highlight_label: (edit.highlight_label || '').trim() || DEFAULT_HIGHLIGHT,
       quiz_enabled: edit.quiz_enabled === true,
-      links: edit.links.filter((l) => l.label.trim()).map((l) => ({ label: l.label.trim(), icon: l.icon || '🔗', url: l.url || '#', desc: (l.desc || '').trim(), enabled: l.enabled !== false })),
+      links: edit.links
+        .filter((l) => l.label.trim())
+        .map((l) => ({
+          label: l.label.trim(),
+          icon: l.icon || '🔗',
+          url: l.url || '#',
+          desc: (l.desc || '').trim(),
+          enabled: l.enabled === false ? false : true,
+        })),
     }
     await $fetch('/api/admin/update', { method: 'POST', body: payload })
-    config.name = payload.name; config.bio = payload.bio; config.highlight_label = payload.highlight_label
+    config.name = payload.name
+    config.bio = payload.bio
+    config.highlight_label = payload.highlight_label
     config.quiz_enabled = payload.quiz_enabled
     config.links = payload.links.map((l) => attachLogo(l))
-    saveMsg.value = 'Salvo!'; setTimeout(() => { saveMsg.value = '' }, 2500)
+    saveMsg.value = 'Salvo!'
+    setTimeout(() => { saveMsg.value = '' }, 2500)
   } catch (e: any) { saveError.value = e?.data?.statusMessage || 'Erro ao salvar' }
   finally { loading.value = false }
 }
