@@ -115,16 +115,16 @@
             <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
           </div>
           <div class="card-col" v-if="!hidePublicChannel">
-            <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
+            <a class="lux-card lux-card--right" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
               <div class="card-glow"></div>
               <div class="card-top">
-                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
+                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
                 <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
               </div>
-              <h2 class="card-title">{{ t('pubTitle') }}</h2>
-              <p class="card-desc">{{ t('pubDesc') }}</p>
+              <h2 class="card-title">{{ t('vipTitle') }}</h2>
+              <p class="card-desc">{{ t('vipDesc') }}</p>
             </a>
-            <a class="card-enter" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">{{ t('pubEnter') }}</a>
+            <a class="card-enter" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">{{ t('pubEnter') }}</a>
           </div>
         </section>
         <section class="vip-block" v-if="configReady && isPt">
@@ -1193,8 +1193,8 @@ const isAdminRoute = computed(() => {
   const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
   return p === '/admin/chat' || p.endsWith('/admin/chat')
 })
-/** Canal de prévias desativado — leads só consumiam grátis sem pagar */
-const hidePublicChannel = computed(() => true)
+/** Coluna direita = bot Telegram (canal de prévias desligado) */
+const hidePublicChannel = computed(() => false)
 import '~/assets/css/links-page.css'
 
 const DEFAULT_HIGHLIGHT = 'PrivSex'
@@ -5392,8 +5392,7 @@ function answerQuiz(key: string) {
 }
 const DEFAULT_LINKS: LinkItem[] = [
   { label: 'PrivSex', icon: '🔥', url: privsexUrl, enabled: true },
-  { label: 'Telegram VIP', icon: '⭐', url: vipBotUrl, enabled: true },
-  { label: 'Canal de prévias', icon: '📱', url: telegramPublicUrl, enabled: false },
+  { label: 'Telegram Bot', icon: '⭐', url: vipBotUrl, enabled: true },
 ]
 const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
 const configReady = ref(false)
