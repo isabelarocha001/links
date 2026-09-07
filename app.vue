@@ -614,17 +614,6 @@
               aria-label="Desbloquear chat"
               @click.stop.prevent="onFunnelComposerInteract"
             ></button>
-            <!-- Chat bloqueado: barra grande (mobile) — 1 toque abre popup -->
-            <button
-              v-if="!funnelChatUnlocked && !funnelBlocked && !leadBlockedWanessa"
-              type="button"
-              class="wa-unlock-bar"
-              @click.stop.prevent="openChatUnlockInfo('chat')"
-              @touchend.stop.prevent="openChatUnlockInfo('chat')"
-            >
-              🔒 Toque pra liberar o chat · R$ 3
-            </button>
-            <template v-else>
             <button type="button" class="wa-composer-icon" aria-label="Emoji" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : onFunnelEmoji()">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             </button>
@@ -634,12 +623,15 @@
               type="text"
               enterkeyhint="send"
               autocomplete="off"
-              :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : 'Mensagem')"
+              :placeholder="leadBlockedWanessa ? 'Contato bloqueado' : (funnelBlocked ? 'Toque para desbloquear' : (funnelChatUnlocked ? 'Mensagem' : 'Toque para digitar…'))"
+              :readonly="!funnelChatUnlocked && !funnelBlocked && !leadBlockedWanessa"
               :disabled="funnelBlocked || funnelTyping || leadBlockedWanessa"
-              @focus="onFunnelInputFocus(); !funnelBlocked && onFunnelComposerInteract()"
+              @click.stop="onInputUnlockTap($event)"
+              @touchend.stop.prevent="onInputUnlockTap($event)"
+              @focus="onInputUnlockFocus($event)"
               @blur="onFunnelInputBlur()"
               @keydown="onFunnelComposerKey"
-              @keydown.enter.prevent="sendFunnelFreeText"
+              @keydown.enter.prevent="funnelChatUnlocked ? sendFunnelFreeText() : openChatUnlockInfo('chat')"
             />
             <button type="button" class="wa-composer-icon" aria-label="Anexar" tabindex="-1" @click="funnelBlocked ? onFunnelComposerInteract() : (closeFunnelEmojiPicker(), onFunnelAttach())">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -663,12 +655,11 @@
               type="button"
               class="wa-send"
               aria-label="Enviar"
-              :disabled="!funnelInput.trim() || funnelTyping"
+              :disabled="!funnelInput.trim() || funnelTyping || !funnelChatUnlocked"
               @click.stop.prevent="sendFunnelFreeText"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
-            </template>
           </div>
 
           <!-- Menu anexos estilo WhatsApp -->
@@ -1333,29 +1324,21 @@ function onLockedComposerTap(e?: Event) {
   openChatUnlockInfo('chat')
 }
 
-function onComposerPointer(e: Event) {
+/** Só o campo de digitar abre o popup de unlock */
+function onInputUnlockTap(e?: Event) {
   if (funnelChatUnlocked.value) return
-  onLockedComposerTap(e)
+  if (funnelBlocked.value || leadBlockedWanessa.value) return
+  try { (e?.target as any)?.blur?.() } catch {}
+  openChatUnlockInfo('chat')
 }
 
-function onComposerFocus(e: Event) {
+function onInputUnlockFocus(e: Event) {
   if (!funnelChatUnlocked.value) {
-    onLockedComposerTap(e)
+    onInputUnlockTap(e)
     return
   }
   onFunnelInputFocus()
   if (!funnelBlocked.value) onFunnelComposerInteract()
-}
-
-/** Clique simples no enviar — abre popup se bloqueado (sem segurar) */
-function onSendOrUnlock(e?: Event) {
-  try { e?.preventDefault?.(); e?.stopPropagation?.() } catch {}
-  if (leadBlockedWanessa.value || funnelTyping.value) return
-  if (!funnelChatUnlocked.value) {
-    openChatUnlockInfo('chat')
-    return
-  }
-  sendFunnelFreeText()
 }
 
 function closeChatUnlockInfo() {
@@ -4625,12 +4608,8 @@ function deleteFunnelMsg() {
 async function sendFunnelFreeText() {
   if (leadBlockedWanessa.value) return
   if (funnelTyping.value || funnelActionLock.value) return
+  // Popup só no campo de digitar — enviar sem unlock não digita
   if (!funnelChatUnlocked.value) {
-    const pending = (funnelInput.value || '').trim()
-    if (pending) {
-      try { (window as any).__pendingLeadText = pending } catch {}
-      funnelInput.value = ''
-    }
     openChatUnlockInfo('chat')
     return
   }
