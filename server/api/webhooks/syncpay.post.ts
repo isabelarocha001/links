@@ -147,6 +147,48 @@ function pickAmount(payload: any): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+
+/** Marca conversas do visitor como chat_unlocked (após PIX aprovado de plano chat). */
+async function markChatUnlockedForVisitor(
+  supabase: ReturnType<typeof useServiceSupabase>,
+  visitorId: string,
+  extra: Record<string, any> = {},
+) {
+  const vid = String(visitorId || '').trim()
+  if (!vid) return 0
+  const now = new Date().toISOString()
+  const { data: convs } = await supabase
+    .from('wa_funnel_conversations')
+    .select('id, metadata')
+    .eq('visitor_id', vid)
+  let n = 0
+  for (const c of convs || []) {
+    const meta = (c.metadata && typeof c.metadata === 'object') ? { ...c.metadata } : {}
+    if ((meta as any).chat_unlocked === true) continue
+    ;(meta as any).chat_unlocked = true
+    ;(meta as any).chat_unlocked_at = now
+    ;(meta as any).chat_unlocked_by = extra.by || 'payment'
+    if (extra.plan_key) (meta as any).chat_unlock_plan = extra.plan_key
+    await supabase
+      .from('wa_funnel_conversations')
+      .update({ metadata: meta, updated_at: now })
+      .eq('id', c.id)
+    n++
+  }
+  return n
+}
+
+function isChatUnlockPlan(meta: any): boolean {
+  const plan = String(meta?.plan_key || meta?.plan || '').toLowerCase()
+  const source = String(meta?.source || '')
+  return (
+    plan.includes('chat') ||
+    source === 'links_chat_lock' ||
+    source === 'admin_unlock_chat' ||
+    meta?.admin_grant === true
+  )
+}
+
 export default defineEventHandler(async (event) => {
   if (getMethod(event) === 'GET') {
     return { ok: true, service: 'syncpay-webhook' }
@@ -240,6 +282,18 @@ export default defineEventHandler(async (event) => {
     if (error) {
       console.error('[webhook/syncpay] update', error.message)
       return { ok: false, error: error.message }
+    }
+    // Libera chat no inbox admin se for plano de desbloqueio
+    if (status === 'approved') {
+      try {
+        const meta = mergedMeta || {}
+        if (isChatUnlockPlan(meta)) {
+          const vid = String((meta as any).visitor_id || '')
+          if (vid) await markChatUnlockedForVisitor(supabase, vid, { by: 'webhook', plan_key: (meta as any).plan_key })
+        }
+      } catch (e: any) {
+        console.warn('[webhook/syncpay] mark unlock', e?.message || e)
+      }
     }
     return { ok: true, updated: true, payment_id: existing.id, status }
   }

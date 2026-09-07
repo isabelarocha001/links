@@ -61,6 +61,36 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Cruza com payments aprovados de chat (caso metadata ainda não tenha chat_unlocked)
+  const unlockedByPayment = new Set<string>()
+  const unlockedAtByVid: Record<string, string> = {}
+  try {
+    const { data: pays } = await supabase
+      .from('payments')
+      .select('id, approved_at, metadata')
+      .eq('status', 'approved')
+      .order('approved_at', { ascending: false })
+      .limit(100)
+    for (const p of pays || []) {
+      const meta = (p.metadata && typeof p.metadata === 'object') ? p.metadata : {}
+      const vid = String((meta as any).visitor_id || '').trim()
+      if (!vid) continue
+      const plan = String((meta as any).plan_key || (meta as any).plan || '')
+      const source = String((meta as any).source || '')
+      const isChat =
+        plan.toLowerCase().includes('chat') ||
+        source === 'links_chat_lock' ||
+        source === 'admin_unlock_chat' ||
+        (meta as any).admin_grant === true
+      if (isChat) {
+        unlockedByPayment.add(vid)
+        if (p.approved_at && !unlockedAtByVid[vid]) unlockedAtByVid[vid] = String(p.approved_at)
+      }
+    }
+  } catch (e: any) {
+    console.warn('[admin/conversations] payments cross-check', e?.message || e)
+  }
+
   const dayAgo = Date.now() - 24 * 60 * 60 * 1000
   const items = list.map((c: any) => {
     const last = lastByConv[c.id] || null
@@ -70,8 +100,9 @@ export default defineEventHandler(async (event) => {
     const meta = (c.metadata && typeof c.metadata === 'object') ? c.metadata : {}
     const lead_blocked = !!(meta as any).lead_blocked || c.status === 'blocked'
     const block_reason = String((meta as any).block_reason || '')
-    const chat_unlocked = !!(meta as any).chat_unlocked
-    const chat_unlocked_at = (meta as any).chat_unlocked_at || null
+    const vid = String(c.visitor_id || '')
+    const chat_unlocked = !!(meta as any).chat_unlocked || unlockedByPayment.has(vid)
+    const chat_unlocked_at = (meta as any).chat_unlocked_at || unlockedAtByVid[vid] || null
     return {
       id: c.id,
       visitor_id: c.visitor_id,

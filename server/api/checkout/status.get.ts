@@ -84,6 +84,48 @@ async function getSyncPayToken(clientId: string, clientSecret: string) {
   return String(data.access_token)
 }
 
+
+/** Marca conversas do visitor como chat_unlocked (após PIX aprovado de plano chat). */
+async function markChatUnlockedForVisitor(
+  supabase: ReturnType<typeof useServiceSupabase>,
+  visitorId: string,
+  extra: Record<string, any> = {},
+) {
+  const vid = String(visitorId || '').trim()
+  if (!vid) return 0
+  const now = new Date().toISOString()
+  const { data: convs } = await supabase
+    .from('wa_funnel_conversations')
+    .select('id, metadata')
+    .eq('visitor_id', vid)
+  let n = 0
+  for (const c of convs || []) {
+    const meta = (c.metadata && typeof c.metadata === 'object') ? { ...c.metadata } : {}
+    if ((meta as any).chat_unlocked === true) continue
+    ;(meta as any).chat_unlocked = true
+    ;(meta as any).chat_unlocked_at = now
+    ;(meta as any).chat_unlocked_by = extra.by || 'payment'
+    if (extra.plan_key) (meta as any).chat_unlock_plan = extra.plan_key
+    await supabase
+      .from('wa_funnel_conversations')
+      .update({ metadata: meta, updated_at: now })
+      .eq('id', c.id)
+    n++
+  }
+  return n
+}
+
+function isChatUnlockPlan(meta: any): boolean {
+  const plan = String(meta?.plan_key || meta?.plan || '').toLowerCase()
+  const source = String(meta?.source || '')
+  return (
+    plan.includes('chat') ||
+    source === 'links_chat_lock' ||
+    source === 'admin_unlock_chat' ||
+    meta?.admin_grant === true
+  )
+}
+
 export default defineEventHandler(async (event) => {
   const q = getQuery(event)
   const id = String(q.id || '').trim()
@@ -118,8 +160,15 @@ export default defineEventHandler(async (event) => {
     return { status: 'unknown', message: 'Pagamento não encontrado' }
   }
 
-  // Se já aprovado no banco, retorna
+  // Se já aprovado no banco, retorna (e garante metadata.chat_unlocked na conversa)
   if (['approved', 'paid', 'completed'].includes(String(row.status || '').toLowerCase())) {
+    try {
+      const meta = row.metadata || {}
+      if (isChatUnlockPlan(meta)) {
+        const vid = String((meta as any).visitor_id || '')
+        if (vid) await markChatUnlockedForVisitor(supabase, vid, { by: 'status_already', plan_key: (meta as any).plan_key })
+      }
+    } catch {}
     return {
       status: row.status,
       payment_id: row.id,
@@ -158,18 +207,23 @@ export default defineEventHandler(async (event) => {
 
             if (mapped === 'approved' && row.id) {
               try {
+                const nextMeta = {
+                  ...(row.metadata || {}),
+                  status_check: stData,
+                  checked_at: new Date().toISOString(),
+                }
                 await supabase
                   .from('payments')
                   .update({
                     status: 'approved',
                     approved_at: new Date().toISOString(),
-                    metadata: {
-                      ...(row.metadata || {}),
-                      status_check: stData,
-                      checked_at: new Date().toISOString(),
-                    },
+                    metadata: nextMeta,
                   })
                   .eq('id', row.id)
+                if (isChatUnlockPlan(nextMeta)) {
+                  const vid = String((nextMeta as any).visitor_id || '')
+                  if (vid) await markChatUnlockedForVisitor(supabase, vid, { by: 'status_poll', plan_key: (nextMeta as any).plan_key })
+                }
               } catch {}
             }
 
