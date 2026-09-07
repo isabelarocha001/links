@@ -1058,7 +1058,8 @@
 
       <!-- Modal PIX gerado -->
       
-      <!-- Stripe Embedded Checkout (cartão / gringa) — popup na conversa -->
+      
+      <!-- Stripe Elements: formulário próprio (número / validade / CVV) na conversa -->
       <div
         v-if="showStripeModal"
         class="chat-plans-overlay"
@@ -1075,15 +1076,41 @@
           <div class="chat-plans-handle" aria-hidden="true"></div>
           <div class="chat-plans-head">
             <div>
-              <p class="chat-plans-kicker">Card payment</p>
+              <p class="chat-plans-kicker">Card</p>
               <h3>{{ selectedChatPlan?.title || selectedPack?.label || 'Checkout' }}</h3>
-              <p class="chat-plans-sub">Secure payment · Stripe</p>
+              <p class="chat-plans-sub">
+                {{ selectedChatPlan?.priceLabel ? ('R$ ' + selectedChatPlan.priceLabel) : '' }}
+              </p>
             </div>
             <button type="button" class="chat-plans-x" aria-label="Close" @click="closeStripeModal">✕</button>
           </div>
-          <p v-if="stripeLoading" class="chat-plans-sub" style="text-align:center;padding:12px">Loading checkout…</p>
-          <p v-if="stripeError" class="chat-plans-error" style="color:#f66;text-align:center;padding:8px">{{ stripeError }}</p>
-          <div id="stripe-embed-mount" ref="stripeMountEl" style="min-height:320px;padding:4px 0 16px"></div>
+
+          <form class="stripe-card-form" @submit.prevent="submitStripeCard">
+            <label class="stripe-field-label">Card number</label>
+            <div id="stripe-card-number" class="stripe-field"></div>
+
+            <div class="stripe-field-row">
+              <div class="stripe-field-col">
+                <label class="stripe-field-label">Expiry</label>
+                <div id="stripe-card-expiry" class="stripe-field"></div>
+              </div>
+              <div class="stripe-field-col">
+                <label class="stripe-field-label">CVV</label>
+                <div id="stripe-card-cvc" class="stripe-field"></div>
+              </div>
+            </div>
+
+            <p v-if="stripeError" class="stripe-error">{{ stripeError }}</p>
+
+            <button
+              type="submit"
+              class="cu-btn cu-btn--yes cu-btn--wide"
+              style="width:100%;margin-top:14px"
+              :disabled="stripeLoading || stripePaying"
+            >
+              {{ stripePaying ? 'Processing…' : (stripeLoading ? 'Loading…' : 'Pay') }}
+            </button>
+          </form>
         </div>
       </div>
 
@@ -2833,20 +2860,72 @@ function prewarmStripeJs() {
 
 async function closeStripeModal() {
   try {
-    if (stripeCheckout && typeof stripeCheckout.destroy === 'function') {
-      stripeCheckout.destroy()
-    }
+    stripeCardNumber?.destroy?.()
+    stripeCardExpiry?.destroy?.()
+    stripeCardCvc?.destroy?.()
   } catch {}
-  stripeCheckout = null
+  stripeCardNumber = null
+  stripeCardExpiry = null
+  stripeCardCvc = null
+  stripeElements = null
+  stripeInstance = null
+  stripeClientSecret = ''
   showStripeModal.value = false
   stripeError.value = ''
   stripeLoading.value = false
+  stripePaying.value = false
 }
 
 /**
  * Checkout unificado: PIX (BR) ou Stripe embedded (intl).
  * opts: plan_key, amount, title, source
  */
+
+/** Confirma pagamento com os campos Stripe Elements do nosso formulário */
+async function submitStripeCard() {
+  if (!stripeInstance || !stripeClientSecret || !stripeCardNumber) {
+    stripeError.value = 'Form not ready'
+    return
+  }
+  stripeError.value = ''
+  stripePaying.value = true
+  try {
+    const { error, paymentIntent } = await stripeInstance.confirmCardPayment(stripeClientSecret, {
+      payment_method: {
+        card: stripeCardNumber,
+      },
+    })
+    if (error) {
+      stripeError.value = error.message || 'Payment failed'
+      return
+    }
+    if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
+      pixPaid.value = true
+      funnelChatUnlocked.value = true
+      try {
+        localStorage.setItem('wanessa_chat_unlocked', '1')
+      } catch {}
+      try {
+        track('stripe_elements_paid', {
+          plan_key: stripePendingPlanKey,
+          status: paymentIntent.status,
+        })
+      } catch {}
+      await closeStripeModal()
+      try {
+        await funnelType('Payment confirmed 💚|||Chat unlocked — you can message me now.', 800)
+      } catch {}
+    } else {
+      stripeError.value = 'Payment status: ' + (paymentIntent?.status || 'unknown')
+    }
+  } catch (e: any) {
+    stripeError.value = e?.message || 'Payment error'
+    console.error('[submitStripeCard]', e)
+  } finally {
+    stripePaying.value = false
+  }
+}
+
 async function startUnifiedCheckout(opts: {
   plan_key: string
   amount: number
@@ -2864,18 +2943,20 @@ async function startUnifiedCheckout(opts: {
   if (preferStripeCheckout()) {
     stripeError.value = ''
     stripeLoading.value = true
+    stripePaying.value = false
     showStripeModal.value = true
     showPixModal.value = false
     showChatPlans.value = false
+    stripePendingPlanKey = opts.plan_key
     try {
       const res = await $fetch<{
         ok?: boolean
         client_secret?: string
-        session_id?: string
+        payment_intent_id?: string
         payment_id?: string
-        publishable_key?: string | null
+        publishable_key?: string
         amount?: number
-      }>('/api/checkout/stripe-session', {
+      }>('/api/checkout/stripe-intent', {
         method: 'POST',
         body: {
           plan_key: opts.plan_key,
@@ -2883,71 +2964,64 @@ async function startUnifiedCheckout(opts: {
           title: opts.title,
           visitor_id,
           source,
-          return_origin: typeof window !== 'undefined' ? window.location.origin : '',
         },
       })
       if (!res?.ok || !res.client_secret) {
-        throw new Error('Stripe session failed')
+        throw new Error('Stripe intent failed')
       }
-      // pk só vem do backend (app_secrets) — sem env Vercel no front
       const pk = String(res.publishable_key || '').trim()
-      if (!pk || !pk.startsWith('pk_')) {
+      if (!pk.startsWith('pk_')) {
         throw new Error('Missing Stripe publishable key (app_secrets)')
       }
+      stripeClientSecret = res.client_secret
+      pixPaymentId.value = res.payment_id || ''
+      pixExternalId.value = res.payment_intent_id || ''
+
       const StripeCtor = await loadStripeJs()
-      const stripe = StripeCtor(pk)
-      // Garante modal aberto e #stripe-embed-mount no DOM
-      showStripeModal.value = true
-      stripeLoading.value = false
+      stripeInstance = StripeCtor(pk)
       await nextTick()
       await new Promise((r) => requestAnimationFrame(() => r(null)))
-      let el: HTMLElement | null = document.getElementById('stripe-embed-mount')
-      for (let i = 0; i < 40 && !el; i++) {
-        await new Promise((r) => setTimeout(r, 50))
-        el = document.getElementById('stripe-embed-mount')
-      }
-      if (!el) throw new Error('Stripe mount element missing')
-      el.innerHTML = ''
-      if (stripeCheckout && typeof stripeCheckout.destroy === 'function') {
-        try {
-          stripeCheckout.destroy()
-        } catch {}
-      }
-      stripeCheckout = await stripe.initEmbeddedCheckout({
-        clientSecret: res.client_secret,
-        onComplete: async () => {
-          try {
-            pixPaid.value = true
-            funnelChatUnlocked.value = true
-            try {
-              localStorage.setItem('wanessa_chat_unlocked', '1')
-            } catch {}
-            try {
-              if (stripeCheckout && typeof stripeCheckout.destroy === 'function') stripeCheckout.destroy()
-            } catch {}
-            stripeCheckout = null
-            showStripeModal.value = false
-            try {
-              await funnelType('Payment confirmed 💚|||Chat unlocked — you can message me now.', 800)
-            } catch {}
-            try {
-              track('stripe_checkout_complete', { plan_key: opts.plan_key, amount: opts.amount })
-            } catch {}
-          } catch (e) {
-            console.warn('[stripe onComplete]', e)
-          }
+
+      // monta Elements nos campos do nosso formulário
+      const style = {
+        base: {
+          color: '#e9edef',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fontSize: '16px',
+          '::placeholder': { color: '#8696a0' },
         },
-      })
-      stripeCheckout.mount('#stripe-embed-mount')
-      pixPaymentId.value = res.payment_id || ''
-      pixExternalId.value = res.session_id || ''
+        invalid: { color: '#ff6b6b' },
+      }
+      stripeElements = stripeInstance.elements()
       try {
-        track('stripe_checkout_open', { plan_key: opts.plan_key, amount: opts.amount })
+        stripeCardNumber?.destroy?.()
+        stripeCardExpiry?.destroy?.()
+        stripeCardCvc?.destroy?.()
+      } catch {}
+
+      let tries = 0
+      while (tries < 30 && !document.getElementById('stripe-card-number')) {
+        await new Promise((r) => setTimeout(r, 50))
+        tries++
+      }
+      if (!document.getElementById('stripe-card-number')) {
+        throw new Error('Card form not ready')
+      }
+
+      stripeCardNumber = stripeElements.create('cardNumber', { style, showIcon: true })
+      stripeCardExpiry = stripeElements.create('cardExpiry', { style })
+      stripeCardCvc = stripeElements.create('cardCvc', { style })
+      stripeCardNumber.mount('#stripe-card-number')
+      stripeCardExpiry.mount('#stripe-card-expiry')
+      stripeCardCvc.mount('#stripe-card-cvc')
+
+      try {
+        track('stripe_elements_open', { plan_key: opts.plan_key, amount: opts.amount })
       } catch {}
     } catch (e: any) {
       stripeError.value =
         e?.data?.statusMessage || e?.message || 'Card payment unavailable. Try again.'
-      console.error('[stripe checkout]', e)
+      console.error('[stripe elements]', e)
     } finally {
       stripeLoading.value = false
     }
@@ -6657,4 +6731,30 @@ useHead({
   -webkit-tap-highlight-color: transparent;
 }
 
+
+.stripe-card-form { padding: 4px 16px 20px; }
+.stripe-field-label {
+  display: block;
+  font-size: 12px;
+  color: #8696a0;
+  margin: 10px 0 6px;
+}
+.stripe-field {
+  background: #1f2c34;
+  border: 1px solid #2a3942;
+  border-radius: 10px;
+  padding: 12px 14px;
+  min-height: 44px;
+}
+.stripe-field-row {
+  display: flex;
+  gap: 12px;
+}
+.stripe-field-col { flex: 1; min-width: 0; }
+.stripe-error {
+  color: #ff6b6b;
+  font-size: 13px;
+  margin: 10px 0 0;
+  text-align: center;
+}
 </style>

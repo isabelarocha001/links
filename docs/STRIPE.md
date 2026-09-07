@@ -1,24 +1,23 @@
-# Stripe (cartão / gringa) — 100% via Supabase
+# Stripe — formulário próprio (Elements)
 
-Sem variáveis na Vercel. Tudo em `app_secrets`.
+Popup na conversa com campos:
+- número do cartão
+- validade
+- CVV
 
-## Chaves (tabela `app_secrets`)
+Implementados com **Stripe Elements** (PCI: dados sensíveis ficam no iframe da Stripe; visual nosso).
 
-| key | value |
-|-----|--------|
-| `STRIPE_SECRET_KEY` | `sk_live_...` |
-| `STRIPE_PUBLISHABLE_KEY` | `pk_live_...` |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_...` (opcional até configurar webhook) |
+## Fluxo
 
-O front **nunca** lê a secret. Fluxo:
+1. Lead gringo → `POST /api/checkout/stripe-intent` (PaymentIntent)
+2. API lê `sk_` / `pk_` em `app_secrets`
+3. Front monta Elements em `#stripe-card-number`, `#stripe-card-expiry`, `#stripe-card-cvc`
+4. Lead toca **Pay** → `stripe.confirmCardPayment`
+5. Webhook `payment_intent.succeeded` → libera chat no Supabase
 
-1. Lead gringo → `POST /api/checkout/stripe-session`
-2. API lê `sk_` + `pk_` no Supabase, cria session embedded
-3. API devolve `client_secret` + `publishable_key` ao front
-4. Front monta Stripe.js no popup da conversa
+## app_secrets
 
-## Webhook
-
-URL: `https://SEU_DOMINIO/api/webhooks/stripe`  
-Eventos: `checkout.session.completed`, `checkout.session.async_payment_succeeded`  
-Signing secret → gravar em `app_secrets` como `STRIPE_WEBHOOK_SECRET`.
+- `STRIPE_SECRET_KEY`
+- `STRIPE_PUBLISHABLE_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_WEBHOOK_URL`

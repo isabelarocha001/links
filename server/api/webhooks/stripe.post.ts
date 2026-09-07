@@ -111,6 +111,55 @@ export default defineEventHandler(async (event) => {
   const type = String(eventBody?.type || '')
   const obj = eventBody?.data?.object || {}
 
+  const supabase = useServiceSupabase()
+  const now = new Date().toISOString()
+
+  // PaymentIntent (formulário Elements no app)
+  if (type === 'payment_intent.succeeded') {
+    const piId = String(obj?.id || '')
+    if (!piId) return { ok: false, error: 'missing pi id' }
+    const metaIn = obj?.metadata || {}
+    const { data: existing } = await supabase
+      .from('payments')
+      .select('id, metadata')
+      .eq('external_id', piId)
+      .maybeSingle()
+    const mergedMeta = {
+      ...(existing?.metadata || {}),
+      ...metaIn,
+      provider: 'stripe',
+      stripe_event: type,
+      webhook_at: now,
+    }
+    if (existing?.id) {
+      await supabase
+        .from('payments')
+        .update({ status: 'approved', approved_at: now, updated_at: now, metadata: mergedMeta })
+        .eq('id', existing.id)
+    } else {
+      await supabase.from('payments').insert({
+        external_id: piId,
+        payment_method: 'card',
+        status: 'approved',
+        amount: (Number(obj?.amount_received || obj?.amount) || 0) / 100,
+        currency: String(obj?.currency || 'brl').toUpperCase(),
+        approved_at: now,
+        metadata: mergedMeta,
+      })
+    }
+    if (isChatPlan(mergedMeta)) {
+      const vid = String(mergedMeta.visitor_id || '')
+      if (vid) {
+        try {
+          await markChatUnlocked(supabase, vid, String(mergedMeta.plan_key || 'chat_quick'))
+        } catch (e: any) {
+          console.warn('[stripe webhook] unlock', e?.message || e)
+        }
+      }
+    }
+    return { ok: true, payment_intent: piId, unlocked: isChatPlan(mergedMeta) }
+  }
+
   if (
     type !== 'checkout.session.completed' &&
     type !== 'checkout.session.async_payment_succeeded'
@@ -122,7 +171,6 @@ export default defineEventHandler(async (event) => {
   const paymentStatus = String(obj?.payment_status || obj?.status || '')
   if (!sessionId) return { ok: false, error: 'missing session id' }
 
-  // paid / complete
   const paid =
     paymentStatus === 'paid' ||
     paymentStatus === 'complete' ||
@@ -132,8 +180,6 @@ export default defineEventHandler(async (event) => {
     return { ok: true, pending: true, payment_status: paymentStatus }
   }
 
-  const supabase = useServiceSupabase()
-  const now = new Date().toISOString()
   const metaIn = obj?.metadata || {}
 
   const { data: existing } = await supabase
