@@ -128,6 +128,7 @@ const pt: Dict = {
 
 // --- English ---
 const en: Dict = {
+  cuBody3: "Unlocked? Then you can message me here… 🔥",
   waName: 'Content creator · Wanessa',
   waTyping: 'typing…',
   waOnline: 'online',
@@ -208,6 +209,7 @@ const en: Dict = {
 
 // --- Español (herda en + overrides) ---
 const es: Dict = {
+  cuBody3: "¿Desbloqueaste? Entonces puedes escribirme aquí… 🔥",
   ...en,
   waName: 'Creadora de contenido · Wanessa',
   waTyping: 'escribiendo…',
