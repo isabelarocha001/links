@@ -954,11 +954,12 @@
       <!-- Só quando WANESSA/sistema bloqueia o lead → segunda chance com mimo -->
       <!-- Esconde enquanto o PIX está aberto (evita botão sobreposto no modal) -->
       <div
-        v-if="funnelPermBlocked && !leadBlockedWanessa && showWaFunnel && !showPixModal && !showPixStatusChecking"
+        v-if="funnelPermBlocked && !leadBlockedWanessa && showWaFunnel && !showPixModal && !showPixStatusChecking && !permBlockCardDismissed"
         class="wa-perm-block-overlay"
         @click.stop
       >
         <div class="wa-perm-block-card">
+          <button type="button" class="wa-perm-block-x" aria-label="Fechar" @click="permBlockCardDismissed = true">✕</button>
           <p class="wa-perm-block-title">Wanessa te bloqueou permanentemente</p>
           <p class="wa-perm-block-sub">Você não pode digitar, enviar áudio, emoji, mídia nem fazer chamadas.</p>
           <p class="wa-perm-block-sub">Ainda quer uma segunda chance? Envie um mimo para desbloqueio automático.</p>
@@ -1272,6 +1273,7 @@ let funnelKbdBaseH = 0
 const funnelChatUnlocked = ref(false)
 const funnelBlocked = ref(false) // lead insistiu em programa/encontro presencial
 const funnelPermBlocked = ref(false) // Wanessa/sistema bloqueou o lead → segunda chance com mimo
+const permBlockCardDismissed = ref(false) // usuário fechou o card com X (bloqueio continua)
 const leadBlockedWanessa = ref(false) // lead bloqueou Wanessa (com justificativa) — SEM mimo
 const showBlockReasonModal = ref(false)
 const blockReasonDraft = ref('')
@@ -2036,6 +2038,7 @@ function applyPermanentBlock() {
 
 function clearPermanentBlock() {
   funnelPermBlocked.value = false
+  permBlockCardDismissed.value = false
   try { localStorage.removeItem(PERM_BLOCK_KEY) } catch {}
   try { saveFunnelState() } catch {}
 }
