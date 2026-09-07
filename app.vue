@@ -5426,12 +5426,6 @@ const publicChannelEnabled = computed(() => {
 const showLogin = ref(false)
 const isAdmin = ref(false)
 const showAdminPanel = ref(false)
-provide('openAdminConfig', () => {
-  openEdit()
-})
-provide('setAdminSession', (v: boolean) => {
-  isAdmin.value = !!v
-})
 const videoCallVideos = ref<string[]>([])
 const showVideoCallPlayer = ref(false)
 const videoCallIndex = ref(0)
@@ -5940,6 +5934,7 @@ function closeAdmin() {
   saveError.value = ''
 }
 provide('openAdminConfig', () => {
+  isAdmin.value = true
   openEdit()
 })
 provide('setAdminSession', (v: boolean) => {
