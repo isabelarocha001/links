@@ -13,9 +13,10 @@ export default defineEventHandler(async () => {
     highlight_label: 'PrivSex',
     quiz_enabled: false,
     links: [
-      { label: 'PrivSex', icon: '🔥', url: 'https://privsex.com/wanessa' },
-      { label: 'Telegram VIP', icon: '⭐', url: 'https://t.me/wanessaavipbot?start=pressel' },
-      { label: 'Canal de prévias', icon: '📱', url: 'https://t.me/+yA5Y1pAWx5RlMWIx' }
+      { label: 'PrivSex', icon: '🔥', url: 'https://privsex.com/wanessa', enabled: true },
+      { label: 'Telegram Bot', icon: '⭐', url: 'https://t.me/wanessaavipbot?start=Pressel', enabled: true },
+      { label: 'Canal de prévias', icon: '📱', url: 'https://t.me/+yA5Y1pAWx5RlMWIx', enabled: false },
+      { label: 'WhatsApp', icon: '💬', url: 'https://wa.me/5547992750967', enabled: true }
     ]
   }
 
