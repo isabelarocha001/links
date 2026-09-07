@@ -1057,7 +1057,37 @@
       </div>
 
       <!-- Modal PIX gerado -->
-      <div v-if="showPixModal" class="chat-plans-overlay" style="z-index:40120" @click.self="closePixModal">
+      
+      <!-- Stripe Embedded Checkout (cartão / gringa) — popup na conversa -->
+      <div
+        v-if="showStripeModal"
+        class="chat-plans-overlay"
+        style="z-index:40130"
+        @click.self="closeStripeModal"
+      >
+        <div
+          class="chat-plans-sheet chat-pix-sheet"
+          role="dialog"
+          aria-modal="true"
+          @click.stop
+          style="max-height:90dvh;overflow:auto"
+        >
+          <div class="chat-plans-handle" aria-hidden="true"></div>
+          <div class="chat-plans-head">
+            <div>
+              <p class="chat-plans-kicker">Card payment</p>
+              <h3>{{ selectedChatPlan?.title || selectedPack?.label || 'Checkout' }}</h3>
+              <p class="chat-plans-sub">Secure payment · Stripe</p>
+            </div>
+            <button type="button" class="chat-plans-x" aria-label="Close" @click="closeStripeModal">✕</button>
+          </div>
+          <p v-if="stripeLoading" class="chat-plans-sub" style="text-align:center;padding:12px">Loading checkout…</p>
+          <p v-if="stripeError" class="chat-plans-error" style="color:#f66;text-align:center;padding:8px">{{ stripeError }}</p>
+          <div id="stripe-embed-mount" ref="stripeMountEl" style="min-height:320px;padding:4px 0 16px"></div>
+        </div>
+      </div>
+
+<div v-if="showPixModal" class="chat-plans-overlay" style="z-index:40120" @click.self="closePixModal">
         <div class="chat-plans-sheet chat-pix-sheet" role="dialog" aria-modal="true" @click.stop>
           <div class="chat-plans-handle" aria-hidden="true"></div>
           <div class="chat-plans-head">
@@ -2866,10 +2896,13 @@ async function startUnifiedCheckout(opts: {
       }
       const StripeCtor = await loadStripeJs()
       const stripe = StripeCtor(pk)
+      // Garante modal aberto e #stripe-embed-mount no DOM
+      showStripeModal.value = true
+      stripeLoading.value = false
       await nextTick()
-      // espera o container no DOM
-      let el = document.getElementById('stripe-embed-mount')
-      for (let i = 0; i < 20 && !el; i++) {
+      await new Promise((r) => requestAnimationFrame(() => r(null)))
+      let el: HTMLElement | null = document.getElementById('stripe-embed-mount')
+      for (let i = 0; i < 40 && !el; i++) {
         await new Promise((r) => setTimeout(r, 50))
         el = document.getElementById('stripe-embed-mount')
       }
@@ -2889,6 +2922,10 @@ async function startUnifiedCheckout(opts: {
             try {
               localStorage.setItem('wanessa_chat_unlocked', '1')
             } catch {}
+            try {
+              if (stripeCheckout && typeof stripeCheckout.destroy === 'function') stripeCheckout.destroy()
+            } catch {}
+            stripeCheckout = null
             showStripeModal.value = false
             try {
               await funnelType('Payment confirmed 💚|||Chat unlocked — you can message me now.', 800)
