@@ -566,6 +566,32 @@
   max-width: 340px;
   box-sizing: border-box;
 }
+.x-profile-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 10px auto 4px;
+  border-radius: 50%;
+  color: rgba(245, 240, 255, 0.85);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(192, 132, 252, 0.28);
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  text-decoration: none;
+}
+.x-profile-link:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(192, 132, 252, 0.5);
+  color: #fff;
+}
+.x-profile-link:active {
+  transform: scale(0.96);
+}
+.x-profile-icon {
+  display: block;
+}
 .bio-copy {
   margin: 8px 0 0;
   font-size: 0.7rem;
