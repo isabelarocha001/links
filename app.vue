@@ -184,6 +184,17 @@
           </div>
           <p class="bio-meta">{{ t('bioMeta') }}</p>
           <p class="bio-text">{{ t('bioText') }}</p>
+          <a
+            class="x-profile-link"
+            href="https://x.com/wanessabsx"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Perfil no X"
+          >
+            <svg class="x-profile-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.451L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+          </a>
           <p class="bio-copy">© Wanessa</p>
         </footer>
       </template>
