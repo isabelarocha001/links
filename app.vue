@@ -94,6 +94,58 @@
           </div>
           <!-- identity title removed -->
         </header>
+
+        <!-- Mapa de confiança gamificado: tira dúvida sem texto longo -->
+        <section v-if="isPt && configReady" class="trust-map" aria-label="Como me conhecer">
+          <div class="tm-head">
+            <p class="tm-kicker">Mapa pra me conhecer</p>
+            <div class="tm-xp" aria-hidden="true">
+              <span class="tm-xp-fill" :style="{ width: (trustStep / 3 * 100) + '%' }"></span>
+            </div>
+            <p class="tm-level">Nível {{ trustStep }}/3</p>
+          </div>
+
+          <div class="tm-steps">
+            <button type="button" class="tm-step" :class="{ active: trustStep >= 1, done: trustStep > 1 }" @click="openTrustStep(1)">
+              <span class="tm-num">1</span>
+              <span class="tm-label">Ver de graça</span>
+            </button>
+            <button type="button" class="tm-step" :class="{ active: trustStep >= 2, done: trustStep > 2, locked: trustStep < 1 }" @click="openTrustStep(2)">
+              <span class="tm-num">2</span>
+              <span class="tm-label">O que eu faço</span>
+            </button>
+            <button type="button" class="tm-step" :class="{ active: trustStep >= 3, locked: trustStep < 2 }" @click="openTrustStep(3)">
+              <span class="tm-num">3</span>
+              <span class="tm-label">Ficar perto</span>
+            </button>
+          </div>
+
+          <div class="tm-panel" v-if="trustStep === 1">
+            <p class="tm-title">Prévia grátis no Telegram</p>
+            <p class="tm-text">Entra no canal público, vê teasers e sente se curte meu jeito — sem pagar nada.</p>
+            <a v-if="!hidePublicChannel" class="tm-cta tm-cta--soft" :href="telegramPublicUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Canal de prévias', telegramPublicUrl)">Abrir canal grátis →</a>
+          </div>
+
+          <div class="tm-panel" v-else-if="trustStep === 2">
+            <p class="tm-title">O que rola comigo</p>
+            <ul class="tm-chips">
+              <li class="tm-chip on">📸 Conteúdo exclusivo</li>
+              <li class="tm-chip on">💬 Chat privado</li>
+              <li class="tm-chip on">📹 Videochamada</li>
+              <li class="tm-chip on">🔴 Lives</li>
+              <li class="tm-chip off">🚫 Sem presencial</li>
+            </ul>
+            <p class="tm-text">Tudo online. Nada de encontro na vida real — só digital, no seu ritmo.</p>
+            <button type="button" class="tm-cta" @click="openTrustStep(3)">Entendi → quero ficar perto</button>
+          </div>
+
+          <div class="tm-panel tm-panel--hot" v-else-if="trustStep === 3">
+            <p class="tm-title">Aqui a conexão acontece</p>
+            <p class="tm-text">No PrivSex eu respondo, mando o que não posto em lugar nenhum e libero videochamada pra quem entra.</p>
+            <a class="tm-cta" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">Entrar no PrivSex →</a>
+          </div>
+        </section>
+
         <section class="main-cards" :class="{ 'main-cards--single': hidePublicChannel }" v-if="configReady">
           <div class="card-col">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
@@ -5788,6 +5840,16 @@ async function loadNearPresence() {
 
 const gate = ref<1 | 2 | 3 | 4 | 'pass' | 'reject' | null>(null)
 const quizAnswers = ref<Record<string, string>>({})
+const trustStep = ref(1)
+function openTrustStep(n: number) {
+  if (n === 1) { trustStep.value = 1; return }
+  if (n === 2 && trustStep.value >= 1) { trustStep.value = 2; return }
+  if (n === 3 && trustStep.value >= 2) { trustStep.value = 3; return }
+  // se tentar pular, libera no máximo +1
+  if (n > trustStep.value) trustStep.value = Math.min(3, trustStep.value + 1)
+  else trustStep.value = n
+}
+
 const gateReady = ref(false)
 const chatMessages = ref<ChatMsg[]>([])
 const isTyping = ref(false)
@@ -6819,4 +6881,146 @@ useHead({
   margin: 10px 0 0;
   text-align: center;
 }
+
+/* --- trust map gamificado --- */
+.trust-map {
+  margin: 0.35rem 0.9rem 0.75rem;
+  padding: 0.85rem 0.9rem 1rem;
+  border-radius: 18px;
+  background: linear-gradient(165deg, rgba(88,28,135,0.35), rgba(15,10,30,0.85));
+  border: 1px solid rgba(192,132,252,0.22);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+}
+.tm-head { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.7rem; }
+.tm-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(233,213,255,0.75);
+  font-weight: 600;
+}
+.tm-xp {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.tm-xp-fill {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #c084fc, #e879f9, #f0abfc);
+  transition: width 0.35s ease;
+}
+.tm-level {
+  margin: 0;
+  font-size: 0.7rem;
+  color: rgba(250,245,255,0.55);
+}
+.tm-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.tm-step {
+  appearance: none;
+  border: 1px solid rgba(192,132,252,0.25);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.55);
+  border-radius: 12px;
+  padding: 0.45rem 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+.tm-step .tm-num {
+  width: 1.35rem; height: 1.35rem;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 0.7rem; font-weight: 700;
+  background: rgba(255,255,255,0.08);
+}
+.tm-step .tm-label { font-size: 0.62rem; font-weight: 600; text-align: center; line-height: 1.15; }
+.tm-step.active {
+  color: #faf5ff;
+  border-color: rgba(232,121,249,0.55);
+  background: rgba(168,85,247,0.22);
+  box-shadow: 0 0 0 1px rgba(232,121,249,0.2);
+}
+.tm-step.done .tm-num { background: #a855f7; color: #fff; }
+.tm-step.locked { opacity: 0.4; }
+.tm-panel {
+  border-radius: 14px;
+  padding: 0.75rem 0.8rem;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.tm-panel--hot {
+  border-color: rgba(232,121,249,0.35);
+  background: linear-gradient(160deg, rgba(126,34,206,0.35), rgba(0,0,0,0.35));
+}
+.tm-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #faf5ff;
+}
+.tm-text {
+  margin: 0 0 0.7rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: rgba(250,245,255,0.72);
+}
+.tm-chips {
+  list-style: none;
+  margin: 0 0 0.65rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.tm-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.32rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.tm-chip.on {
+  background: rgba(168,85,247,0.25);
+  color: #f5d0fe;
+  border-color: rgba(232,121,249,0.3);
+}
+.tm-chip.off {
+  background: rgba(127,29,29,0.35);
+  color: #fecaca;
+  border-color: rgba(248,113,113,0.35);
+}
+.tm-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 12px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  color: #1a0528;
+  background: linear-gradient(135deg, #e879f9, #c084fc 45%, #a78bfa);
+}
+.tm-cta--soft {
+  color: #faf5ff;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(192,132,252,0.35);
+}
+
 </style>
