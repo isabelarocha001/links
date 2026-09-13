@@ -80,8 +80,8 @@
             <div class="photo-dots" aria-hidden="true">
               <span v-for="(_, i) in gallery" :key="i" class="dot" :class="{ active: i === photoIndex }" />
             </div>
-            <!-- CTA principal: WhatsApp logo abaixo da foto -->
-            <button type="button" class="hero-wa-btn" @click="openWaFunnel('hero_photo')">
+            <!-- CTA principal: WhatsApp — só se link WhatsApp estiver ativo no admin -->
+            <button v-if="whatsappLinkEnabled" type="button" class="hero-wa-btn" @click="openWaFunnel('hero_photo')">
               <span class="hero-wa-ico" aria-hidden="true">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
               </span>
@@ -116,7 +116,7 @@
           </div>
           <div class="card-col" v-if="!hidePublicChannel">
             <!-- BR + canal desativado no admin → bot; gringa SEMPRE canal público (nunca bot) -->
-            <template v-if="isPt && !publicChannelEnabled">
+            <template v-if="isPt && !publicChannelEnabled && telegramBotEnabled">
               <a class="lux-card lux-card--right" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
                 <div class="card-glow"></div>
                 <div class="card-top">
@@ -143,7 +143,7 @@
           </div>
         </section>
         <!-- Bot Telegram no rodapé quando canal público está na direita -->
-        <section class="vip-block" v-if="publicChannelEnabled && configReady && isPt">
+        <section class="vip-block" v-if="publicChannelEnabled && telegramBotEnabled && configReady && isPt">
           <a class="vip-card" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">
             <div class="vip-shine"></div>
             <div class="vip-content">
@@ -5904,9 +5904,9 @@ function answerQuiz(key: string) {
 }
 const DEFAULT_LINKS: LinkItem[] = [
   { label: 'PrivSex', icon: '🔥', url: privsexUrl, enabled: true },
-  { label: 'Telegram Bot', icon: '⭐', url: vipBotUrl, enabled: true },
-  { label: 'Canal de prévias', icon: '📱', url: telegramPublicUrl, enabled: false },
-  { label: 'WhatsApp', icon: '💬', url: 'https://wa.me/5547992750967', enabled: true },
+  { label: 'Telegram Bot', icon: '⭐', url: vipBotUrl, enabled: false },
+  { label: 'Canal de prévias', icon: '📱', url: telegramPublicUrl, enabled: true },
+  { label: 'WhatsApp', icon: '💬', url: 'https://wa.me/5547992750967', enabled: false },
 ]
 const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
 const configReady = ref(false)
@@ -5916,6 +5916,20 @@ const publicChannelEnabled = computed(() => {
     if (l.enabled === false) return false
     const label = String(l.label || '').toLowerCase()
     return /pr[eé]via|canal\s*p[uú]blico|telegram\s*p[uú]blico|canal\s*de\s*pr/i.test(label)
+  })
+})
+const whatsappLinkEnabled = computed(() => {
+  return config.links.some((l) => {
+    if (l.enabled === false) return false
+    const label = String(l.label || '').toLowerCase()
+    return /whatsapp|\bwa\b/i.test(label)
+  })
+})
+const telegramBotEnabled = computed(() => {
+  return config.links.some((l) => {
+    if (l.enabled === false) return false
+    const label = String(l.label || '').toLowerCase()
+    return /telegram\s*(bot|vip)|(bot|vip).*telegram/i.test(label)
   })
 })
 const showLogin = ref(false)
@@ -6254,8 +6268,12 @@ function applyServerConfig(data: any) {
   if (Array.isArray(data.links) && data.links.length) {
     config.links = data.links.filter((l: any) => l && l.label).map((l: any) => {
       const label = String(l.label || '')
-      const core = /privsex|priv\s*sex|telegram\s*(bot|vip)|whatsapp/i.test(label)
-      const enabled = core ? true : (l.enabled === false ? false : true)
+      let enabled = l.enabled === false ? false : true
+      // Forçado: desativa WhatsApp e Telegram Bot; mantém PrivSex e Canal de prévias
+      if (/whatsapp|\bwa\b/i.test(label)) enabled = false
+      if (/telegram\s*(bot|vip)|(bot|vip).*telegram/i.test(label)) enabled = false
+      if (/privsex|priv\s*sex/i.test(label)) enabled = true
+      if (/pr[eé]via|canal\s*p[uú]blico|telegram\s*p[uú]blico|canal\s*de\s*pr/i.test(label)) enabled = true
       return attachLogo({ label, icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled })
     })
   } else config.links = DEFAULT_LINKS.map(attachLogo)
