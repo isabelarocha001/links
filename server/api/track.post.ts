@@ -9,7 +9,7 @@
  * Assim o clique no link não espera Supabase/Telegram.
  */
 
-const PRESSEL_WEBHOOK = 'https://telegram-metricas.vercel.app/api/pressel'
+const PRESSEL_WEBHOOK = 'https://agent-de-metricas-telegram.vercel.app/api/pressel'
 const LINK_TREE_HOST = 'wanessabsx.vercel.app'
 const LINK_TREE_PATH = '/links/wanessa'
 const LINK_TREE_SOURCE = 'wanessa_links'
