@@ -94,7 +94,7 @@
           </div>
           <!-- identity title removed -->
         </header>
-        <section class="main-cards" :class="{ 'main-cards--single': hidePublicChannel || !privsexLinkEnabled }" v-if="configReady">
+        <section class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
           <div class="card-col" v-if="privsexLinkEnabled">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
               <div class="portal-spiral" aria-hidden="true">
@@ -113,6 +113,21 @@
               <p class="card-desc">{{ t('privDesc') }}</p>
             </a>
             <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
+          </div>
+          <!-- WhatsApp no lugar do PrivSex enquanto ele estiver pausado -->
+          <div class="card-col" v-else-if="isPt">
+            <button type="button" class="lux-card lux-card--left iq-main-card" @click="iqStart">
+              <div class="card-glow"></div>
+              <div class="card-top">
+                <span class="card-icon iq-wa-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="#25D366" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                </span>
+                <span class="card-badge badge-wa">Chat</span>
+              </div>
+              <h2 class="card-title">WhatsApp</h2>
+              <p class="card-desc">Me chama pra conversar</p>
+            </button>
+            <button type="button" class="card-enter iq-main-enter" @click="iqStart">Abrir</button>
           </div>
           <div class="card-col" v-if="!hidePublicChannel">
             <!-- BR + canal desativado no admin → bot; gringa SEMPRE canal público (nunca bot) -->
@@ -160,13 +175,15 @@
           </a>
         </section>
 
-        <!-- QUIZ ICP → WhatsApp (só após qualificação; número não no HTML inicial) -->
-        <section class="iq-section" v-if="configReady && isPt">
+        <!-- WhatsApp abaixo do bot TG quando PrivSex estiver ativo (após 12/10) -->
+        <section class="iq-section" v-if="configReady && isPt && privsexLinkEnabled">
           <button type="button" class="iq-open-btn" @click="iqStart">
-            <span class="iq-open-ico" aria-hidden="true">💬</span>
+            <span class="iq-open-ico iq-wa-svg" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </span>
             <span class="iq-open-text">
               <strong>WhatsApp</strong>
-              <small>Responda 4 perguntas rápidas · a partir de R$ 49,90</small>
+              <small>Me chama pra conversar</small>
             </span>
             <span class="iq-open-arrow" aria-hidden="true">→</span>
           </button>
@@ -1421,7 +1438,9 @@ const iqCurrentOptions = computed((): IqOpt[] => {
     return [
       { id: 'private', label: 'Conteúdo privado' },
       { id: 'custom', label: 'Conteúdo personalizado' },
-      { id: 'company', label: 'Companhia/conversa online' },
+      { id: 'sexting', label: 'Sexting' },
+      { id: 'call', label: 'Chamada (vídeo ou voz)' },
+      { id: 'company', label: 'Companhia / conversa online' },
       { id: 'meet', label: 'Conhecer pessoalmente / encontro' },
       { id: 'looking', label: 'Só estou olhando' },
     ]
@@ -1558,7 +1577,7 @@ function iqAnswer(opt: IqOpt) {
       )
       return
     }
-    // private | custom | company → segue
+    // private | custom | sexting | call | company → segue
     iqStep.value = 2
     iqMaxStepReached.value = 2
     return
@@ -1600,6 +1619,8 @@ function iqBuildWaMessage(): string {
   const intentMap: Record<string, string> = {
     private: 'conteúdo privado',
     custom: 'conteúdo personalizado',
+    sexting: 'sexting',
+    call: 'chamada',
     company: 'companhia/conversa online',
   }
   const ticketMap: Record<string, string> = {
@@ -7147,6 +7168,37 @@ useHead({
 }
 
 /* —— Quiz ICP → WhatsApp —— */
+.iq-main-card {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.iq-main-enter {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.badge-wa {
+  background: rgba(37, 211, 102, 0.2) !important;
+  color: #86efac !important;
+}
+.iq-wa-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.iq-wa-svg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .iq-section { margin: 14px 0 8px; padding: 0 2px; }
 .iq-open-btn {
   width: 100%;
