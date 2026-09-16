@@ -231,8 +231,7 @@
                   <p class="iq-success-msg">Pode seguir 🧡</p>
                   <div class="iq-final-box">
                     <p class="iq-final-lead">Leia com atenção:</p>
-                    <p class="iq-final-line">❌ Eu NÃO saio com você</p>
-                    <p class="iq-final-line">❌ Eu NÃO namoro cliente</p>
+                    <p class="iq-final-line">❌ Eu NÃO faço encontro presencial</p>
                     <p class="iq-final-line">✅ Eu VENDO fotos, vídeos, call e chat</p>
                     <p class="iq-final-line">✅ Tudo pela internet · a partir de R$ 49,90</p>
                   </div>
