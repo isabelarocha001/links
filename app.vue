@@ -5909,7 +5909,7 @@ function answerQuiz(key: string) {
 }
 const DEFAULT_LINKS: LinkItem[] = [
   { label: 'PrivSex', icon: '🔥', url: privsexUrl, enabled: true },
-  { label: 'Telegram Bot', icon: '⭐', url: vipBotUrl, enabled: false },
+  { label: 'Telegram Bot', icon: '⭐', url: vipBotUrl, enabled: true },
   { label: 'Canal de prévias', icon: '📱', url: telegramPublicUrl, enabled: true },
   { label: 'WhatsApp', icon: '💬', url: 'https://wa.me/5547992750967', enabled: false },
 ]
@@ -6282,10 +6282,10 @@ function applyServerConfig(data: any) {
     config.links = data.links.filter((l: any) => l && l.label).map((l: any) => {
       const label = String(l.label || '')
       let enabled = l.enabled === false ? false : true
-      // Forçado: desativa WhatsApp e Telegram Bot; Canal de prévias on
+      // Forçado: WhatsApp off; Telegram Bot + Canal on
       // PrivSex: off até 12/10/2026 (isPrivsexPaused), depois força on de novo
       if (/whatsapp|\bwa\b/i.test(label)) enabled = false
-      if (/telegram\s*(bot|vip)|(bot|vip).*telegram/i.test(label)) enabled = false
+      if (/telegram\s*(bot|vip)|(bot|vip).*telegram/i.test(label)) enabled = true
       if (/privsex|priv\s*sex/i.test(label)) enabled = isPrivsexPaused() ? false : true
       if (/pr[eé]via|canal\s*p[uú]blico|telegram\s*p[uú]blico|canal\s*de\s*pr/i.test(label)) enabled = true
       return attachLogo({ label, icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled })
