@@ -1462,6 +1462,8 @@ const iqCurrentOptions = computed((): IqOpt[] => {
   return [
     { id: 'pix', label: 'Vou pagar no PIX' },
     { id: 'card', label: 'Vou pagar no cartão' },
+    { id: 'chat_first', label: 'Só quero conversar, sem pagar' },
+    { id: 'not_buy', label: 'Não quero comprar agora' },
   ]
 })
 
@@ -1603,9 +1605,17 @@ function iqAnswer(opt: IqOpt) {
     return
   }
 
-  // Etapa 4 — só PIX ou cartão
+  // Etapa 4 — PIX/cartão qualificam; sem compra → soft reject
   if (iqStep.value === 3) {
     iqAnswers.pay = opt.id
+    if (opt.id === 'chat_first' || opt.id === 'not_buy') {
+      iqDisqualify(
+        'disqualified_no_purchase_intent',
+        'O WhatsApp é só pra quem vai comprar.\nOlha o site com calma e volta depois 💕',
+        true,
+      )
+      return
+    }
     // pix | card → qualificado
     iqPhase.value = 'result'
     iqTrack('qualified', { answers: { ...iqAnswers } })
@@ -1647,6 +1657,7 @@ function iqTryAutoOpenFromRoute() {
   const q = route.query || {}
   const want =
     p === '/quiz' ||
+    p === '/whatsapp' ||
     p === '/chat' ||
     p.startsWith('/chat/') ||
     q.quiz === '1' ||
@@ -6689,6 +6700,11 @@ onMounted(async () => {
   let chatSlug = 'wanessabsx'
   try {
     const path = (window.location.pathname || '').replace(/\/+$/, '') || '/'
+    // /whatsapp e /chat → quiz ICP (não funil antigo)
+    if (path === '/whatsapp') {
+      openChatDirect = true
+      chatSlug = 'whatsapp'
+    }
     // /chat sozinho → mesma landing de /chat/wanessabsx
     if (path === '/chat') {
       openChatDirect = true
