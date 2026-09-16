@@ -6768,7 +6768,7 @@ onMounted(async () => {
     try { nextTick(bootQuiz) } catch { bootQuiz() }
     setTimeout(bootQuiz, 300)
     setTimeout(bootQuiz, 1000)
-  }   } else {
+  } else {
     // Reload na home: se o chat estava aberto, reabre com o histórico
     try {
       const raw = localStorage.getItem(FUNNEL_STORAGE_KEY)
