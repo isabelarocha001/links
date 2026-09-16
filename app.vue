@@ -125,7 +125,7 @@
                 <span class="card-badge badge-wa">Chat</span>
               </div>
               <h2 class="card-title">WhatsApp</h2>
-              <p class="card-desc">Falar comigo</p>
+              <p class="card-desc">Conteúdo online · sem encontro</p>
             </button>
             <button type="button" class="card-enter iq-main-enter" @click="iqStart">Abrir</button>
           </div>
@@ -183,7 +183,7 @@
             </span>
             <span class="iq-open-text">
               <strong>WhatsApp</strong>
-              <small>Falar comigo</small>
+              <small>Conteúdo online · sem encontro</small>
             </span>
             <span class="iq-open-arrow" aria-hidden="true">→</span>
           </button>
@@ -199,6 +199,9 @@
                   <p class="iq-name">{{ config.name || 'Wanessa' }}</p>
                 </div>
                 <h3 class="iq-title">{{ iqPhase === 'quiz' ? 'Antes de falar comigo 💕' : 'Oi' }}</h3>
+                <p class="iq-expect" v-if="iqPhase === 'quiz'">
+                  Aqui eu vendo conteúdo online (fotos, vídeos, call e chat). Não faço encontro.
+                </p>
                 <p class="iq-intro" v-if="iqPhase === 'quiz'">
                   Amor, me responde 4 perguntas rápidas 💕
                   <br />É só pra eu saber o que você quer.
@@ -7371,6 +7374,17 @@ useHead({
   font-weight: 600;
   letter-spacing: 0.02em;
   opacity: 0.8;
+}
+.iq-expect {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(253, 164, 175, 0.1);
+  border: 1px solid rgba(253, 164, 175, 0.25);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: #fecdd3;
+  text-align: center;
 }
 .iq-intro {
   margin: 8px 0 12px;
