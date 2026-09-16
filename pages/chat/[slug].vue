@@ -1,10 +1,10 @@
-<!-- Rota /chat/:slug: landing de chat com slug da criadora. -->
+<!-- Rota /chat/:slug: mesmo quiz ICP (slug só para tracking). -->
 <script setup lang="ts">
 /**
- * Rota pública do lead: /chat/wanessabsx | /chat/wanessa
- * Abre o funil WhatsApp direto (lógica em app.vue onMounted).
- * NÃO confundir com /admin/chat (só admin autenticado).
+ * /chat/wanessabsx | /chat/wanessa
+ * Abre quiz ICP (app.vue). Não confundir com /admin/chat.
  */
+useSeoMeta({ title: 'Falar comigo', robots: 'noindex, nofollow' })
 </script>
 
 <template>
