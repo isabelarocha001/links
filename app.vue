@@ -160,43 +160,55 @@
           </a>
         </section>
 
-        <!-- NOVO: triagem de intenção → WhatsApp conteúdo R$49,90 -->
+        <!-- QUIZ ICP → WhatsApp (só após qualificação; número não no HTML inicial) -->
         <section class="iq-section" v-if="configReady && isPt">
-          <button type="button" class="iq-open-btn" @click="iqOpen">
+          <button type="button" class="iq-open-btn" @click="iqStart">
             <span class="iq-open-ico" aria-hidden="true">💬</span>
             <span class="iq-open-text">
               <strong>WhatsApp</strong>
-              <small>Conteúdo exclusivo · R$ 49,90</small>
+              <small>Responda 4 perguntas rápidas · a partir de R$ 49,90</small>
             </span>
             <span class="iq-open-arrow" aria-hidden="true">→</span>
           </button>
         </section>
 
         <Teleport to="body">
-          <div v-if="iqVisible" class="iq-overlay" @click.self="iqClose">
-            <div class="iq-sheet" role="dialog" aria-modal="true" aria-label="Antes do WhatsApp">
+          <div v-if="iqVisible" class="iq-overlay" @click.self="iqAbandonClose">
+            <div class="iq-sheet" role="dialog" aria-modal="true" aria-label="Qualificação">
               <header class="iq-head">
-                <p class="iq-kicker">Antes de falar comigo</p>
-                <h3 class="iq-title">{{ iqStepTitle }}</h3>
-                <button type="button" class="iq-x" @click="iqClose" aria-label="Fechar">×</button>
+                <p class="iq-kicker" v-if="iqPhase === 'quiz'">{{ iqProgressLabel }}</p>
+                <p class="iq-kicker" v-else-if="iqPhase === 'result'">Pronto</p>
+                <p class="iq-kicker" v-else>Atenção</p>
+                <h3 class="iq-title">{{ iqHeaderTitle }}</h3>
+                <button type="button" class="iq-x" @click="iqAbandonClose" aria-label="Fechar">×</button>
               </header>
               <div class="iq-body">
-                <p class="iq-q">{{ iqQuestion }}</p>
-                <div class="iq-opts">
-                  <button
-                    v-for="opt in iqOptions"
-                    :key="opt.id"
-                    type="button"
-                    class="iq-opt"
-                    :class="{ 'iq-opt--bad': opt.tone === 'bad', 'iq-opt--good': opt.tone === 'good' }"
-                    @click="iqPick(opt)"
-                  >{{ opt.label }}</button>
-                </div>
-                <p v-if="iqReject" class="iq-reject">{{ iqReject }}</p>
+                <template v-if="iqPhase === 'quiz'">
+                  <p class="iq-q">{{ iqQuestionText }}</p>
+                  <div class="iq-opts">
+                    <button
+                      v-for="opt in iqCurrentOptions"
+                      :key="opt.id"
+                      type="button"
+                      class="iq-opt"
+                      @click="iqAnswer(opt)"
+                    >{{ opt.label }}</button>
+                  </div>
+                </template>
+                <template v-else-if="iqPhase === 'reject'">
+                  <p class="iq-reject-msg">{{ iqRejectMsg }}</p>
+                  <button type="button" class="iq-opt iq-opt--primary" @click="iqAbandonClose">Entendi</button>
+                </template>
+                <template v-else-if="iqPhase === 'soft'">
+                  <p class="iq-reject-msg">{{ iqRejectMsg }}</p>
+                  <button type="button" class="iq-opt" @click="iqAbandonClose">Voltar às opções do site</button>
+                </template>
+                <template v-else-if="iqPhase === 'result'">
+                  <p class="iq-success-msg">Tudo certo 🧡</p>
+                  <p class="iq-q">Meu atendimento é somente online e as opções começam em R$49,90.</p>
+                  <button type="button" class="iq-opt iq-opt--wa" @click="iqGoWhatsApp">Continuar no WhatsApp</button>
+                </template>
               </div>
-              <footer class="iq-foot" v-if="iqStep > 0 && !iqReject">
-                <button type="button" class="iq-back" @click="iqBack">Voltar</button>
-              </footer>
             </div>
           </div>
         </Teleport>
@@ -1359,75 +1371,212 @@ function isPrivsexPaused() {
 }
 
 // =============================================================================
-// NOVO: triagem de intenção (perfil ideal = desejo + conteúdo pago, sem encontro/call)
+// QUIZ ICP — qualificação antes do WhatsApp (sem pontuação visível)
+// ICP: 18+ AND só online AND ticket >= 49,90 AND intenção comercial
+// Número/link do WA NÃO fica no HTML inicial — só após qualified + clique
 // =============================================================================
 const IQ_WA_NUMBER = '5547992750967'
-const IQ_WA_TEXT = 'oi wanessa quero seus conteudos por 49,90'
+type IqPhase = 'quiz' | 'reject' | 'soft' | 'result'
+type IqOpt = { id: string; label: string }
 const iqVisible = ref(false)
-const iqStep = ref(0)
-const iqReject = ref('')
-type IqOpt = { id: string; label: string; tone?: 'good' | 'bad'; next?: number | 'pass' | 'fail'; failMsg?: string }
-const iqSteps: { title: string; question: string; options: IqOpt[] }[] = [
-  {
-    title: 'Passo 1 de 3',
-    question: 'O que você está buscando comigo agora?',
-    options: [
-      { id: 'content', label: 'Ver meu conteúdo adulto pago e gozar com isso', tone: 'good', next: 1 },
-      { id: 'meet', label: 'Encontro presencial / programa', tone: 'bad', next: 'fail', failMsg: 'Não faço encontro. Meu foco é só conteúdo digital.' },
-      { id: 'call', label: 'Chamada de vídeo ou voz ao vivo', tone: 'bad', next: 'fail', failMsg: 'Não atendo chamada. Só conteúdo gravado/pago no WhatsApp.' },
-    ],
-  },
-  {
-    title: 'Passo 2 de 3',
-    question: 'Como você quer usar esse conteúdo?',
-    options: [
-      { id: 'solo', label: 'Sozinho, batendo punheta vendo minhas fotos/vídeos', tone: 'good', next: 2 },
-      { id: 'gf', label: 'Quero que você seja minha “namorada” o dia todo no chat', tone: 'bad', next: 'fail', failMsg: 'Não é chat de namoradinha 24h — é conteúdo pra você se divertir.' },
-      { id: 'date', label: 'Quero te conhecer pessoalmente', tone: 'bad', next: 'fail', failMsg: 'Não rola presencial. Só conteúdo digital.' },
-    ],
-  },
-  {
-    title: 'Passo 3 de 3',
-    question: 'Confirma que você entende o que leva no WhatsApp?',
-    options: [
-      { id: 'ok', label: 'Sim: conteúdo digital por R$ 49,90 — sem encontro e sem call', tone: 'good', next: 'pass' },
-      { id: 'no', label: 'Na verdade quero encontro ou chamada', tone: 'bad', next: 'fail', failMsg: 'Então não sou o perfil certo pra você. Valeu pela honestidade.' },
-    ],
-  },
-]
-const iqStepTitle = computed(() => iqSteps[iqStep.value]?.title || '')
-const iqQuestion = computed(() => iqSteps[iqStep.value]?.question || '')
-const iqOptions = computed(() => iqSteps[iqStep.value]?.options || [])
-function iqOpen() {
+const iqPhase = ref<IqPhase>('quiz')
+const iqStep = ref(0) // 0 idade, 1 intenção, 2 ticket, 3 pagamento
+const iqRejectMsg = ref('')
+const iqAnswers = reactive({
+  age: '' as string,
+  intent: '' as string,
+  ticket: '' as string,
+  pay: '' as string,
+})
+const iqMaxStepReached = ref(0)
+
+const iqProgressLabel = computed(() => `Etapa ${iqStep.value + 1} de 4`)
+const iqHeaderTitle = computed(() => {
+  if (iqPhase.value === 'result') return 'Qualificado'
+  if (iqPhase.value === 'reject' || iqPhase.value === 'soft') return 'Aviso'
+  return ['Maioridade', 'Intenção', 'Investimento', 'Liberação'][iqStep.value] || ''
+})
+const iqQuestionText = computed(() => {
+  return [
+    'Você tem 18 anos ou mais? 🔞',
+    'O que você está procurando? 👀',
+    'As opções que atendo começam em R$49,90. O que você prefere?',
+    'Se encontrar a opção que quer, como prefere liberar o acesso?',
+  ][iqStep.value] || ''
+})
+const iqCurrentOptions = computed((): IqOpt[] => {
+  if (iqStep.value === 0) {
+    return [
+      { id: 'yes18', label: 'Sim, tenho 18+' },
+      { id: 'no18', label: 'Não' },
+    ]
+  }
+  if (iqStep.value === 1) {
+    return [
+      { id: 'private', label: 'Conteúdo privado' },
+      { id: 'custom', label: 'Conteúdo personalizado' },
+      { id: 'company', label: 'Companhia/conversa online' },
+      { id: 'meet', label: 'Conhecer pessoalmente / encontro' },
+      { id: 'looking', label: 'Só estou olhando' },
+    ]
+  }
+  if (iqStep.value === 2) {
+    return [
+      { id: 'from4990', label: 'Quero ver as opções a partir de R$49,90' },
+      { id: 'custom_pay', label: 'Quero algo personalizado' },
+      { id: 'below', label: 'Estou procurando algo abaixo de R$49,90' },
+    ]
+  }
+  return [
+    { id: 'pix', label: 'PIX' },
+    { id: 'card', label: 'Cartão' },
+    { id: 'chat_first', label: 'Quero apenas conversar primeiro' },
+    { id: 'not_buy', label: 'Ainda não quero comprar' },
+  ]
+})
+
+function iqTrack(event: string, extra: Record<string, unknown> = {}) {
+  try {
+    track(event, {
+      quiz: 'icp_wa',
+      step: iqStep.value,
+      phase: iqPhase.value,
+      ...extra,
+    })
+  } catch {}
+}
+
+function iqResetState() {
+  iqPhase.value = 'quiz'
   iqStep.value = 0
-  iqReject.value = ''
+  iqRejectMsg.value = ''
+  iqAnswers.age = ''
+  iqAnswers.intent = ''
+  iqAnswers.ticket = ''
+  iqAnswers.pay = ''
+  iqMaxStepReached.value = 0
+}
+
+function iqStart() {
+  iqResetState()
   iqVisible.value = true
-  try { onCardClick('IQ WhatsApp open', '') } catch {}
+  iqTrack('quiz_started')
 }
-function iqClose() {
+
+function iqAbandonClose() {
+  if (iqVisible.value && iqPhase.value === 'quiz') {
+    iqTrack('quiz_abandoned', { abandon_step: iqStep.value, max_step: iqMaxStepReached.value })
+  }
   iqVisible.value = false
-  iqReject.value = ''
 }
-function iqBack() {
-  iqReject.value = ''
-  if (iqStep.value > 0) iqStep.value -= 1
+
+function iqDisqualify(event: string, msg: string, soft = false) {
+  iqTrack(event, { answers: { ...iqAnswers } })
+  iqRejectMsg.value = msg
+  iqPhase.value = soft ? 'soft' : 'reject'
 }
-function iqPick(opt: IqOpt) {
-  iqReject.value = ''
-  if (opt.next === 'fail') {
-    iqReject.value = opt.failMsg || 'Não combinamos.'
-    try { onCardClick('IQ WhatsApp reject', opt.id) } catch {}
+
+function iqAnswer(opt: IqOpt) {
+  if (iqPhase.value !== 'quiz') return
+  if (iqStep.value > iqMaxStepReached.value) iqMaxStepReached.value = iqStep.value
+  iqTrack('quiz_answer', { option: opt.id, step: iqStep.value })
+
+  // Etapa 1 — maioridade
+  if (iqStep.value === 0) {
+    iqAnswers.age = opt.id
+    if (opt.id === 'no18') {
+      iqDisqualify('disqualified_underage', 'Este conteúdo é exclusivo para maiores de 18 anos.')
+      return
+    }
+    iqStep.value = 1
+    iqMaxStepReached.value = 1
     return
   }
-  if (opt.next === 'pass') {
-    try { onCardClick('IQ WhatsApp pass', IQ_WA_TEXT) } catch {}
-    const url = 'https://wa.me/' + IQ_WA_NUMBER + '?text=' + encodeURIComponent(IQ_WA_TEXT)
-    iqVisible.value = false
-    if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer')
+
+  // Etapa 2 — intenção
+  if (iqStep.value === 1) {
+    iqAnswers.intent = opt.id
+    if (opt.id === 'meet') {
+      iqDisqualify(
+        'disqualified_meeting',
+        'Meu atendimento é exclusivamente online 🧡 Não realizo encontros presenciais.',
+      )
+      return
+    }
+    if (opt.id === 'looking') {
+      iqDisqualify(
+        'disqualified_browsing',
+        'Quando quiser conteúdo de verdade, é só voltar. Por enquanto não liberamos o atendimento.',
+        true,
+      )
+      return
+    }
+    // private | custom | company → segue
+    iqStep.value = 2
+    iqMaxStepReached.value = 2
     return
   }
-  if (typeof opt.next === 'number') {
-    iqStep.value = opt.next
+
+  // Etapa 3 — ticket
+  if (iqStep.value === 2) {
+    iqAnswers.ticket = opt.id
+    if (opt.id === 'below') {
+      iqDisqualify(
+        'disqualified_low_ticket',
+        'As opções que atendo começam em R$49,90. Abaixo disso não consigo liberar o atendimento.',
+      )
+      return
+    }
+    iqStep.value = 3
+    iqMaxStepReached.value = 3
+    return
+  }
+
+  // Etapa 4 — ação de compra
+  if (iqStep.value === 3) {
+    iqAnswers.pay = opt.id
+    if (opt.id === 'chat_first' || opt.id === 'not_buy') {
+      iqDisqualify(
+        'disqualified_no_purchase_intent',
+        'Por agora explore as opções do site. O WhatsApp fica para quem já quer liberar o acesso 🧡',
+        true,
+      )
+      return
+    }
+    // pix | card → qualificado
+    iqPhase.value = 'result'
+    iqTrack('qualified', { answers: { ...iqAnswers } })
+  }
+}
+
+function iqBuildWaMessage(): string {
+  const intentMap: Record<string, string> = {
+    private: 'conteúdo privado',
+    custom: 'conteúdo personalizado',
+    company: 'companhia/conversa online',
+  }
+  const ticketMap: Record<string, string> = {
+    from4990: 'vi que as opções começam em R$49,90',
+    custom_pay: 'quero algo personalizado',
+  }
+  const payMap: Record<string, string> = {
+    pix: 'prefiro pagar por PIX',
+    card: 'prefiro pagar no cartão',
+  }
+  const intent = intentMap[iqAnswers.intent] || 'conteúdo'
+  const ticket = ticketMap[iqAnswers.ticket] || 'vi que as opções começam em R$49,90'
+  const pay = payMap[iqAnswers.pay] || 'quero ver as opções'
+  return `Oi 🧡 Vim pelo site. Estou procurando ${intent}, ${ticket} e ${pay}. Quero ver as opções.`
+}
+
+function iqGoWhatsApp() {
+  // Destino só existe após qualificação + clique (não no HTML inicial)
+  const text = iqBuildWaMessage()
+  const url = 'https://wa.me/' + IQ_WA_NUMBER + '?text=' + encodeURIComponent(text)
+  iqTrack('whatsapp_clicked', { answers: { ...iqAnswers } })
+  iqVisible.value = false
+  if (typeof window !== 'undefined') {
+    window.location.href = url
   }
 }
 
@@ -6950,7 +7099,7 @@ useHead({
   text-align: center;
 }
 
-/* —— Intent Quiz → WhatsApp (novo) —— */
+/* —— Quiz ICP → WhatsApp —— */
 .iq-section { margin: 14px 0 8px; padding: 0 2px; }
 .iq-open-btn {
   width: 100%;
@@ -6960,59 +7109,76 @@ useHead({
   border: 1px solid rgba(37, 211, 102, 0.35);
   background: linear-gradient(135deg, rgba(37, 211, 102, 0.16), rgba(18, 140, 70, 0.12));
   color: inherit; cursor: pointer; text-align: left;
-  transition: transform .15s ease, border-color .15s ease;
+  transition: transform .15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 .iq-open-btn:active { transform: scale(0.98); }
 .iq-open-ico { font-size: 1.4rem; line-height: 1; }
 .iq-open-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .iq-open-text strong { font-size: 0.95rem; font-weight: 650; }
-.iq-open-text small { font-size: 0.75rem; opacity: 0.75; }
+.iq-open-text small { font-size: 0.72rem; opacity: 0.75; line-height: 1.3; }
 .iq-open-arrow { opacity: 0.6; font-size: 1.1rem; }
 .iq-overlay {
   position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex; align-items: flex-end; justify-content: center;
-  padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding: 12px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
 }
 .iq-sheet {
   width: 100%; max-width: 420px;
+  max-height: min(90dvh, 640px);
+  overflow-y: auto;
   background: #12141a; color: #f1f5f9;
   border-radius: 20px 20px 16px 16px;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 20px 50px rgba(0,0,0,0.45);
-  overflow: hidden;
 }
-.iq-head { position: relative; padding: 18px 44px 8px 18px; }
-.iq-kicker { margin: 0; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.55; }
-.iq-title { margin: 4px 0 0; font-size: 1.05rem; font-weight: 650; }
+.iq-head { position: relative; padding: 18px 48px 6px 18px; }
+.iq-kicker {
+  margin: 0; font-size: 0.68rem; letter-spacing: 0.06em;
+  text-transform: uppercase; opacity: 0.55;
+}
+.iq-title { margin: 4px 0 0; font-size: 1.08rem; font-weight: 650; }
 .iq-x {
   position: absolute; top: 12px; right: 12px;
-  width: 32px; height: 32px; border-radius: 999px;
+  width: 36px; height: 36px; border-radius: 999px;
   border: none; background: rgba(255,255,255,0.08); color: #fff;
-  font-size: 1.25rem; line-height: 1; cursor: pointer;
+  font-size: 1.35rem; line-height: 1; cursor: pointer;
 }
-.iq-body { padding: 8px 18px 18px; }
-.iq-q { margin: 0 0 14px; font-size: 0.95rem; line-height: 1.45; color: #e2e8f0; }
-.iq-opts { display: flex; flex-direction: column; gap: 8px; }
+.iq-body { padding: 10px 16px 20px; }
+.iq-q { margin: 0 0 14px; font-size: 1rem; line-height: 1.45; color: #e2e8f0; }
+.iq-opts { display: flex; flex-direction: column; gap: 10px; }
 .iq-opt {
-  width: 100%; text-align: left; padding: 12px 14px;
-  border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.04); color: #f8fafc;
-  font-size: 0.88rem; line-height: 1.35; cursor: pointer;
+  width: 100%; text-align: left; padding: 16px 16px;
+  min-height: 52px;
+  border-radius: 14px; border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05); color: #f8fafc;
+  font-size: 0.95rem; line-height: 1.35; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.iq-opt--good { border-color: rgba(37, 211, 102, 0.35); }
-.iq-opt--bad { border-color: rgba(248, 113, 113, 0.25); }
-.iq-opt:active { background: rgba(255,255,255,0.08); }
-.iq-reject {
-  margin: 14px 0 0; padding: 12px;
-  border-radius: 12px; background: rgba(248, 113, 113, 0.12);
-  border: 1px solid rgba(248, 113, 113, 0.25);
-  color: #fecaca; font-size: 0.85rem; line-height: 1.4;
+.iq-opt:active { background: rgba(255,255,255,0.1); }
+.iq-opt--primary {
+  text-align: center; font-weight: 600;
+  border-color: rgba(255,255,255,0.2);
 }
-.iq-foot { padding: 0 18px 16px; }
-.iq-back {
-  border: none; background: transparent; color: rgba(255,255,255,0.55);
-  font-size: 0.8rem; cursor: pointer; padding: 6px 0;
+.iq-opt--wa {
+  text-align: center; font-weight: 700;
+  background: linear-gradient(135deg, #25d366, #128c46);
+  border-color: transparent; color: #fff;
+  margin-top: 8px;
+}
+.iq-reject-msg {
+  margin: 0 0 16px; padding: 14px;
+  border-radius: 14px;
+  background: rgba(251, 146, 60, 0.12);
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  color: #fed7aa; font-size: 0.92rem; line-height: 1.45;
+}
+.iq-success-msg {
+  margin: 0 0 8px; font-size: 1.15rem; font-weight: 700; color: #fdba74;
 }
 
 </style>
