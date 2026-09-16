@@ -198,11 +198,13 @@
                   <img class="iq-avatar" src="/model.jpg" alt="" width="72" height="72" draggable="false" />
                   <p class="iq-name">{{ config.name || 'Wanessa' }}</p>
                 </div>
-                <h3 class="iq-title">{{ iqPhase === 'quiz' ? 'Antes de falar comigo 💕' : 'Oi' }}</h3>
-                <p class="iq-expect" v-if="iqPhase === 'quiz'">
-                  Aqui eu vendo conteúdo online (fotos, vídeos, call e chat). Não faço encontro.
+                <h3 class="iq-title" v-if="iqPhase === 'quiz' && iqStep === 0">Antes de falar comigo 💕</h3>
+                <h3 class="iq-title" v-else-if="iqPhase === 'result'">Pode seguir 🧡</h3>
+                <h3 class="iq-title" v-else-if="iqPhase !== 'quiz'">Oi</h3>
+                <p class="iq-expect" v-if="iqPhase === 'quiz' && iqStep === 0">
+                  Aqui eu vendo conteúdo exclusivo (fotos, vídeos, call e chat). Não faço encontro.
                 </p>
-                <p class="iq-intro" v-if="iqPhase === 'quiz'">
+                <p class="iq-intro" v-if="iqPhase === 'quiz' && iqStep === 0">
                   Amor, me responde 4 perguntas rápidas 💕
                   <br />É só pra eu saber o que você quer.
                   <br />Depois eu te levo pro meu WhatsApp 😊
@@ -231,12 +233,11 @@
                   <button type="button" class="iq-opt" @click="iqAbandonClose">Voltar</button>
                 </template>
                 <template v-else-if="iqPhase === 'result'">
-                  <p class="iq-success-msg">Pode seguir 🧡</p>
                   <div class="iq-final-box">
                     <p class="iq-final-lead">Leia com atenção:</p>
                     <p class="iq-final-line">❌ Eu NÃO faço encontro presencial</p>
                     <p class="iq-final-line">✅ Eu VENDO fotos, vídeos, call e chat</p>
-                    <p class="iq-final-line">✅ Tudo pela internet · a partir de R$ 49,90</p>
+                    <p class="iq-final-line">✅ Tenho pacotes a partir de R$ 49,90</p>
                   </div>
                   <p class="iq-q">No WhatsApp: peça as opções → escolha → pague → pronto.</p>
                   <button type="button" class="iq-opt iq-opt--wa" @click="iqGoWhatsApp">Ir pro WhatsApp</button>
@@ -1433,7 +1434,7 @@ const iqQuestionText = computed(() => {
   return [
     'Você tem 18 anos ou mais? 🔞',
     'O que você quer comigo? 👀',
-    'Eu cobro a partir de R$ 49,90. O que você quer?',
+    'Meus pacotes começam a partir de R$ 49,90. O que você quer?',
     'Como você quer pagar?',
   ][iqStep.value] || ''
 })
