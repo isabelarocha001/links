@@ -125,7 +125,7 @@
                 <span class="card-badge badge-wa">Chat</span>
               </div>
               <h2 class="card-title">WhatsApp</h2>
-              <p class="card-desc">Conteúdo online · sem encontro</p>
+              <p class="card-desc">Conteúdo exclusivo</p>
             </button>
             <button type="button" class="card-enter iq-main-enter" @click="iqStart">Abrir</button>
           </div>
@@ -183,7 +183,7 @@
             </span>
             <span class="iq-open-text">
               <strong>WhatsApp</strong>
-              <small>Conteúdo online · sem encontro</small>
+              <small>Conteúdo exclusivo</small>
             </span>
             <span class="iq-open-arrow" aria-hidden="true">→</span>
           </button>
