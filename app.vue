@@ -1647,10 +1647,19 @@ function iqTryAutoOpenFromRoute() {
   const q = route.query || {}
   const want =
     p === '/quiz' ||
+    p === '/chat' ||
+    p.startsWith('/chat/') ||
     q.quiz === '1' ||
     q.quiz === 'true' ||
     q.wa === '1' ||
-    q.wa === 'true'
+    q.wa === 'true' ||
+    q.chat === '1' ||
+    q.chat === 'true' ||
+    q.chat === 'wanessa' ||
+    q.chat === 'wanessabsx' ||
+    q.open === 'whatsapp'
+  // /chamada continua no funil antigo — não abrir quiz aqui
+  if (p === '/chamada') return
   if (!want) return
   iqAutoOpened = true
   iqStart()
@@ -6707,33 +6716,43 @@ onMounted(async () => {
     if ((window.location.hash || '').toLowerCase().includes('chat')) openChatDirect = true
   } catch {}
 
-  if (openChatDirect) {
+  if (openChatDirect && openChamadaDirect) {
+    // /chamada — funil antigo + popup videochamada (NÃO misturar com quiz ICP)
     isChatLanding.value = true
     gate.value = 'pass'
     gateReady.value = true
     try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
-    try { track('page_view', { offer_slug: openChamadaDirect ? 'chamada' : ('chat_' + chatSlug) }) } catch {}
+    try { track('page_view', { offer_slug: 'chamada' }) } catch {}
     loadFunnelConversationLocal()
-    openWaFunnel(openChamadaDirect ? 'chamada' : ('chat_' + chatSlug))
-    // reforço (Telegram WebView às vezes atrasa o paint)
+    openWaFunnel('chamada')
     setTimeout(() => {
-      if (!showWaFunnel.value) openWaFunnel(openChamadaDirect ? 'chamada' : ('chat_' + chatSlug))
+      if (!showWaFunnel.value) openWaFunnel('chamada')
     }, 300)
     setTimeout(() => {
-      if (!showWaFunnel.value) openWaFunnel(openChamadaDirect ? 'chamada' : ('chat_' + chatSlug))
+      if (!showWaFunnel.value) openWaFunnel('chamada')
     }, 1000)
-    // Canal previas: já abre o popup de videochamada entrando
-    if (openChamadaDirect) {
-      setTimeout(() => {
-        try { startIncomingVideoCall() } catch {}
-      }, 450)
-      setTimeout(() => {
-        try {
-          if (!showIncomingCall.value) startIncomingVideoCall()
-        } catch {}
-      }, 1200)
+    setTimeout(() => {
+      try { startIncomingVideoCall() } catch {}
+    }, 450)
+    setTimeout(() => {
+      try {
+        if (!showIncomingCall.value) startIncomingVideoCall()
+      } catch {}
+    }, 1200)
+  } else if (openChatDirect) {
+    // /chat e /chat/:slug e ?chat= / ?open=whatsapp → quiz ICP (NÃO abre funil/chat velho)
+    isChatLanding.value = false
+    gate.value = 'pass'
+    gateReady.value = true
+    try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
+    try { track('page_view', { offer_slug: 'chat_to_quiz_' + chatSlug }) } catch {}
+    const bootQuiz = () => {
+      try { iqStart() } catch {}
     }
-  } else {
+    try { nextTick(bootQuiz) } catch { bootQuiz() }
+    setTimeout(bootQuiz, 300)
+    setTimeout(bootQuiz, 1000)
+  }   } else {
     // Reload na home: se o chat estava aberto, reabre com o histórico
     try {
       const raw = localStorage.getItem(FUNNEL_STORAGE_KEY)
