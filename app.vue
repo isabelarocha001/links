@@ -159,6 +159,48 @@
             <span class="vip-arrow">→</span>
           </a>
         </section>
+
+        <!-- NOVO: triagem de intenção → WhatsApp conteúdo R$49,90 -->
+        <section class="iq-section" v-if="configReady && isPt">
+          <button type="button" class="iq-open-btn" @click="iqOpen">
+            <span class="iq-open-ico" aria-hidden="true">💬</span>
+            <span class="iq-open-text">
+              <strong>WhatsApp</strong>
+              <small>Conteúdo exclusivo · R$ 49,90</small>
+            </span>
+            <span class="iq-open-arrow" aria-hidden="true">→</span>
+          </button>
+        </section>
+
+        <Teleport to="body">
+          <div v-if="iqVisible" class="iq-overlay" @click.self="iqClose">
+            <div class="iq-sheet" role="dialog" aria-modal="true" aria-label="Antes do WhatsApp">
+              <header class="iq-head">
+                <p class="iq-kicker">Antes de falar comigo</p>
+                <h3 class="iq-title">{{ iqStepTitle }}</h3>
+                <button type="button" class="iq-x" @click="iqClose" aria-label="Fechar">×</button>
+              </header>
+              <div class="iq-body">
+                <p class="iq-q">{{ iqQuestion }}</p>
+                <div class="iq-opts">
+                  <button
+                    v-for="opt in iqOptions"
+                    :key="opt.id"
+                    type="button"
+                    class="iq-opt"
+                    :class="{ 'iq-opt--bad': opt.tone === 'bad', 'iq-opt--good': opt.tone === 'good' }"
+                    @click="iqPick(opt)"
+                  >{{ opt.label }}</button>
+                </div>
+                <p v-if="iqReject" class="iq-reject">{{ iqReject }}</p>
+              </div>
+              <footer class="iq-foot" v-if="iqStep > 0 && !iqReject">
+                <button type="button" class="iq-back" @click="iqBack">Voltar</button>
+              </footer>
+            </div>
+          </div>
+        </Teleport>
+
         <!-- Contato direto: TG só gringa (WA já está sob a foto) -->
         <section v-if="!isPt" class="direct-section">
           <p class="direct-label">{{ t('directLabel') }}</p>
@@ -1315,6 +1357,80 @@ const PRIVSEX_RESUME_AT = new Date('2026-10-12T00:00:00-03:00')
 function isPrivsexPaused() {
   return Date.now() < PRIVSEX_RESUME_AT.getTime()
 }
+
+// =============================================================================
+// NOVO: triagem de intenção (perfil ideal = desejo + conteúdo pago, sem encontro/call)
+// =============================================================================
+const IQ_WA_NUMBER = '5547992750967'
+const IQ_WA_TEXT = 'oi wanessa quero seus conteudos por 49,90'
+const iqVisible = ref(false)
+const iqStep = ref(0)
+const iqReject = ref('')
+type IqOpt = { id: string; label: string; tone?: 'good' | 'bad'; next?: number | 'pass' | 'fail'; failMsg?: string }
+const iqSteps: { title: string; question: string; options: IqOpt[] }[] = [
+  {
+    title: 'Passo 1 de 3',
+    question: 'O que você está buscando comigo agora?',
+    options: [
+      { id: 'content', label: 'Ver meu conteúdo adulto pago e gozar com isso', tone: 'good', next: 1 },
+      { id: 'meet', label: 'Encontro presencial / programa', tone: 'bad', next: 'fail', failMsg: 'Não faço encontro. Meu foco é só conteúdo digital.' },
+      { id: 'call', label: 'Chamada de vídeo ou voz ao vivo', tone: 'bad', next: 'fail', failMsg: 'Não atendo chamada. Só conteúdo gravado/pago no WhatsApp.' },
+    ],
+  },
+  {
+    title: 'Passo 2 de 3',
+    question: 'Como você quer usar esse conteúdo?',
+    options: [
+      { id: 'solo', label: 'Sozinho, batendo punheta vendo minhas fotos/vídeos', tone: 'good', next: 2 },
+      { id: 'gf', label: 'Quero que você seja minha “namorada” o dia todo no chat', tone: 'bad', next: 'fail', failMsg: 'Não é chat de namoradinha 24h — é conteúdo pra você se divertir.' },
+      { id: 'date', label: 'Quero te conhecer pessoalmente', tone: 'bad', next: 'fail', failMsg: 'Não rola presencial. Só conteúdo digital.' },
+    ],
+  },
+  {
+    title: 'Passo 3 de 3',
+    question: 'Confirma que você entende o que leva no WhatsApp?',
+    options: [
+      { id: 'ok', label: 'Sim: conteúdo digital por R$ 49,90 — sem encontro e sem call', tone: 'good', next: 'pass' },
+      { id: 'no', label: 'Na verdade quero encontro ou chamada', tone: 'bad', next: 'fail', failMsg: 'Então não sou o perfil certo pra você. Valeu pela honestidade.' },
+    ],
+  },
+]
+const iqStepTitle = computed(() => iqSteps[iqStep.value]?.title || '')
+const iqQuestion = computed(() => iqSteps[iqStep.value]?.question || '')
+const iqOptions = computed(() => iqSteps[iqStep.value]?.options || [])
+function iqOpen() {
+  iqStep.value = 0
+  iqReject.value = ''
+  iqVisible.value = true
+  try { onCardClick('IQ WhatsApp open', '') } catch {}
+}
+function iqClose() {
+  iqVisible.value = false
+  iqReject.value = ''
+}
+function iqBack() {
+  iqReject.value = ''
+  if (iqStep.value > 0) iqStep.value -= 1
+}
+function iqPick(opt: IqOpt) {
+  iqReject.value = ''
+  if (opt.next === 'fail') {
+    iqReject.value = opt.failMsg || 'Não combinamos.'
+    try { onCardClick('IQ WhatsApp reject', opt.id) } catch {}
+    return
+  }
+  if (opt.next === 'pass') {
+    try { onCardClick('IQ WhatsApp pass', IQ_WA_TEXT) } catch {}
+    const url = 'https://wa.me/' + IQ_WA_NUMBER + '?text=' + encodeURIComponent(IQ_WA_TEXT)
+    iqVisible.value = false
+    if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer')
+    return
+  }
+  if (typeof opt.next === 'number') {
+    iqStep.value = opt.next
+  }
+}
+
 const telegramPublicUrl = 'https://t.me/+yA5Y1pAWx5RlMWIx'
 const telegramPublicUrlIntl = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const vipBotUrl = 'https://t.me/wanessaavipbot?start=Pressel'
@@ -6833,4 +6949,70 @@ useHead({
   margin: 10px 0 0;
   text-align: center;
 }
+
+/* —— Intent Quiz → WhatsApp (novo) —— */
+.iq-section { margin: 14px 0 8px; padding: 0 2px; }
+.iq-open-btn {
+  width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  background: linear-gradient(135deg, rgba(37, 211, 102, 0.16), rgba(18, 140, 70, 0.12));
+  color: inherit; cursor: pointer; text-align: left;
+  transition: transform .15s ease, border-color .15s ease;
+}
+.iq-open-btn:active { transform: scale(0.98); }
+.iq-open-ico { font-size: 1.4rem; line-height: 1; }
+.iq-open-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.iq-open-text strong { font-size: 0.95rem; font-weight: 650; }
+.iq-open-text small { font-size: 0.75rem; opacity: 0.75; }
+.iq-open-arrow { opacity: 0.6; font-size: 1.1rem; }
+.iq-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+.iq-sheet {
+  width: 100%; max-width: 420px;
+  background: #12141a; color: #f1f5f9;
+  border-radius: 20px 20px 16px 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+  overflow: hidden;
+}
+.iq-head { position: relative; padding: 18px 44px 8px 18px; }
+.iq-kicker { margin: 0; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.55; }
+.iq-title { margin: 4px 0 0; font-size: 1.05rem; font-weight: 650; }
+.iq-x {
+  position: absolute; top: 12px; right: 12px;
+  width: 32px; height: 32px; border-radius: 999px;
+  border: none; background: rgba(255,255,255,0.08); color: #fff;
+  font-size: 1.25rem; line-height: 1; cursor: pointer;
+}
+.iq-body { padding: 8px 18px 18px; }
+.iq-q { margin: 0 0 14px; font-size: 0.95rem; line-height: 1.45; color: #e2e8f0; }
+.iq-opts { display: flex; flex-direction: column; gap: 8px; }
+.iq-opt {
+  width: 100%; text-align: left; padding: 12px 14px;
+  border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04); color: #f8fafc;
+  font-size: 0.88rem; line-height: 1.35; cursor: pointer;
+}
+.iq-opt--good { border-color: rgba(37, 211, 102, 0.35); }
+.iq-opt--bad { border-color: rgba(248, 113, 113, 0.25); }
+.iq-opt:active { background: rgba(255,255,255,0.08); }
+.iq-reject {
+  margin: 14px 0 0; padding: 12px;
+  border-radius: 12px; background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: #fecaca; font-size: 0.85rem; line-height: 1.4;
+}
+.iq-foot { padding: 0 18px 16px; }
+.iq-back {
+  border: none; background: transparent; color: rgba(255,255,255,0.55);
+  font-size: 0.8rem; cursor: pointer; padding: 6px 0;
+}
+
 </style>
