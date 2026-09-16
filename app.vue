@@ -198,21 +198,24 @@
                   <img class="iq-avatar" src="/model.jpg" alt="" width="72" height="72" draggable="false" />
                   <p class="iq-name">{{ config.name || 'Wanessa' }}</p>
                 </div>
-                <h3 class="iq-title" v-if="iqPhase === 'quiz' && iqStep === 0">Antes de falar comigo 💕</h3>
+                <h3 class="iq-title" v-if="iqPhase === 'welcome' || (iqPhase === 'quiz' && iqStep === 0)">Antes de falar comigo 💕</h3>
                 <h3 class="iq-title" v-else-if="iqPhase === 'result'">Pode seguir 🧡</h3>
-                <h3 class="iq-title" v-else-if="iqPhase !== 'quiz'">Oi</h3>
-                <p class="iq-expect" v-if="iqPhase === 'quiz' && iqStep === 0">
-                  Aqui eu vendo conteúdo exclusivo (fotos, vídeos, call e chat). Não faço encontro.
-                </p>
-                <p class="iq-intro" v-if="iqPhase === 'quiz' && iqStep === 0">
-                  Amor, me responde 4 perguntas rápidas 💕
-                  <br />É só pra eu saber o que você quer.
-                  <br />Depois eu te levo pro meu WhatsApp 😊
-                </p>
+                <h3 class="iq-title" v-else-if="iqPhase === 'reject' || iqPhase === 'soft'">Oi</h3>
                 <p class="iq-kicker" v-if="iqPhase === 'quiz'">{{ iqProgressLabel }}</p>
               </header>
               <div class="iq-body">
-                <template v-if="iqPhase === 'quiz'">
+                <template v-if="iqPhase === 'welcome'">
+                  <div class="iq-bubble" role="status">
+                    <p class="iq-bubble-text">Aqui eu vendo conteúdo exclusivo (fotos, vídeos, call e chat). Não faço encontro.</p>
+                  </div>
+                  <p class="iq-intro iq-intro--after-bubble">
+                    Amor, me responde 4 perguntas rápidas 💕
+                    <br />É só pra eu saber o que você quer.
+                    <br />Depois eu te levo pro meu WhatsApp 😊
+                  </p>
+                  <button type="button" class="iq-opt iq-opt--primary" @click="iqWelcomeContinue">Continuar</button>
+                </template>
+                <template v-else-if="iqPhase === 'quiz'">
                   <p class="iq-q">{{ iqQuestionText }}</p>
                   <div class="iq-opts">
                     <button
@@ -1410,7 +1413,7 @@ function isPrivsexPaused() {
 // Número/link do WA NÃO fica no HTML inicial — só após qualified + clique
 // =============================================================================
 const IQ_WA_NUMBER = '5547992750967'
-type IqPhase = 'quiz' | 'reject' | 'soft' | 'result'
+type IqPhase = 'welcome' | 'quiz' | 'reject' | 'soft' | 'result'
 type IqOpt = { id: string; label: string }
 const iqVisible = ref(false)
 const iqPhase = ref<IqPhase>('quiz')
@@ -1483,7 +1486,7 @@ function iqTrack(event: string, extra: Record<string, unknown> = {}) {
 }
 
 function iqResetState() {
-  iqPhase.value = 'quiz'
+  iqPhase.value = 'welcome'
   iqStep.value = 0
   iqRejectMsg.value = ''
   iqAnswers.age = ''
@@ -1535,13 +1538,24 @@ function iqStart() {
     return
   }
   iqResetState()
+  iqPhase.value = 'welcome'
   iqVisible.value = true
   iqTrack('quiz_started')
 }
 
+function iqWelcomeContinue() {
+  iqPhase.value = 'quiz'
+  iqStep.value = 0
+  iqTrack('quiz_welcome_continue')
+}
+
 function iqAbandonClose() {
-  if (iqVisible.value && iqPhase.value === 'quiz') {
-    iqTrack('quiz_abandoned', { abandon_step: iqStep.value, max_step: iqMaxStepReached.value })
+  if (iqVisible.value && (iqPhase.value === 'quiz' || iqPhase.value === 'welcome')) {
+    iqTrack('quiz_abandoned', {
+      abandon_step: iqPhase.value === 'welcome' ? -1 : iqStep.value,
+      max_step: iqMaxStepReached.value,
+      phase: iqPhase.value,
+    })
   }
   iqVisible.value = false
 }
@@ -7375,6 +7389,36 @@ useHead({
   font-weight: 600;
   letter-spacing: 0.02em;
   opacity: 0.8;
+}
+.iq-bubble {
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border-radius: 18px 18px 18px 6px;
+  background: rgba(253, 164, 175, 0.14);
+  border: 1px solid rgba(253, 164, 175, 0.32);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  text-align: left;
+  -webkit-animation: iqBubbleIn 0.28s ease-out;
+  animation: iqBubbleIn 0.28s ease-out;
+}
+.iq-bubble-text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #fecdd3;
+  font-weight: 600;
+}
+.iq-intro--after-bubble {
+  margin-top: 4px;
+  margin-bottom: 16px;
+}
+@-webkit-keyframes iqBubbleIn {
+  from { opacity: 0; -webkit-transform: translateY(8px); transform: translateY(8px); }
+  to { opacity: 1; -webkit-transform: none; transform: none; }
+}
+@keyframes iqBubbleIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }
 .iq-expect {
   margin: 0 0 10px;
