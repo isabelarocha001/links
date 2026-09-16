@@ -198,8 +198,8 @@
                   <img class="iq-avatar" src="/model.jpg" alt="" width="72" height="72" draggable="false" />
                   <p class="iq-name">{{ config.name || 'Wanessa' }}</p>
                 </div>
-                <h3 class="iq-title">Antes de falar comigo 💕</h3>
-                <p class="iq-intro">
+                <h3 class="iq-title">{{ iqPhase === 'quiz' ? 'Antes de falar comigo 💕' : 'Oi' }}</h3>
+                <p class="iq-intro" v-if="iqPhase === 'quiz'">
                   Amor, me responde 4 perguntas rápidas 💕
                   <br />É só pra eu saber o que você quer.
                   <br />Depois eu te levo pro meu WhatsApp 😊
