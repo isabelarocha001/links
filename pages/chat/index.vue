@@ -1,10 +1,13 @@
-<!-- Rota /chat: redireciona/landing padrão do chat. -->
+<!-- Rota /chat: abre o quiz ICP do WhatsApp (não o funil/chat antigo). -->
 <script setup lang="ts">
 /**
- * /chat — mesma landing de /chat/wanessabsx (abre funil WhatsApp direto)
- * Também: ?chat=wanessabsx | /chat/wanessabsx
- * app.vue trata path /chat e /chat/*
+ * /chat — deep link de anúncio/Instagram
+ * Abre o quiz de qualificação (app.vue → iqStart).
+ * NÃO abre o funil WhatsApp antigo (showWaFunnel).
+ * /chamada permanece no funil + videochamada.
+ * /admin/chat permanece inbox admin.
  */
+useSeoMeta({ title: 'Falar comigo', robots: 'noindex, nofollow' })
 </script>
 
 <template>
