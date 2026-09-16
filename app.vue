@@ -125,7 +125,7 @@
                 <span class="card-badge badge-wa">Chat</span>
               </div>
               <h2 class="card-title">WhatsApp</h2>
-              <p class="card-desc">Me chama pra conversar</p>
+              <p class="card-desc">Falar comigo</p>
             </button>
             <button type="button" class="card-enter iq-main-enter" @click="iqStart">Abrir</button>
           </div>
@@ -183,7 +183,7 @@
             </span>
             <span class="iq-open-text">
               <strong>WhatsApp</strong>
-              <small>Me chama pra conversar</small>
+              <small>Falar comigo</small>
             </span>
             <span class="iq-open-arrow" aria-hidden="true">→</span>
           </button>
@@ -200,8 +200,9 @@
                 </div>
                 <h3 class="iq-title">Antes de falar comigo 💕</h3>
                 <p class="iq-intro">
-                  Me responde 4 perguntinhas rápidas antes de continuar pro meu WhatsApp, amor.
-                  É rapidinho e me ajuda a entender o que você está procurando 😊
+                  Amor, me responde 4 perguntas rápidas 💕
+                  <br />É só pra eu saber o que você quer.
+                  <br />Depois eu te levo pro meu WhatsApp 😊
                 </p>
                 <p class="iq-kicker" v-if="iqPhase === 'quiz'">{{ iqProgressLabel }}</p>
               </header>
@@ -220,23 +221,23 @@
                 </template>
                 <template v-else-if="iqPhase === 'reject'">
                   <p class="iq-reject-msg">{{ iqRejectMsg }}</p>
-                  <button type="button" class="iq-opt iq-opt--primary" @click="iqAbandonClose">Tudo bem, beijo</button>
+                  <button type="button" class="iq-opt iq-opt--primary" @click="iqAbandonClose">Ok</button>
                 </template>
                 <template v-else-if="iqPhase === 'soft'">
                   <p class="iq-reject-msg">{{ iqRejectMsg }}</p>
-                  <button type="button" class="iq-opt" @click="iqAbandonClose">Voltar pro site, amor</button>
+                  <button type="button" class="iq-opt" @click="iqAbandonClose">Voltar</button>
                 </template>
                 <template v-else-if="iqPhase === 'result'">
-                  <p class="iq-success-msg">Tudo certo, bebê 🧡</p>
+                  <p class="iq-success-msg">Pode seguir 🧡</p>
                   <div class="iq-final-box">
-                    <p class="iq-final-lead">Aqui é só venda de conteúdo online.</p>
-                    <p class="iq-final-line">❌ Não faço encontro presencial</p>
-                    <p class="iq-final-line">❌ Não é Tinder nem flerte de graça</p>
-                    <p class="iq-final-line">✅ Conteúdo, call, sexting e pacotes — tudo online</p>
-                    <p class="iq-final-line">✅ Opções a partir de R$49,90</p>
+                    <p class="iq-final-lead">Leia com atenção:</p>
+                    <p class="iq-final-line">❌ Eu NÃO saio com você</p>
+                    <p class="iq-final-line">❌ Eu NÃO namoro cliente</p>
+                    <p class="iq-final-line">✅ Eu VENDO fotos, vídeos, call e chat</p>
+                    <p class="iq-final-line">✅ Tudo pela internet · a partir de R$ 49,90</p>
                   </div>
-                  <p class="iq-q">No WhatsApp você pede as opções, escolhe o pacote, paga e pronto 💕</p>
-                  <button type="button" class="iq-opt iq-opt--wa" @click="iqGoWhatsApp">Continuar no WhatsApp</button>
+                  <p class="iq-q">No WhatsApp: peça as opções → escolha → pague → pronto.</p>
+                  <button type="button" class="iq-opt iq-opt--wa" @click="iqGoWhatsApp">Ir pro WhatsApp</button>
                 </template>
               </div>
             </div>
@@ -1428,42 +1429,42 @@ const iqHeaderTitle = computed(() => {
 })
 const iqQuestionText = computed(() => {
   return [
-    'Amor, você tem 18 anos ou mais? 🔞',
-    'Me conta, o que você tá procurando comigo? 👀',
-    'As opções que eu atendo começam em R$49,90, vida. O que você prefere?',
-    'Se achar a opção que quer, como prefere liberar o acesso, bebê?',
+    'Você tem 18 anos ou mais? 🔞',
+    'O que você quer comigo? 👀',
+    'Eu cobro a partir de R$ 49,90. O que você quer?',
+    'Como você quer pagar?',
   ][iqStep.value] || ''
 })
 const iqCurrentOptions = computed((): IqOpt[] => {
   if (iqStep.value === 0) {
     return [
-      { id: 'yes18', label: 'Sim, tenho 18+ 😊' },
-      { id: 'no18', label: 'Não' },
+      { id: 'yes18', label: 'Sim, tenho 18 anos ou mais' },
+      { id: 'no18', label: 'Não, sou menor de 18' },
     ]
   }
   if (iqStep.value === 1) {
     return [
-      { id: 'private', label: 'Conteúdo privado' },
-      { id: 'custom', label: 'Conteúdo personalizado' },
-      { id: 'sexting', label: 'Sexting' },
-      { id: 'call', label: 'Chamada (vídeo ou voz)' },
-      { id: 'company', label: 'Companhia / conversa online' },
-      { id: 'meet', label: 'Conhecer pessoalmente / encontro' },
-      { id: 'looking', label: 'Só estou olhando' },
+      { id: 'private', label: 'Quero ver suas fotos e vídeos' },
+      { id: 'custom', label: 'Quero foto/vídeo feito pra mim' },
+      { id: 'sexting', label: 'Quero putaria no chat (sexting)' },
+      { id: 'call', label: 'Quero chamada de vídeo ou voz' },
+      { id: 'company', label: 'Quero só conversar online' },
+      { id: 'meet', label: 'Quero te ver pessoalmente' },
+      { id: 'looking', label: 'Só estou olhando, não quero nada' },
     ]
   }
   if (iqStep.value === 2) {
     return [
-      { id: 'from4990', label: 'Quero ver as opções a partir de R$49,90 🔥' },
-      { id: 'custom_pay', label: 'Quero algo personalizado' },
-      { id: 'below', label: 'Estou procurando algo abaixo de R$49,90' },
+      { id: 'from4990', label: 'Ok, a partir de R$ 49,90' },
+      { id: 'custom_pay', label: 'Quero algo especial (pode ser mais)' },
+      { id: 'below', label: 'Só tenho menos de R$ 49,90' },
     ]
   }
   return [
-    { id: 'pix', label: 'PIX 💚' },
-    { id: 'card', label: 'Cartão 💳' },
-    { id: 'chat_first', label: 'Quero apenas conversar primeiro' },
-    { id: 'not_buy', label: 'Ainda não quero comprar' },
+    { id: 'pix', label: 'Vou pagar no PIX' },
+    { id: 'card', label: 'Vou pagar no cartão' },
+    { id: 'chat_first', label: 'Só quero conversar, sem pagar' },
+    { id: 'not_buy', label: 'Não quero comprar agora' },
   ]
 })
 
@@ -1490,7 +1491,7 @@ function iqResetState() {
 }
 
 const IQ_LS_KEY = 'iq_icp_disqualified_v1'
-const IQ_BLOCKED_MSG = 'Amor, você não é o perfil de cliente que eu procuro agora. Obrigada mesmo 💕'
+const IQ_BLOCKED_MSG = 'Você não é o tipo de cliente que eu atendo.\nObrigada.'
 
 function iqReadDisqualified(): { event?: string; answers?: Record<string, string>; at?: number } | null {
   try {
@@ -1558,7 +1559,7 @@ function iqAnswer(opt: IqOpt) {
   if (iqStep.value === 0) {
     iqAnswers.age = opt.id
     if (opt.id === 'no18') {
-      iqDisqualify('disqualified_underage', 'Amor, esse cantinho é só pra maiores de 18 🔞')
+      iqDisqualify('disqualified_underage', 'Só pode quem tem 18 anos ou mais. 🔞')
       return
     }
     iqStep.value = 1
@@ -1572,14 +1573,14 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'meet') {
       iqDisqualify(
         'disqualified_meeting',
-        'Amor, meu atendimento é só online 🧡 Não faço encontro presencial, tá?',
+        'Eu NÃO saio com cliente.\nNão faço encontro.\nSó vendo conteúdo pela internet 🧡',
       )
       return
     }
     if (opt.id === 'looking') {
       iqDisqualify(
         'disqualified_browsing',
-        'Beleza, vida 💕 Quando quiser de verdade, é só voltar que eu te atendo.',
+        'Beleza.\nQuando quiser comprar conteúdo, volta aqui 💕',
         true,
       )
       return
@@ -1596,7 +1597,7 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'below') {
       iqDisqualify(
         'disqualified_low_ticket',
-        'Amor, as opções que eu atendo começam em R$49,90 🧡 Abaixo disso não consigo liberar agora.',
+        'O mínimo é R$ 49,90.\nMenos que isso eu não atendo.',
       )
       return
     }
@@ -1611,7 +1612,7 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'chat_first' || opt.id === 'not_buy') {
       iqDisqualify(
         'disqualified_no_purchase_intent',
-        'Tudo bem, bebê 💕 Explora o site com calma. O WhatsApp eu deixo pra quem já quer liberar o acesso 🧡',
+        'O WhatsApp é só pra quem vai comprar.\nOlha o site com calma e volta depois 💕',
         true,
       )
       return
@@ -1624,24 +1625,24 @@ function iqAnswer(opt: IqOpt) {
 
 function iqBuildWaMessage(): string {
   const intentMap: Record<string, string> = {
-    private: 'conteúdo privado',
-    custom: 'conteúdo personalizado',
-    sexting: 'sexting',
-    call: 'chamada',
-    company: 'companhia/conversa online',
+    private: 'ver suas fotos e vídeos',
+    custom: 'foto/vídeo feito pra mim',
+    sexting: 'putaria no chat',
+    call: 'chamada de vídeo ou voz',
+    company: 'conversar online',
   }
   const ticketMap: Record<string, string> = {
-    from4990: 'vi que as opções começam em R$49,90',
-    custom_pay: 'quero algo personalizado',
+    from4990: 'Aceito a partir de R$49,90',
+    custom_pay: 'Quero algo especial',
   }
   const payMap: Record<string, string> = {
-    pix: 'prefiro pagar por PIX',
-    card: 'prefiro pagar no cartão',
+    pix: 'Vou pagar no PIX',
+    card: 'Vou pagar no cartão',
   }
   const intent = intentMap[iqAnswers.intent] || 'conteúdo'
   const ticket = ticketMap[iqAnswers.ticket] || 'vi que as opções começam em R$49,90'
   const pay = payMap[iqAnswers.pay] || 'quero ver as opções'
-  return `Oi amor 🧡 Vim pelo site. Tô procurando ${intent}, ${ticket} e ${pay}. Quero ver as opções.`
+  return `Oi 🧡 Vim pelo site. Quero ${intent}. ${ticket}. ${pay}. Me manda as opções.`
 }
 
 function iqGoWhatsApp() {
