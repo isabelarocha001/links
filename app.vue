@@ -1462,8 +1462,6 @@ const iqCurrentOptions = computed((): IqOpt[] => {
   return [
     { id: 'pix', label: 'Vou pagar no PIX' },
     { id: 'card', label: 'Vou pagar no cartão' },
-    { id: 'chat_first', label: 'Só quero conversar, sem pagar' },
-    { id: 'not_buy', label: 'Não quero comprar agora' },
   ]
 })
 
@@ -1605,17 +1603,9 @@ function iqAnswer(opt: IqOpt) {
     return
   }
 
-  // Etapa 4 — ação de compra
+  // Etapa 4 — só PIX ou cartão
   if (iqStep.value === 3) {
     iqAnswers.pay = opt.id
-    if (opt.id === 'chat_first' || opt.id === 'not_buy') {
-      iqDisqualify(
-        'disqualified_no_purchase_intent',
-        'O WhatsApp é só pra quem vai comprar.\nOlha o site com calma e volta depois 💕',
-        true,
-      )
-      return
-    }
     // pix | card → qualificado
     iqPhase.value = 'result'
     iqTrack('qualified', { answers: { ...iqAnswers } })
@@ -1643,6 +1633,33 @@ function iqBuildWaMessage(): string {
   const pay = payMap[iqAnswers.pay] || 'quero ver as opções'
   return `Oi 🧡 Vim pelo site. Quero ${intent}. ${ticket}. ${pay}. Me manda as opções.`
 }
+
+
+/** Rota direta /quiz ou ?quiz=1 / ?wa=1 abre o formulário */
+let iqAutoOpened = false
+function iqTryAutoOpenFromRoute() {
+  if (iqAutoOpened) return
+  if (!configReady.value) return
+  try {
+    if (!isPt.value) return
+  } catch { return }
+  const p = String(route.path || '').replace(/\/+$/, '') || '/'
+  const q = route.query || {}
+  const want =
+    p === '/quiz' ||
+    q.quiz === '1' ||
+    q.quiz === 'true' ||
+    q.wa === '1' ||
+    q.wa === 'true'
+  if (!want) return
+  iqAutoOpened = true
+  iqStart()
+}
+watch(
+  () => [configReady.value, route.path, route.query?.quiz, route.query?.wa, isPt.value] as const,
+  () => { iqTryAutoOpenFromRoute() },
+  { immediate: true },
+)
 
 function iqGoWhatsApp() {
   // Destino só existe após qualificação + clique (não no HTML inicial)
@@ -7249,22 +7266,47 @@ useHead({
 .iq-open-text small { font-size: 0.72rem; opacity: 0.75; line-height: 1.3; }
 .iq-open-arrow { opacity: 0.6; font-size: 1.1rem; }
 .iq-overlay {
-  position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,0.55);
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: 99999;
+  background: rgba(0,0,0,0.72);
+  /* blur só onde roda; Opera Mini / webviews antigas ignoram */
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  display: flex; align-items: flex-end; justify-content: center;
-  padding: 12px;
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .iq-sheet {
-  width: 100%; max-width: 420px;
-  max-height: min(90dvh, 640px);
+  width: 100%;
+  max-width: 420px;
+  margin: auto;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-x: hidden;
   overflow-y: auto;
-  background: #12141a; color: #f1f5f9;
-  border-radius: 20px 20px 16px 16px;
+  -webkit-overflow-scrolling: touch;
+  background: #12141a;
+  color: #f1f5f9;
+  border-radius: 20px;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+  box-sizing: border-box;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 .iq-head {
   position: relative;
