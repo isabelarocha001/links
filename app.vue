@@ -1675,12 +1675,6 @@ function iqTryAutoOpenFromRoute() {
   iqAutoOpened = true
   iqStart()
 }
-watch(
-  () => [configReady.value, route.path, route.query?.quiz, route.query?.wa, isPt.value] as const,
-  () => { iqTryAutoOpenFromRoute() },
-  { immediate: true },
-)
-
 function iqGoWhatsApp() {
   // Destino só existe após qualificação + clique (não no HTML inicial)
   const text = iqBuildWaMessage()
@@ -6292,6 +6286,13 @@ const DEFAULT_LINKS: LinkItem[] = [
 ]
 const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
 const configReady = ref(false)
+
+/** Deep-link /quiz /whatsapp /chat — só depois de configReady existir (evita TDZ) */
+watch(
+  () => [configReady.value, route.path, route.query?.quiz, route.query?.wa, route.query?.chat, route.query?.open, isPt.value] as const,
+  () => { iqTryAutoOpenFromRoute() },
+  { immediate: true },
+)
 /** Toggle admin "Canal de prévias" — afeta SÓ layout BR (gringa sempre vê canal, nunca bot) */
 const publicChannelEnabled = computed(() => {
   return config.links.some((l) => {
