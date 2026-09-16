@@ -1,36 +1,31 @@
-# Rotas de chat
+# Rotas de chat / WhatsApp
 
 ## Público (lead)
 
 | URL | O que faz |
 |-----|-----------|
-| `/chat` | Abre o funil WhatsApp direto (slug padrão) |
-| `/chat/wanessabsx` | Funil direto (pula quiz se slug ok) |
+| `/chat` | **Quiz ICP** (qualificação → WhatsApp). Não abre o funil antigo. |
+| `/chat/wanessabsx` | Idem (slug só tracking) |
 | `/chat/wanessa` | Idem |
-| `/chamada` | Canal de prévias: funil + popup de videochamada |
-| `/CanalPublico` | Landing de tráfego do canal (esconde botão canal) |
-| `/?chat=1` ou `/?open=whatsapp` | Abre funil na home |
-| `/#chat` | Fallback hash |
+| `/quiz` | Mesmo quiz ICP |
+| `/?quiz=1` ou `/?wa=1` | Quiz na home |
+| `/?chat=1` ou `/?open=whatsapp` | Quiz ICP (não funil antigo) |
+| `/chamada` | Funil antigo + popup videochamada (canal de prévias) |
+| `/CanalPublico` | Landing tráfego canal |
 
-Páginas shell: `pages/chat/index.vue`, `pages/chat/[slug].vue`, `pages/chamada.vue`, `pages/CanalPublico.vue`  
-Lógica real do funil: **`app.vue`**
+Lógica do quiz: **`app.vue`** (`iqStart`).  
+Funil antigo (`openWaFunnel`) só em **`/chamada`** (e restore de sessão se o usuário já tinha chat aberto na home).
 
 ## Admin
 
 | URL | O que faz |
 |-----|-----------|
-| `/admin/chat` | Inbox de conversas (`AdminChatInbox.vue`) |
+| `/admin/chat` | Inbox admin (`AdminChatInbox.vue`) — **não alterar** |
 
-Ver também: [ADMIN_CHAT.md](./ADMIN_CHAT.md)
-
-## APIs de chat (lead)
+## APIs (inalteradas)
 
 | Método | Path | Uso |
 |--------|------|-----|
-| POST | `/api/funnel-chat` | Lead envia msg / evento |
-| GET | `/api/funnel-chat` | Lead busca respostas do admin |
-| GET | `/api/chat-unlock` | Lead verifica se chat foi liberado |
-| POST | `/api/checkout/pix` | Gera PIX (chat R$ 9,90, packs, call…) |
-| GET | `/api/checkout/status` | Poll status do pagamento |
-| POST | `/api/lead-presence` | Lead reporta typing/online |
-| GET | `/api/presence` | Lead vê se admin está online |
+| POST | `/api/funnel-chat` | Funil legado |
+| GET | `/api/funnel-chat` | Funil legado |
+| GET | `/api/chat-unlock` | Unlock legado |
