@@ -1457,7 +1457,47 @@ function iqResetState() {
   iqMaxStepReached.value = 0
 }
 
+const IQ_LS_KEY = 'iq_icp_disqualified_v1'
+const IQ_BLOCKED_MSG = 'Você não é o meu perfil de cliente ideal que eu procuro. Obrigada.'
+
+function iqReadDisqualified(): { event?: string; answers?: Record<string, string>; at?: number } | null {
+  try {
+    if (typeof localStorage === 'undefined') return null
+    const raw = localStorage.getItem(IQ_LS_KEY)
+    if (!raw) return null
+    const data = JSON.parse(raw)
+    if (!data || data.disqualified !== true) return null
+    return data
+  } catch {
+    return null
+  }
+}
+
+function iqPersistDisqualified(event: string) {
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(
+      IQ_LS_KEY,
+      JSON.stringify({
+        disqualified: true,
+        event,
+        answers: { ...iqAnswers },
+        at: Date.now(),
+      }),
+    )
+  } catch {}
+}
+
 function iqStart() {
+  const blocked = iqReadDisqualified()
+  if (blocked) {
+    iqResetState()
+    iqRejectMsg.value = IQ_BLOCKED_MSG
+    iqPhase.value = 'reject'
+    iqVisible.value = true
+    iqTrack('quiz_blocked_repeat', { prior_event: blocked.event || '', answers: blocked.answers || {} })
+    return
+  }
   iqResetState()
   iqVisible.value = true
   iqTrack('quiz_started')
@@ -1472,6 +1512,7 @@ function iqAbandonClose() {
 
 function iqDisqualify(event: string, msg: string, soft = false) {
   iqTrack(event, { answers: { ...iqAnswers } })
+  iqPersistDisqualified(event)
   iqRejectMsg.value = msg
   iqPhase.value = soft ? 'soft' : 'reject'
 }
