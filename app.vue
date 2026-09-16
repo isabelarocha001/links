@@ -228,7 +228,14 @@
                 </template>
                 <template v-else-if="iqPhase === 'result'">
                   <p class="iq-success-msg">Tudo certo, bebê 🧡</p>
-                  <p class="iq-q">Meu atendimento é só online e as opções começam em R$49,90. Vou te esperar no WhatsApp 💕</p>
+                  <div class="iq-final-box">
+                    <p class="iq-final-lead">Aqui é só venda de conteúdo online.</p>
+                    <p class="iq-final-line">❌ Não faço encontro presencial</p>
+                    <p class="iq-final-line">❌ Não é Tinder nem flerte de graça</p>
+                    <p class="iq-final-line">✅ Conteúdo, call, sexting e pacotes — tudo online</p>
+                    <p class="iq-final-line">✅ Opções a partir de R$49,90</p>
+                  </div>
+                  <p class="iq-q">No WhatsApp você pede as opções, escolhe o pacote, paga e pronto 💕</p>
                   <button type="button" class="iq-opt iq-opt--wa" @click="iqGoWhatsApp">Continuar no WhatsApp</button>
                 </template>
               </div>
@@ -7168,6 +7175,30 @@ useHead({
 }
 
 /* —— Quiz ICP → WhatsApp —— */
+
+.iq-final-box {
+  margin: 0 0 14px;
+  padding: 14px 14px;
+  border-radius: 14px;
+  background: rgba(253, 164, 175, 0.08);
+  border: 1px solid rgba(253, 164, 175, 0.22);
+  text-align: left;
+}
+.iq-final-lead {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fda4af;
+  line-height: 1.35;
+}
+.iq-final-line {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: #e2e8f0;
+}
+.iq-final-line:last-child { margin-bottom: 0; }
+
 .iq-main-card {
   width: 100%;
   text-align: left;
