@@ -1,75 +1,61 @@
 #!/usr/bin/env python3
 """Skip IQ welcome screen — open straight on the 4 commercial questions."""
 from pathlib import Path
+import re
 
 APP = Path(__file__).resolve().parents[1] / "app.vue"
 
 def main() -> None:
     text = APP.read_text(encoding="utf-8")
+    changed = False
 
-    old_title = (
-        '                <h3 class="iq-title" v-if="iqPhase === \'welcome\' || (iqPhase === \'quiz\' && iqStep === 0)">Antes de falar comigo 💕</h3>\n'
-        '                <h3 class="iq-title" v-else-if="iqPhase === \'result\'">Pode seguir 🧡</h3>\n'
-        '                <h3 class="iq-title" v-else-if="iqPhase === \'reject\' || iqPhase === \'soft\'">Oi</h3>\n'
-        '                <p class="iq-kicker" v-if="iqPhase === \'quiz\'">{{ iqProgressLabel }}</p>'
-    )
-    new_title = (
-        '                <h3 class="iq-title" v-if="iqPhase === \'quiz\'">{{ iqHeaderTitle }}</h3>\n'
-        '                <h3 class="iq-title" v-else-if="iqPhase === \'result\'">Pode seguir 🧡</h3>\n'
-        '                <h3 class="iq-title" v-else-if="iqPhase === \'reject\' || iqPhase === \'soft\'">Oi</h3>\n'
-        '                <p class="iq-kicker" v-if="iqPhase === \'quiz\'">{{ iqProgressLabel }}</p>'
-    )
-    if old_title in text:
-        text = text.replace(old_title, new_title, 1)
-        print("title patched")
-    elif 'v-if="iqPhase === \'quiz\'">{{ iqHeaderTitle }}' in text:
-        print("title already patched")
-    else:
-        if "Antes de falar comigo" in text and "iqPhase === 'welcome'" in text:
-            text = text.replace(
-                "iqPhase === 'welcome' || (iqPhase === 'quiz' && iqStep === 0)">Antes de falar comigo 💕",
-                "iqPhase === 'quiz'">{{ iqHeaderTitle }}",
-                1,
-            )
-            print("title soft-patched")
-        else:
-            print("title: no change needed or unknown state")
+    if "iqPhase === 'welcome' || (iqPhase === 'quiz' && iqStep === 0)" in text:
+        text = text.replace(
+            "iqPhase === 'welcome' || (iqPhase === 'quiz' && iqStep === 0)",
+            "iqPhase === 'quiz'",
+            1,
+        )
+        changed = True
+        print("title condition patched")
 
-    old_start = """  iqResetState()
-  iqPhase.value = 'welcome'
-  iqVisible.value = true
-  iqTrack('quiz_started')
-}"""
-    new_start = """  iqResetState()
-  iqPhase.value = 'quiz'
-  iqStep.value = 0
-  iqVisible.value = true
-  iqTrack('quiz_started')
-}"""
-    if old_start in text:
-        text = text.replace(old_start, new_start, 1)
+    text2, n = re.subn(
+        r'(<h3 class="iq-title"[^>]*>)Antes de falar comigo[^<]*(</h3>)',
+        r'<h3 class="iq-title" v-if="iqPhase === \'quiz\'">{{ iqHeaderTitle }}</h3>',
+        text,
+        count=1,
+    )
+    if n:
+        text = text2
+        changed = True
+        print("title line replaced")
+
+    text = text.replace("{{ iqHeaderTitle }} 💕</h3>", "{{ iqHeaderTitle }}</h3>")
+    text = text.replace("{{ iqHeaderTitle }}💕</h3>", "{{ iqHeaderTitle }}</h3>")
+
+    if "iqPhase.value = 'welcome'\n  iqVisible.value = true\n  iqTrack('quiz_started')" in text:
+        text = text.replace(
+            "iqPhase.value = 'welcome'\n  iqVisible.value = true\n  iqTrack('quiz_started')",
+            "iqPhase.value = 'quiz'\n  iqStep.value = 0\n  iqVisible.value = true\n  iqTrack('quiz_started')",
+            1,
+        )
+        changed = True
         print("iqStart patched")
-    elif "iqPhase.value = 'quiz'\n  iqStep.value = 0\n  iqVisible.value = true\n  iqTrack('quiz_started')" in text:
-        print("iqStart already patched")
     else:
-        text = text.replace("iqPhase.value = 'welcome'\n  iqVisible.value = true\n  iqTrack('quiz_started')",
-                            "iqPhase.value = 'quiz'\n  iqStep.value = 0\n  iqVisible.value = true\n  iqTrack('quiz_started')", 1)
-        print("iqStart soft-patched")
+        print("iqStart already ok or different")
 
-    old_reset = """function iqResetState() {
-  iqPhase.value = 'welcome'
-  iqStep.value = 0"""
-    new_reset = """function iqResetState() {
-  iqPhase.value = 'quiz'
-  iqStep.value = 0"""
-    if old_reset in text:
-        text = text.replace(old_reset, new_reset, 1)
+    if "function iqResetState() {\n  iqPhase.value = 'welcome'\n  iqStep.value = 0" in text:
+        text = text.replace(
+            "function iqResetState() {\n  iqPhase.value = 'welcome'\n  iqStep.value = 0",
+            "function iqResetState() {\n  iqPhase.value = 'quiz'\n  iqStep.value = 0",
+            1,
+        )
+        changed = True
         print("reset patched")
     else:
-        print("reset already ok or different")
+        print("reset already ok")
 
     APP.write_text(text, encoding="utf-8")
-    print("done, bytes=", len(text))
+    print("done changed=", changed, "bytes=", len(text))
 
 if __name__ == "__main__":
     main()
