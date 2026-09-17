@@ -18,9 +18,20 @@ def main() -> None:
         changed = True
         print("title condition patched")
 
+    # Fix accidental backslash-quotes from earlier patches
+    lines = text.splitlines(keepends=True)
+    out = []
+    for line in lines:
+        if "iq-title" in line and "\\" in line:
+            line = line.replace("\\'", "'")
+            changed = True
+            print("cleaned escapes in title line")
+        out.append(line)
+    text = "".join(out)
+
     text2, n = re.subn(
         r'(<h3 class="iq-title"[^>]*>)Antes de falar comigo[^<]*(</h3>)',
-        r'<h3 class="iq-title" v-if="iqPhase === \'quiz\'">{{ iqHeaderTitle }}</h3>',
+        '<h3 class="iq-title" v-if="iqPhase === \'quiz\'">{{ iqHeaderTitle }}</h3>',
         text,
         count=1,
     )
