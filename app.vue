@@ -1409,7 +1409,7 @@ function isPrivsexPaused() {
 
 // =============================================================================
 // QUIZ ICP — qualificação antes do WhatsApp (sem pontuação visível)
-// Fluxo: 18+ → Interesse → Ticket R$49,90 → Momento (agora/hoje) → Intenção de compra
+// Fluxo: Interesse → Ticket R$49,90 → Momento (agora/hoje) → Intenção de compra (anúncio já filtra 18+)
 // Só lead QUALIFIED cai no WhatsApp do comercial. Número/link do WA só após qualified + clique
 // =============================================================================
 const IQ_WA_NUMBER = '5547992750967'
@@ -1417,10 +1417,9 @@ type IqPhase = 'welcome' | 'quiz' | 'reject' | 'soft' | 'result'
 type IqOpt = { id: string; label: string }
 const iqVisible = ref(false)
 const iqPhase = ref<IqPhase>('quiz')
-const iqStep = ref(0) // 0 idade, 1 interesse, 2 ticket, 3 momento, 4 intenção de compra
+const iqStep = ref(0) // 0 interesse, 1 ticket, 2 momento, 3 intenção de compra
 const iqRejectMsg = ref('')
 const iqAnswers = reactive({
-  age: '' as string,
   interest: '' as string,
   ticket: '' as string,
   moment: '' as string,
@@ -1428,19 +1427,14 @@ const iqAnswers = reactive({
 })
 const iqMaxStepReached = ref(0)
 
-const iqProgressLabel = computed(() => {
-  // step 0 = idade (filtro legal); etapas comerciais = 1..4
-  if (iqStep.value === 0) return 'ETAPA 0 DE 4'
-  return `ETAPA ${iqStep.value} DE 4`
-})
+const iqProgressLabel = computed(() => `ETAPA ${iqStep.value + 1} DE 4`)
 const iqHeaderTitle = computed(() => {
   if (iqPhase.value === 'result') return 'Qualificado'
   if (iqPhase.value === 'reject' || iqPhase.value === 'soft') return 'Aviso'
-  return ['Maioridade', 'Interesse', 'Ticket', 'Momento', 'Intenção'][iqStep.value] || ''
+  return ['Interesse', 'Ticket', 'Momento', 'Intenção'][iqStep.value] || ''
 })
 const iqQuestionText = computed(() => {
   return [
-    'Você tem 18 anos ou mais? 🔞',
     'O que você quer? 👀',
     'Os acessos começam em R$ 49,90 🧡\nTudo bem pra você?',
     'Quando você quer comprar? ⏰',
@@ -1448,14 +1442,8 @@ const iqQuestionText = computed(() => {
   ][iqStep.value] || ''
 })
 const iqCurrentOptions = computed((): IqOpt[] => {
-  if (iqStep.value === 0) {
-    return [
-      { id: 'yes18', label: 'Sim, tenho 18 anos ou mais' },
-      { id: 'no18', label: 'Não, sou menor de 18' },
-    ]
-  }
   // ETAPA 1 — INTERESSE
-  if (iqStep.value === 1) {
+  if (iqStep.value === 0) {
     return [
       { id: 'photo_video_pack', label: '📸 Pack de fotos e vídeos' },
       { id: 'sexting', label: '💬 Sexting' },
@@ -1463,14 +1451,14 @@ const iqCurrentOptions = computed((): IqOpt[] => {
     ]
   }
   // ETAPA 2 — TICKET
-  if (iqStep.value === 2) {
+  if (iqStep.value === 1) {
     return [
       { id: 'yes_ticket', label: '✅ Sim' },
       { id: 'no_ticket', label: '❌ Não' },
     ]
   }
   // ETAPA 3 — MOMENTO
-  if (iqStep.value === 3) {
+  if (iqStep.value === 2) {
     return [
       { id: 'now', label: '🔥 Agora' },
       { id: 'today', label: '🧡 Hoje' },
@@ -1516,7 +1504,6 @@ function iqResetState() {
   iqPhase.value = 'welcome'
   iqStep.value = 0
   iqRejectMsg.value = ''
-  iqAnswers.age = ''
   iqAnswers.interest = ''
   iqAnswers.ticket = ''
   iqAnswers.moment = ''
@@ -1600,28 +1587,16 @@ function iqAnswer(opt: IqOpt) {
   if (iqStep.value > iqMaxStepReached.value) iqMaxStepReached.value = iqStep.value
   iqTrack('quiz_answer', { option: opt.id, step: iqStep.value })
 
-  // Filtro legal — maioridade (não conta como etapa comercial)
+  // ETAPA 1 DE 4 — INTERESSE (salva o produto)
   if (iqStep.value === 0) {
-    iqAnswers.age = opt.id
-    if (opt.id === 'no18') {
-      iqDisqualify('disqualified_underage', 'Só pode quem tem 18 anos ou mais. 🔞')
-      return
-    }
+    iqAnswers.interest = opt.id
     iqStep.value = 1
     iqMaxStepReached.value = 1
     return
   }
 
-  // ETAPA 1 DE 4 — INTERESSE (salva o produto)
-  if (iqStep.value === 1) {
-    iqAnswers.interest = opt.id
-    iqStep.value = 2
-    iqMaxStepReached.value = 2
-    return
-  }
-
   // ETAPA 2 DE 4 — TICKET
-  if (iqStep.value === 2) {
+  if (iqStep.value === 1) {
     iqAnswers.ticket = opt.id
     if (opt.id === 'no_ticket') {
       iqDisqualify(
@@ -1630,13 +1605,13 @@ function iqAnswer(opt: IqOpt) {
       )
       return
     }
-    iqStep.value = 3
-    iqMaxStepReached.value = 3
+    iqStep.value = 2
+    iqMaxStepReached.value = 2
     return
   }
 
   // ETAPA 3 DE 4 — MOMENTO
-  if (iqStep.value === 3) {
+  if (iqStep.value === 2) {
     iqAnswers.moment = opt.id
     if (opt.id === 'later') {
       iqDisqualify(
@@ -1655,13 +1630,13 @@ function iqAnswer(opt: IqOpt) {
       return
     }
     // now | today → segue
-    iqStep.value = 4
-    iqMaxStepReached.value = 4
+    iqStep.value = 3
+    iqMaxStepReached.value = 3
     return
   }
 
   // ETAPA 4 DE 4 — INTENÇÃO DE COMPRA
-  if (iqStep.value === 4) {
+  if (iqStep.value === 3) {
     iqAnswers.purchase = opt.id
     if (opt.id === 'buy_no') {
       iqDisqualify(
