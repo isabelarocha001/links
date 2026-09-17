@@ -198,7 +198,7 @@
                   <img class="iq-avatar" src="/model.jpg" alt="" width="72" height="72" draggable="false" />
                   <p class="iq-name">{{ config.name || 'Wanessa' }}</p>
                 </div>
-                <h3 class="iq-title" v-if="iqPhase === 'welcome' || (iqPhase === 'quiz' && iqStep === 0)">Antes de falar comigo 💕</h3>
+                <h3 class="iq-title" v-if="iqPhase === \'quiz\'">{{ iqHeaderTitle }}</h3>
                 <h3 class="iq-title" v-else-if="iqPhase === 'result'">Pode seguir 🧡</h3>
                 <h3 class="iq-title" v-else-if="iqPhase === 'reject' || iqPhase === 'soft'">Oi</h3>
                 <p class="iq-kicker" v-if="iqPhase === 'quiz'">{{ iqProgressLabel }}</p>
@@ -1501,7 +1501,7 @@ function iqTrack(event: string, extra: Record<string, unknown> = {}) {
 }
 
 function iqResetState() {
-  iqPhase.value = 'welcome'
+  iqPhase.value = 'quiz'
   iqStep.value = 0
   iqRejectMsg.value = ''
   iqAnswers.interest = ''
@@ -1553,7 +1553,8 @@ function iqStart() {
     return
   }
   iqResetState()
-  iqPhase.value = 'welcome'
+  iqPhase.value = 'quiz'
+  iqStep.value = 0
   iqVisible.value = true
   iqTrack('quiz_started')
 }
