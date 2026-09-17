@@ -1476,12 +1476,28 @@ const iqCurrentOptions = computed((): IqOpt[] => {
 
 function iqTrack(event: string, extra: Record<string, unknown> = {}) {
   try {
-    track(event, {
-      quiz: 'icp_wa',
+    const visitor_id = getOrCreateVisitorId()
+    const payload = {
+      event_name: event,
+      visitor_id,
       step: iqStep.value,
       phase: iqPhase.value,
+      quiz: 'icp_wa',
+      ...readUtms(),
       ...extra,
-    })
+    }
+    const json = JSON.stringify(payload)
+    // Endpoint dedicado → Supabase Analistcs + webhook Telegram (canal prévias)
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([json], { type: 'application/json' })
+      if (navigator.sendBeacon('/api/quiz-icp', blob)) return
+    }
+    fetch('/api/quiz-icp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: json,
+      keepalive: true,
+    }).catch(() => {})
   } catch {}
 }
 
