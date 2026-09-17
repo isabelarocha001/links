@@ -198,7 +198,7 @@
                   <img class="iq-avatar" src="/model.jpg" alt="" width="72" height="72" draggable="false" />
                   <p class="iq-name">{{ config.name || 'Wanessa' }}</p>
                 </div>
-                <h3 class="iq-title" v-if="iqPhase === \'quiz\'">{{ iqHeaderTitle }}</h3>
+                <h3 class="iq-title" v-if="iqPhase === 'quiz'">{{ iqHeaderTitle }}</h3>
                 <h3 class="iq-title" v-else-if="iqPhase === 'result'">Pode seguir 🧡</h3>
                 <h3 class="iq-title" v-else-if="iqPhase === 'reject' || iqPhase === 'soft'">Oi</h3>
                 <p class="iq-kicker" v-if="iqPhase === 'quiz'">{{ iqProgressLabel }}</p>
