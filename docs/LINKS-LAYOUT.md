@@ -1,6 +1,6 @@
 # Layout dos links
 
-**Status:** alteração preparada na branch `feat/cards-vip-whatsapp`, sem publicação.
+**Status:** alteração concluída para publicação na `main`.
 
 Na página principal (`app.vue`), a foto é seguida pelo título "Sua musa dos sonhos proibidos" e pela frase "Escolha onde prefere me ter, amor". A primeira linha mantém PrivSex à esquerda e canal público à direita. A segunda linha coloca o bot VIP do Telegram à esquerda e o WhatsApp à direita, ambos como cards verticais com botão de ação abaixo.
 
