@@ -114,7 +114,7 @@
             </a>
             <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
           </div>
-          <!-- WhatsApp no lugar do PrivSex enquanto ele estiver pausado -->
+          <!-- WhatsApp ocupa a esquerda somente se o link PrivSex não existir -->
           <div class="card-col" v-else-if="isPt">
             <button type="button" class="lux-card lux-card--left iq-main-card" @click="iqStart">
               <div class="card-glow"></div>
@@ -175,7 +175,7 @@
           </a>
         </section>
 
-        <!-- WhatsApp abaixo do bot TG quando PrivSex estiver ativo (após 12/10) -->
+        <!-- WhatsApp abaixo do bot TG quando PrivSex estiver ativo -->
         <section class="iq-section" v-if="configReady && isPt && privsexLinkEnabled">
           <button type="button" class="iq-open-btn" @click="iqStart">
             <span class="iq-open-ico iq-wa-svg" aria-hidden="true">
@@ -1401,11 +1401,6 @@ const CLICK_DAY_PREFIX = 'wanessa_click_'
 const GATE_KEY = 'wanessa_gate_v1'
 
 const privsexUrl = 'https://privsex.com/wanessa'
-/** Desativa PrivSex até 12/10/2026 00:00 (America/Sao_Paulo); reativa sozinho depois */
-const PRIVSEX_RESUME_AT = new Date('2026-10-12T00:00:00-03:00')
-function isPrivsexPaused() {
-  return Date.now() < PRIVSEX_RESUME_AT.getTime()
-}
 
 // =============================================================================
 // QUIZ ICP — qualificação antes do WhatsApp (sem pontuação visível)
@@ -6332,9 +6327,8 @@ const whatsappLinkEnabled = computed(() => {
     return /whatsapp|\bwa\b/i.test(label)
   })
 })
-/** Card PrivSex no layout — pausado até 12/10/2026 */
+/** Card PrivSex na coluna esquerda quando o link está configurado */
 const privsexLinkEnabled = computed(() => {
-  if (isPrivsexPaused()) return false
   return config.links.some((l) => {
     if (l.enabled === false) return false
     return /privsex|priv\s*sex/i.test(String(l.label || ''))
@@ -6685,10 +6679,10 @@ function applyServerConfig(data: any) {
       const label = String(l.label || '')
       let enabled = l.enabled === false ? false : true
       // Forçado: WhatsApp off; Telegram Bot + Canal on
-      // PrivSex: off até 12/10/2026 (isPrivsexPaused), depois força on de novo
+      // PrivSex ativo independentemente da antiga data de pausa
       if (/whatsapp|\bwa\b/i.test(label)) enabled = false
       if (/telegram\s*(bot|vip)|(bot|vip).*telegram/i.test(label)) enabled = true
-      if (/privsex|priv\s*sex/i.test(label)) enabled = isPrivsexPaused() ? false : true
+      if (/privsex|priv\s*sex/i.test(label)) enabled = true
       if (/pr[eé]via|canal\s*p[uú]blico|telegram\s*p[uú]blico|canal\s*de\s*pr/i.test(label)) enabled = true
       return attachLogo({ label, icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled })
     })
