@@ -51,7 +51,7 @@
 .wa-input { flex: 1; height: 40px; border-radius: 22px; border: none; background: #2a3942; color: #8696a0; padding: 0 14px; font-size: 0.88rem; outline: none; cursor: not-allowed; }
 .wa-input::placeholder { color: #667781; }
 /* ========== HERO / FOTO ========== */
-.hero { width: 100%; text-align: center; margin-bottom: 28px; }
+.hero { width: 100%; text-align: center; margin-bottom: 8px; }
 .photo-stage { position: relative; width: 100%; max-width: 340px; margin: 0 auto 24px; }
 .photo-frame {
   position: relative; width: 100%; aspect-ratio: 3/4; border-radius: 22px; overflow: hidden;
@@ -213,8 +213,17 @@
 .identity { padding: 0 8px; }
 .eyebrow { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #c084fc; margin: 0 0 6px; }
 .accent-line { width: 48px; height: 1px; margin: 16px auto 0; background: linear-gradient(90deg, transparent, #c084fc, transparent); }
+.links-intro { width: 100%; text-align: center; padding: 0 12px; margin: 0 0 20px; box-sizing: border-box; }
+.links-intro h1 { margin: 0 0 6px; color: #f5f0ff; font-size: clamp(1.25rem, 5vw, 1.65rem); line-height: 1.2; }
+.links-intro p { margin: 0; color: rgba(245, 240, 255, 0.72); font-size: 0.9rem; line-height: 1.4; }
 /* ========== CARDS PRIVSEX + TELEGRAM ========== */
 .main-cards { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; align-items: stretch; }
+.secondary-cards { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; align-items: stretch; }
+.secondary-cards--single { grid-template-columns: 1fr; max-width: 320px; }
+.secondary-cards .vip-block { width: auto; margin: 0; }
+.secondary-cards .vip-card { flex-direction: column; align-items: flex-start; gap: 10px; min-height: 148px; }
+.secondary-cards .vip-content { flex-direction: column; align-items: flex-start; gap: 8px; }
+.secondary-cards .vip-arrow { display: none; }
 .main-cards--single { grid-template-columns: 1fr; max-width: 320px; margin-left: auto; margin-right: auto; }
 .card-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .card-col .lux-card { flex: 1; min-height: 148px; }
@@ -346,7 +355,7 @@
 }
 .lux-card--portal .card-cta { color: #e9d5ff; text-shadow: 0 1px 6px rgba(0,0,0,0.9); }
 
-/* ========== BLOCO VIP BOT RODAPÉ ========== */
+/* ========== CARD VIP BOT ========== */
 .vip-block { width: 100%; margin-bottom: 22px; }
 .vip-card { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 18px; border-radius: 14px; background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(126, 34, 206, 0.12)); border: 1px solid rgba(192, 132, 252, 0.45); text-decoration: none; overflow: hidden; transition: transform 0.15s ease, box-shadow 0.15s ease; }
 .vip-card:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(168, 85, 247, 0.25); }
@@ -461,7 +470,7 @@
   40%      { transform: translateY(-5px); }
   60%      { transform: translateY(-2px); }
 }
-@media (max-width: 360px) { .main-cards { gap: 8px; } .lux-card { padding: 12px 10px; min-height: 136px; } .card-title { font-size: 0.95rem; } .direct-btn { font-size: 0.8rem; padding: 12px 14px; } .wa-shell { height: min(94vh, 680px); height: min(94dvh, 680px); } }
+@media (max-width: 360px) { .main-cards, .secondary-cards { gap: 8px; } .lux-card { padding: 12px 10px; min-height: 136px; } .card-title { font-size: 0.95rem; } .direct-btn { font-size: 0.8rem; padding: 12px 14px; } .wa-shell { height: min(94vh, 680px); height: min(94dvh, 680px); } }
 .wl-overlay { position: fixed !important; inset: 0 !important; z-index: 2147483646 !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: 16px !important; background: rgba(18, 8, 26, 0.92) !important; overflow-y: auto !important; }
 .wl-card { background: #1e1230 !important; border: 1px solid rgba(168, 85, 247, 0.25) !important; border-radius: 16px !important; padding: 20px !important; width: 100% !important; max-width: 400px !important; max-height: min(88vh, 720px) !important; max-height: min(88vh, 720px) !important; max-height: min(88dvh, 720px) !important; overflow-y: auto !important; color: #fff !important; box-shadow: 0 24px 80px rgba(0,0,0,0.75) !important; -webkit-user-select: text !important; user-select: text !important; }
 .wl-card h2 { font-size: 1.15rem; margin: 0 0 14px; }
