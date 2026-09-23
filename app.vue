@@ -56,7 +56,7 @@
       </Teleport>
 
 
-      <template v-else-if="gateReady && gate === 'pass'">
+      <template v-if="gateReady && gate === 'pass'">
         <header class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
