@@ -6,8 +6,9 @@
     <div class="bg-grain" aria-hidden="true"></div>
     <!-- cadeado removido do front: acesso admin só por rota direta (/admin/chat) -->
     <main class="container">
+      <!-- Chat/quiz antigo estilo WhatsApp DESLIGADO (só landing + quiz ICP) -->
       <section
-        v-if="gateReady && (gate === 1 || gate === 2 || gate === 3 || gate === 4 || gate === 'reject')"
+        v-if="false"
         class="wa-shell"
       >
         <header class="wa-header">
@@ -6195,9 +6196,9 @@ async function loadNearPresence() {
   }
 }
 
-const gate = ref<1 | 2 | 3 | 4 | 'pass' | 'reject' | null>(null)
+const gate = ref<1 | 2 | 3 | 4 | 'pass' | 'reject' | null>('pass')
 const quizAnswers = ref<Record<string, string>>({})
-const gateReady = ref(false)
+const gateReady = ref(true) // true desde o start — evita flash do chat WA antigo
 const chatMessages = ref<ChatMsg[]>([])
 const isTyping = ref(false)
 const chatBox = ref<HTMLElement | null>(null)
@@ -6828,40 +6829,26 @@ onMounted(async () => {
   }
 
   if (!openChatDirect) {
-    let restored: string | null = null
-    try { restored = localStorage.getItem(GATE_KEY) } catch {}
-    if (restored === 'pass' || restored === 'reject') gate.value = restored
-    else if (restored === '1' || restored === '2' || restored === '3' || restored === '4') gate.value = Number(restored) as 1 | 2 | 3 | 4
-    else if (restored === '4') gate.value = 1
+    // Quiz/chat antigo estilo WhatsApp removido — sempre landing (cards).
+    // Limpa localStorage antigo (1/2/3/4/reject) que fazia o shell WA aparecer de novo.
+    try {
+      const old = localStorage.getItem(GATE_KEY)
+      if (old && old !== 'pass') localStorage.removeItem(GATE_KEY)
+      localStorage.setItem(GATE_KEY, 'pass')
+    } catch {}
+    gate.value = 'pass'
+    gateReady.value = true
     try {
       const fingerprint = await getDeviceFingerprint()
-      if (gate.value !== 'pass' && gate.value !== 'reject') {
-        try {
-          const res = await $fetch<{ status: string | null }>('/api/quiz', { query: { visitor_id, fingerprint } })
-          if (res?.status === 'pass' || res?.status === 'reject') {
-            gate.value = res.status
-            try { localStorage.setItem(GATE_KEY, res.status) } catch {}
-          }
-        } catch {}
-      } else if (visitor_id && (gate.value === 'pass' || gate.value === 'reject')) {
-        try {
-          fetch('/api/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitor_id, fingerprint, status: gate.value }), keepalive: true }).catch(() => {})
-        } catch {}
+      if (visitor_id) {
+        fetch('/api/quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visitor_id, fingerprint, status: 'pass' }),
+          keepalive: true,
+        }).catch(() => {})
       }
     } catch {}
-    if (!config.quiz_enabled) {
-      gate.value = 'pass'
-      try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
-    }
-    if (gate.value == null) gate.value = 1
-    gateReady.value = true
-    if (gate.value === 1 || gate.value === 2 || gate.value === 3 || gate.value === 4) {
-      chatMessages.value = []
-      typeThenAsk(questionText(gate.value as 1 | 2 | 3 | 4), 800)
-    } else if (gate.value === 'reject') {
-      chatMessages.value = []
-      pushMsg('her', t('rejectIg'))
-    }
   }
 
   photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 5500)
