@@ -6,14 +6,14 @@
     <div class="bg-grain" aria-hidden="true"></div>
     <!-- cadeado removido do front: acesso admin só por rota direta (/admin/chat) -->
     <main class="container">
-      <!-- Chat/quiz antigo estilo WhatsApp DESLIGADO (só landing + quiz ICP) -->
+      <!-- Quiz ICP no visual do chat WhatsApp (só ao clicar WhatsApp) -->
       <section
-        v-if="false"
+        v-if="iqChatMode"
         class="wa-shell"
       >
         <header class="wa-header">
           <div class="wa-header-side">
-            <span class="wa-back" aria-hidden="true">‹</span>
+            <button type="button" class="wa-back" aria-label="Voltar" @click="iqCloseChat">‹</button>
           </div>
           <div class="wa-header-info">
             <p class="wa-name">{{ t('waName') }}</p>
@@ -37,7 +37,7 @@
             :class="m.from === 'me' ? 'wa-row--me' : 'wa-row--her'"
           >
             <div class="wa-bubble" :class="m.from === 'me' ? 'wa-bubble--me' : 'wa-bubble--her'">
-              <p class="wa-text">{{ m.text }}</p>
+              <p class="wa-text" style="white-space:pre-line">{{ m.text }}</p>
               <span class="wa-time">{{ m.time }}</span>
             </div>
           </div>
@@ -48,14 +48,14 @@
           </div>
         </div>
 
-        <div v-if="!isTyping && gate !== 'reject' && quizOptions.length" class="wa-quick">
+        <div v-if="!isTyping && iqChatOptions.length" class="wa-quick">
           <button
-            v-for="opt in quizOptions"
+            v-for="opt in iqChatOptions"
             :key="opt.key"
             type="button"
             class="wa-quick-btn"
             :class="opt.variant"
-            @click="answerQuiz(opt.key)"
+            @click="iqChatAnswer(opt)"
           >
             {{ opt.label }}
           </button>
@@ -70,7 +70,7 @@
         </div>
       </section>
 
-      <template v-else-if="gateReady && gate === 'pass'">
+      <template v-else-if="gateReady && gate === 'pass' && !iqChatMode">
         <header class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
@@ -82,7 +82,7 @@
               <span v-for="(_, i) in gallery" :key="i" class="dot" :class="{ active: i === photoIndex }" />
             </div>
             <!-- CTA principal: WhatsApp — só se link WhatsApp estiver ativo no admin -->
-            <button v-if="whatsappLinkEnabled" type="button" class="hero-wa-btn" @click="openWaFunnel('hero_photo')">
+            <button v-if="whatsappLinkEnabled" type="button" class="hero-wa-btn" @click="iqStart()">
               <span class="hero-wa-ico" aria-hidden="true">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
               </span>
@@ -197,7 +197,7 @@
         </div>
 
         <Teleport to="body">
-          <div v-if="iqVisible" class="iq-overlay" @click.self="iqAbandonClose">
+          <div v-if="false && iqVisible" class="iq-overlay" @click.self="iqAbandonClose">
             <div class="iq-sheet" role="dialog" aria-modal="true" aria-label="Antes de falar comigo">
               <header class="iq-head">
                 <button type="button" class="iq-x" @click="iqAbandonClose" aria-label="Fechar">×</button>
@@ -1420,6 +1420,128 @@ const IQ_WA_NUMBER = '5547992750967'
 type IqPhase = 'welcome' | 'quiz' | 'reject' | 'soft' | 'result'
 type IqOpt = { id: string; label: string }
 const iqVisible = ref(false)
+/** ICP no shell estilo WhatsApp — só após clique (não na home) */
+const iqChatMode = ref(false)
+type IqChatOpt = { key: string; label: string; variant: string }
+const iqChatOptions = computed((): IqChatOpt[] => {
+  if (!iqChatMode.value || isTyping.value) return []
+  if (iqPhase.value === 'welcome') {
+    return [{ key: 'welcome_ok', label: 'Beleza, continuar', variant: 'wa-quick--yes' }]
+  }
+  if (iqPhase.value === 'reject' || iqPhase.value === 'soft') {
+    return [{ key: 'close', label: 'Voltar', variant: 'wa-quick--no' }]
+  }
+  if (iqPhase.value === 'result') {
+    return [{ key: 'go_wa', label: 'Ir pro WhatsApp pra comprar', variant: 'wa-quick--yes' }]
+  }
+  if (iqPhase.value !== 'quiz') return []
+  return iqCurrentOptions.value.map((o) => ({
+    key: o.id,
+    label: o.label,
+    variant: (o.id.includes('no') || o.id === 'later' || o.id === 'browsing' || o.id === 'buy_no')
+      ? 'wa-quick--no'
+      : 'wa-quick--yes',
+  }))
+})
+function iqTypeHer(text: string, delay = 600): Promise<void> {
+  return new Promise((resolve) => {
+    isTyping.value = true
+    scrollChat()
+    if (typingTimer) clearTimeout(typingTimer)
+    typingTimer = setTimeout(() => {
+      isTyping.value = false
+      pushMsg('her', text)
+      resolve()
+    }, delay)
+  })
+}
+async function iqAskCurrentQuestion() {
+  await iqTypeHer(iqQuestionText.value, 700)
+}
+function iqCloseChat() {
+  iqChatMode.value = false
+  isTyping.value = false
+  if (typingTimer) { clearTimeout(typingTimer); typingTimer = null }
+  iqVisible.value = false
+  try { iqTrack('quiz_closed_chat', { step: iqStep.value, phase: iqPhase.value }) } catch {}
+}
+async function iqChatAnswer(opt: IqChatOpt) {
+  if (isTyping.value) return
+  if (opt.key === 'close') { iqCloseChat(); return }
+  if (opt.key === 'go_wa') {
+    iqGoWhatsApp()
+    iqChatMode.value = false
+    return
+  }
+  if (opt.key === 'welcome_ok') {
+    pushMsg('me', opt.label)
+    iqPhase.value = 'quiz'
+    iqStep.value = 0
+    iqTrack('quiz_welcome_continue')
+    await iqAskCurrentQuestion()
+    return
+  }
+  pushMsg('me', opt.label)
+  await iqAnswerInChat({ id: opt.key, label: opt.label })
+}
+async function iqAnswerInChat(opt: { id: string; label: string }) {
+  if (iqStep.value > iqMaxStepReached.value) iqMaxStepReached.value = iqStep.value
+  iqTrack('quiz_answer', { option: opt.id, step: iqStep.value })
+  if (iqStep.value === 0) {
+    iqAnswers.interest = opt.id
+    iqStep.value = 1
+    iqMaxStepReached.value = 1
+    await iqAskCurrentQuestion()
+    return
+  }
+  if (iqStep.value === 1) {
+    iqAnswers.ticket = opt.id
+    if (opt.id === 'no_ticket') {
+      const msg = 'O menor valor é R$ 99,90.\nMenos que isso eu não atendo.'
+      iqDisqualify('disqualified_low_ticket', msg)
+      await iqTypeHer(msg, 900)
+      return
+    }
+    iqStep.value = 2
+    iqMaxStepReached.value = 2
+    await iqAskCurrentQuestion()
+    return
+  }
+  if (iqStep.value === 2) {
+    iqAnswers.moment = opt.id
+    if (opt.id === 'later') {
+      const msg = 'Beleza.\nQuando for comprar (R$ 99,90 pra cima), volta aqui.'
+      iqDisqualify('disqualified_later', msg, true)
+      await iqTypeHer(msg, 900)
+      return
+    }
+    if (opt.id === 'browsing') {
+      const msg = 'Aqui é só pra quem vai comprar.\nQuando quiser pagar, volta.'
+      iqDisqualify('disqualified_browsing', msg, true)
+      await iqTypeHer(msg, 900)
+      return
+    }
+    iqStep.value = 3
+    iqMaxStepReached.value = 3
+    await iqAskCurrentQuestion()
+    return
+  }
+  if (iqStep.value === 3) {
+    iqAnswers.purchase = opt.id
+    if (opt.id === 'buy_no') {
+      const msg = 'WhatsApp é pra comprar, não pra flertar.\nQuando quiser pagar (R$ 99,90 pra cima), volta.'
+      iqDisqualify('disqualified_no_purchase_intent', msg, true)
+      await iqTypeHer(msg, 900)
+      return
+    }
+    iqPhase.value = 'result'
+    iqTrack('qualified', { answers: { ...iqAnswers } })
+    await iqTypeHer(
+      'Combinado 🧡\n\nO WhatsApp é pra COMPRAR, não pra papo de graça.\nSem flerte. Sem encontro.\nA partir de R$ 99,90.\n\nLá: você escolhe → paga → recebe.',
+      1000,
+    )
+  }
+}
 const iqPhase = ref<IqPhase>('quiz')
 const iqStep = ref(0) // 0 interesse, 1 ticket, 2 momento, 3 intenção de compra
 const iqRejectMsg = ref('')
@@ -1552,15 +1674,28 @@ function iqStart() {
     iqResetState()
     iqRejectMsg.value = IQ_BLOCKED_MSG
     iqPhase.value = 'reject'
-    iqVisible.value = true
+    iqVisible.value = false
+    iqChatMode.value = true
+    chatMessages.value = []
+    isTyping.value = false
     iqTrack('quiz_blocked_repeat', { prior_event: blocked.event || '', answers: blocked.answers || {} })
+    nextTick(() => { iqTypeHer(String(IQ_BLOCKED_MSG || 'Quando for comprar de verdade, volta.'), 500) })
     return
   }
   iqResetState()
-  iqPhase.value = 'quiz'
+  iqPhase.value = 'welcome'
   iqStep.value = 0
-  iqVisible.value = true
+  iqVisible.value = false
+  iqChatMode.value = true
+  chatMessages.value = []
+  isTyping.value = false
   iqTrack('quiz_started')
+  nextTick(() => {
+    iqTypeHer(
+      'Aqui eu vendo foto, vídeo, call e chat.\nNão é papo de graça. Não é Tinder. Não saio com ninguém.\n\n4 perguntas rápidas.\nSó quem quer comprar (a partir de R$ 99,90).',
+      800,
+    )
+  })
 }
 
 function iqWelcomeContinue() {
@@ -1715,6 +1850,7 @@ function iqGoWhatsApp() {
   const url = 'https://wa.me/' + IQ_WA_NUMBER + '?text=' + encodeURIComponent(text)
   iqTrack('whatsapp_clicked', { answers: { ...iqAnswers } })
   iqVisible.value = false
+  iqChatMode.value = false
   if (typeof window !== 'undefined') {
     window.location.href = url
   }

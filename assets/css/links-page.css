@@ -13,6 +13,7 @@
 .wa-shell { width: 100%; max-width: 400px; height: min(92vh, 720px); height: min(92dvh, 720px); display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; background: #0b141a; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 50px rgba(0,0,0,0.55); }
 .wa-header { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #1f2c34; flex-shrink: 0; }
 .wa-header-side { width: 28px; display: flex; align-items: center; }
+.wa-back { background: transparent; border: none; cursor: pointer; font: inherit; color: inherit; padding: 0; }
 .wa-back { color: #aebac1; font-size: 1.6rem; line-height: 1; }
 .wa-header-info { flex: 1; min-width: 0; }
 .wa-name { margin: 0; font-size: 0.98rem; font-weight: 600; color: #e9edef; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
