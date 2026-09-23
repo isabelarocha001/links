@@ -212,14 +212,14 @@
               <div class="iq-body">
                 <template v-if="iqPhase === 'welcome'">
                   <div class="iq-bubble" role="status">
-                    <p class="iq-bubble-text">Aqui é venda de conteúdo exclusivo (fotos, vídeos, call e chat pago).<br/>Não é Tinder. Não é bate-papo de graça. Não faço encontro.</p>
+                    <p class="iq-bubble-text">Aqui eu vendo foto, vídeo, call e chat.<br/>Não é papo de graça. Não é Tinder. Não saio com ninguém.</p>
                   </div>
                   <p class="iq-intro iq-intro--after-bubble">
-                    Responde 4 perguntas rápidas.
-                    <br />Só atendo quem quer comprar (ticket a partir de R$ 99,90).
-                    <br />Quem quer flertar de graça: não é o lugar.
+                    4 perguntas rápidas.
+                    <br />Só quem quer comprar (a partir de R$ 99,90).
+                    <br />Se quer só flertar de graça, fecha aí.
                   </p>
-                  <button type="button" class="iq-opt iq-opt--primary" @click="iqWelcomeContinue">Entendi — continuar</button>
+                  <button type="button" class="iq-opt iq-opt--primary" @click="iqWelcomeContinue">Beleza, continuar</button>
                 </template>
                 <template v-else-if="iqPhase === 'quiz'">
                   <p class="iq-q">{{ iqQuestionText }}</p>
@@ -243,15 +243,15 @@
                 </template>
                 <template v-else-if="iqPhase === 'result'">
                   <div class="iq-final-box">
-                    <p class="iq-final-lead">⚠️ Próximo passo = COMPRA (não é papo)</p>
-                    <p class="iq-final-line">❌ Não é Tinder / não é flerte de graça</p>
-                    <p class="iq-final-line">❌ Não faço encontro presencial</p>
-                    <p class="iq-final-line">✅ Só venda: fotos, vídeos, call e chat pago</p>
-                    <p class="iq-final-line">✅ Ticket mínimo R$ 99,90</p>
-                    <p class="iq-final-line">✅ No WhatsApp: opções → escolha → PIX/cartão → acesso</p>
+                    <p class="iq-final-lead">⚠️ O WhatsApp é pra COMPRAR, não pra conversar de graça</p>
+                    <p class="iq-final-line">❌ Sem flerte de graça</p>
+                    <p class="iq-final-line">❌ Sem encontro</p>
+                    <p class="iq-final-line">✅ Só: foto, vídeo, call e chat pago</p>
+                    <p class="iq-final-line">✅ A partir de R$ 99,90</p>
+                    <p class="iq-final-line">✅ Lá: você escolhe → paga → recebe</p>
                   </div>
-                  <p class="iq-q">Ao clicar, você entra no WhatsApp comercial para fechar a compra — não para “conhecer” ou enrolar.</p>
-                  <button type="button" class="iq-opt iq-opt--wa" @click="iqGoWhatsApp">Abrir WhatsApp para comprar</button>
+                  <p class="iq-q">Se clicar, é pra comprar. Não é pra “oi sumida” nem enrolação.</p>
+                  <button type="button" class="iq-opt iq-opt--wa" @click="iqGoWhatsApp">Ir pro WhatsApp pra comprar</button>
                 </template>
               </div>
             </div>
@@ -1438,10 +1438,10 @@ const iqHeaderTitle = computed(() => {
 })
 const iqQuestionText = computed(() => {
   return [
-    'O que você quer comprar? 👀',
-    'O ticket mínimo é R$ 99,90.\nVocê aceita pagar a partir disso?',
+    'O que você quer? 👀',
+    'O menor valor é R$ 99,90.\nDá pra você pagar isso?',
     'Quando você quer comprar? ⏰',
-    'Você quer ir pro WhatsApp só para fechar a compra?',
+    'No WhatsApp é só pra comprar.\nPode ir?',
   ][iqStep.value] || ''
 })
 const iqCurrentOptions = computed((): IqOpt[] => {
@@ -1471,8 +1471,8 @@ const iqCurrentOptions = computed((): IqOpt[] => {
   }
   // ETAPA 4 — INTENÇÃO DE COMPRA
   return [
-    { id: 'buy_yes', label: '🔥 Sim — quero comprar agora' },
-    { id: 'buy_no', label: '❌ Não — só queria papo' },
+    { id: 'buy_yes', label: '🔥 Sim, quero comprar' },
+    { id: 'buy_no', label: '❌ Não, só queria papo' },
   ]
 })
 
@@ -1605,7 +1605,7 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'no_ticket') {
       iqDisqualify(
         'disqualified_low_ticket',
-        'O ticket mínimo é R$ 99,90.\nAbaixo disso eu não atendo — esse canal é só pra quem compra.',
+        'O menor valor é R$ 99,90.\nMenos que isso eu não atendo.',
       )
       return
     }
@@ -1620,7 +1620,7 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'later') {
       iqDisqualify(
         'disqualified_later',
-        'Beleza.\nQuando for comprar de verdade (a partir de R$ 99,90), volta aqui.',
+        'Beleza.\nQuando for comprar (R$ 99,90 pra cima), volta aqui.',
         true,
       )
       return
@@ -1628,7 +1628,7 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'browsing') {
       iqDisqualify(
         'disqualified_browsing',
-        'Esse formulário é só pra quem vai comprar.\nQuando decidir, volta com intenção de fechar.',
+        'Aqui é só pra quem vai comprar.\nQuando quiser pagar, volta.',
         true,
       )
       return
@@ -1645,7 +1645,7 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'buy_no') {
       iqDisqualify(
         'disqualified_no_purchase_intent',
-        'O WhatsApp é canal de venda, não de flerte.\nQuando quiser comprar (a partir de R$ 99,90), volta aqui.',
+        'WhatsApp é pra comprar, não pra flertar.\nQuando quiser pagar (R$ 99,90 pra cima), volta.',
         true,
       )
       return
@@ -1669,11 +1669,11 @@ function iqBuildWaMessage(): string {
   const interest = interestMap[iqAnswers.interest] || 'conteúdo'
   const moment = momentMap[iqAnswers.moment] || 'quero comprar'
   return (
-    `Oi. Vim pelo site (lead qualificado — canal de COMPRA).\n` +
+    `Oi. Vim do site pra COMPRAR.\n` +
     `Quero: ${interest}.\n` +
-    `Aceito ticket a partir de R$ 99,90.\n` +
+    `Posso pagar a partir de R$ 99,90.\n` +
     `${moment}.\n` +
-    `Não vim flertar — quero as opções de acesso/pagamento.`
+    `Não vim flertar. Manda as opções pra eu pagar.`
   )
 }
 
