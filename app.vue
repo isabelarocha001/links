@@ -6,64 +6,55 @@
     <div class="bg-grain" aria-hidden="true"></div>
     <!-- cadeado removido do front: acesso admin só por rota direta (/admin/chat) -->
     <main class="container">
-      <!-- Quiz ICP no visual do chat WhatsApp (só ao clicar WhatsApp) -->
-      <div v-if="iqChatMode" class="wa-icp-backdrop" @click="iqCloseChat" aria-hidden="true"></div>
-      <section
-        v-if="iqChatMode"
-        class="wa-shell wa-shell--icp"
-      >
-        <header class="wa-header">
-          <div class="wa-header-side">
-            <button type="button" class="wa-back" aria-label="Voltar" @click="iqCloseChat">‹</button>
-          </div>
-          <div class="wa-header-info">
-            <p class="wa-name">{{ t('waName') }}</p>
-            <p class="wa-status">
-              <span v-if="isTyping" class="wa-status-typing">{{ t('waTyping') }}</span>
-              <span v-else class="wa-status-online">{{ t('waOnline') }}</span>
-            </p>
-          </div>
-          <div class="wa-avatar-wrap">
-            <img class="wa-avatar" src="/model.jpg" alt="" draggable="false" />
-            <span class="wa-online-dot" aria-hidden="true"></span>
-          </div>
-        </header>
-
-        <div ref="chatBox" class="wa-chat">
-          <div class="wa-day">{{ t('waDay') }}</div>
-          <div
-            v-for="(m, i) in chatMessages"
-            :key="i"
-            class="wa-row"
-            :class="m.from === 'me' ? 'wa-row--me' : 'wa-row--her'"
-          >
-            <div class="wa-bubble" :class="m.from === 'me' ? 'wa-bubble--me' : 'wa-bubble--her'">
-              <p class="wa-text" style="white-space:pre-line">{{ m.text }}</p>
-              <span class="wa-time">{{ m.time }}</span>
+      <!-- Quiz ICP — Teleport no body (evita corte pelo layout da home) -->
+      <Teleport to="body">
+        <div v-if="iqChatMode" class="iq-wa-root" @keydown.esc="iqCloseChat">
+          <div class="iq-wa-backdrop" @click="iqCloseChat"></div>
+          <section class="iq-wa-shell" role="dialog" aria-modal="true" aria-label="Chat">
+            <header class="iq-wa-header">
+              <button type="button" class="iq-wa-back" aria-label="Voltar" @click="iqCloseChat">‹</button>
+              <div class="iq-wa-head-info">
+                <p class="iq-wa-name">Wanessa</p>
+                <p class="iq-wa-status">
+                  <span v-if="isTyping">digitando…</span>
+                  <span v-else>online</span>
+                </p>
+              </div>
+              <img class="iq-wa-avatar" src="/model.jpg" alt="" width="40" height="40" draggable="false" />
+            </header>
+            <div ref="chatBox" class="iq-wa-chat">
+              <div class="iq-wa-day">Hoje</div>
+              <div
+                v-for="(m, i) in chatMessages"
+                :key="i"
+                class="iq-wa-row"
+                :class="m.from === 'me' ? 'iq-wa-row--me' : 'iq-wa-row--her'"
+              >
+                <div class="iq-wa-bubble" :class="m.from === 'me' ? 'iq-wa-bubble--me' : 'iq-wa-bubble--her'">
+                  <p class="iq-wa-text">{{ m.text }}</p>
+                  <span class="iq-wa-time">{{ m.time }}</span>
+                </div>
+              </div>
+              <div v-if="isTyping" class="iq-wa-row iq-wa-row--her">
+                <div class="iq-wa-bubble iq-wa-bubble--her iq-wa-typing">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div v-if="isTyping" class="wa-row wa-row--her">
-            <div class="wa-bubble wa-bubble--her wa-bubble--typing">
-              <span class="wa-dot"></span><span class="wa-dot"></span><span class="wa-dot"></span>
+            <div v-if="!isTyping && iqChatOptions.length" class="iq-wa-quick">
+              <button
+                v-for="opt in iqChatOptions"
+                :key="opt.key"
+                type="button"
+                class="iq-wa-btn"
+                :class="{ 'iq-wa-btn--no': opt.variant === 'wa-quick--no' }"
+                @click="iqChatAnswer(opt)"
+              >{{ opt.label }}</button>
             </div>
-          </div>
+          </section>
         </div>
+      </Teleport>
 
-        <div v-if="!isTyping && iqChatOptions.length" class="wa-quick">
-          <button
-            v-for="opt in iqChatOptions"
-            :key="opt.key"
-            type="button"
-            class="wa-quick-btn"
-            :class="opt.variant"
-            @click="iqChatAnswer(opt)"
-          >
-            {{ opt.label }}
-          </button>
-        </div>
-
-        <!-- composer desativado no quiz ICP — só botões -->
-      </section>
 
       <template v-else-if="gateReady && gate === 'pass'">
         <header class="hero">
@@ -7646,3 +7637,143 @@ useHead({
 }
 
 </style>
+
+<style>
+/* ICP WhatsApp chat — FORA do layout (Teleport body) */
+.iq-wa-root {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 12px !important;
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+}
+.iq-wa-backdrop {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0,0,0,0.78) !important;
+}
+.iq-wa-shell {
+  position: relative !important;
+  z-index: 1 !important;
+  width: min(100%, 400px) !important;
+  height: min(92dvh, 720px) !important;
+  max-height: 92vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: #0b141a !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.75) !important;
+}
+.iq-wa-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  background: #1f2c34 !important;
+  flex-shrink: 0 !important;
+}
+.iq-wa-back {
+  background: none !important;
+  border: none !important;
+  color: #aebac1 !important;
+  font-size: 1.8rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  padding: 0 4px !important;
+}
+.iq-wa-head-info { flex: 1 !important; min-width: 0 !important; }
+.iq-wa-name { margin: 0 !important; color: #e9edef !important; font-weight: 600 !important; font-size: 0.95rem !important; }
+.iq-wa-status { margin: 0 !important; color: #8696a0 !important; font-size: 0.75rem !important; }
+.iq-wa-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  object-position: center top !important;
+  flex-shrink: 0 !important;
+}
+.iq-wa-chat {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding: 12px 10px !important;
+  background: #0b141a !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+.iq-wa-day {
+  text-align: center !important;
+  color: #8696a0 !important;
+  font-size: 0.72rem !important;
+  margin: 4px 0 12px !important;
+}
+.iq-wa-row { display: flex !important; margin-bottom: 8px !important; }
+.iq-wa-row--me { justify-content: flex-end !important; }
+.iq-wa-row--her { justify-content: flex-start !important; }
+.iq-wa-bubble {
+  max-width: 85% !important;
+  padding: 8px 10px 4px !important;
+  border-radius: 10px !important;
+  position: relative !important;
+}
+.iq-wa-bubble--her { background: #1f2c34 !important; color: #e9edef !important; border-top-left-radius: 2px !important; }
+.iq-wa-bubble--me { background: #005c4b !important; color: #e9edef !important; border-top-right-radius: 2px !important; }
+.iq-wa-text {
+  margin: 0 !important;
+  font-size: 0.92rem !important;
+  line-height: 1.4 !important;
+  white-space: pre-line !important;
+  word-break: break-word !important;
+}
+.iq-wa-time {
+  display: block !important;
+  text-align: right !important;
+  font-size: 0.65rem !important;
+  color: rgba(233,237,239,0.55) !important;
+  margin-top: 2px !important;
+}
+.iq-wa-typing { display: flex !important; gap: 4px !important; padding: 12px 14px !important; }
+.iq-wa-typing span {
+  width: 7px !important; height: 7px !important; border-radius: 50% !important;
+  background: #8696a0 !important; animation: iqWaBounce 1.2s infinite ease-in-out !important;
+}
+.iq-wa-typing span:nth-child(2) { animation-delay: 0.15s !important; }
+.iq-wa-typing span:nth-child(3) { animation-delay: 0.3s !important; }
+@keyframes iqWaBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-4px); opacity: 1; }
+}
+.iq-wa-quick {
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  padding: 10px 12px max(12px, env(safe-area-inset-bottom)) !important;
+  background: #0b141a !important;
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+}
+.iq-wa-btn {
+  width: 100% !important;
+  min-height: 48px !important;
+  padding: 12px 14px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(37, 211, 102, 0.35) !important;
+  background: rgba(37, 211, 102, 0.12) !important;
+  color: #e9edef !important;
+  font-size: 0.95rem !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+.iq-wa-btn--no {
+  border-color: rgba(255,255,255,0.12) !important;
+  background: rgba(255,255,255,0.06) !important;
+}
+.iq-wa-btn:active { transform: scale(0.98) !important; }
+</style>
+
