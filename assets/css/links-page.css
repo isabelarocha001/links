@@ -3498,3 +3498,47 @@ html, body {
 .wl-row--sticky .wl-btn {
   margin-top: 0;
 }
+
+
+/* ICP quiz no shell WhatsApp — overlay fixo (não deixa a foto da home vazar) */
+.wa-shell--icp {
+  position: fixed !important;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9000;
+  width: min(100vw - 16px, 400px);
+  height: min(92dvh, 720px);
+  max-height: 92dvh;
+  background: #0b141a !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.75);
+}
+.wa-shell--icp .wa-header {
+  background: #1f2c34;
+  flex-shrink: 0;
+}
+.wa-shell--icp .wa-chat {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: #0b141a;
+}
+.wa-shell--icp .wa-quick {
+  flex-shrink: 0;
+  background: #0b141a;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 10px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wa-shell--icp .wa-composer {
+  flex-shrink: 0;
+}
+.wa-icp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 8990;
+  background: rgba(5, 4, 10, 0.72);
+  backdrop-filter: blur(6px);
+}

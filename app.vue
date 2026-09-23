@@ -7,9 +7,10 @@
     <!-- cadeado removido do front: acesso admin só por rota direta (/admin/chat) -->
     <main class="container">
       <!-- Quiz ICP no visual do chat WhatsApp (só ao clicar WhatsApp) -->
+      <div v-if="iqChatMode" class="wa-icp-backdrop" @click="iqCloseChat" aria-hidden="true"></div>
       <section
         v-if="iqChatMode"
-        class="wa-shell"
+        class="wa-shell wa-shell--icp"
       >
         <header class="wa-header">
           <div class="wa-header-side">
@@ -61,16 +62,10 @@
           </button>
         </div>
 
-        <div class="wa-composer">
-          <button type="button" class="wa-emoji" disabled aria-hidden="true">😊</button>
-          <input class="wa-input" type="text" disabled :placeholder="t('waPlaceholder')" readonly />
-          <button type="button" class="wa-send" disabled aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-          </button>
-        </div>
+        <!-- composer desativado no quiz ICP — só botões -->
       </section>
 
-      <template v-else-if="gateReady && gate === 'pass' && !iqChatMode">
+      <template v-else-if="gateReady && gate === 'pass'">
         <header class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
@@ -1445,12 +1440,18 @@ const iqChatOptions = computed((): IqChatOpt[] => {
 })
 function iqTypeHer(text: string, delay = 600): Promise<void> {
   return new Promise((resolve) => {
-    isTyping.value = true
-    scrollChat()
-    if (typingTimer) clearTimeout(typingTimer)
+    try { isTyping.value = true } catch {}
+    try { scrollChat() } catch {}
+    try { if (typingTimer) clearTimeout(typingTimer) } catch {}
     typingTimer = setTimeout(() => {
-      isTyping.value = false
-      pushMsg('her', text)
+      try { isTyping.value = false } catch {}
+      try { pushMsg('her', text) } catch {
+        // fallback se pushMsg ainda não existir
+        try {
+          chatMessages.value.push({ from: 'her', text, time: nowTime() })
+        } catch {}
+      }
+      try { scrollChat() } catch {}
       resolve()
     }, delay)
   })
