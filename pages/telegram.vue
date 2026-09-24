@@ -7,7 +7,7 @@ const TELEGRAM_URL_BR = 'https://t.me/+yA5Y1pAWx5RlMWIx'
 const TELEGRAM_URL_INTL = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const REDIRECT_SECONDS = 3
 
-const OG_IMAGE = 'https://wanessabsx.vercel.app/hero-1.jpg'
+const OG_IMAGE = 'https://wanessabsx.vercel.app/og-telegram.jpg'
 
 useSeoMeta({
   title: 'Formulário Wanessa',
