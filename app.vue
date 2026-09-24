@@ -1,7 +1,7 @@
 <template>
   <NuxtPage />
   <AdminChatInbox v-if="isAdminRoute" />
-  <div v-else class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
+  <div v-else-if="!isIsolatedRoute" class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="bg-grain" aria-hidden="true"></div>
     <!-- cadeado removido do front: acesso admin só por rota direta (/admin/chat) -->
@@ -1381,6 +1381,11 @@ const route = useRoute()
 const isAdminRoute = computed(() => {
   const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
   return p === '/admin/chat' || p.endsWith('/admin/chat')
+})
+/** Rotas isoladas: só <NuxtPage />, sem shell da home */
+const isIsolatedRoute = computed(() => {
+  const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
+  return p === '/telegram'
 })
 /** Coluna direita sempre visível; conteúdo troca entre bot e canal público */
 const hidePublicChannel = computed(() => false)
