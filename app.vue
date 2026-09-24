@@ -1418,7 +1418,7 @@ const iqChatOptions = computed((): IqChatOpt[] => {
     return [{ key: 'close', label: 'Voltar', variant: 'wa-quick--no' }]
   }
   if (iqPhase.value === 'result') {
-    return [{ key: 'go_wa', label: 'Ir pro WhatsApp pra comprar', variant: 'wa-quick--yes' }]
+    return [{ key: 'go_wa', label: 'Ir para o WhatsApp', variant: 'wa-quick--yes' }]
   }
   if (iqPhase.value !== 'quiz') return []
   return iqCurrentOptions.value.map((o) => ({
@@ -1489,7 +1489,7 @@ async function iqAnswerInChat(opt: { id: string; label: string }) {
   if (iqStep.value === 1) {
     iqAnswers.ticket = opt.id
     if (opt.id === 'no_ticket') {
-      const msg = 'O menor valor é R$ 99,90.\nMenos que isso eu não atendo.'
+      const msg = 'Entendi. Nesse caso, o atendimento não é para você no momento.\nQuando estiver dentro desse valor, pode voltar.'
       iqDisqualify('disqualified_low_ticket', msg)
       await iqTypeHer(msg, 900)
       return
@@ -1502,13 +1502,13 @@ async function iqAnswerInChat(opt: { id: string; label: string }) {
   if (iqStep.value === 2) {
     iqAnswers.moment = opt.id
     if (opt.id === 'later') {
-      const msg = 'Beleza.\nQuando for comprar (R$ 99,90 pra cima), volta aqui.'
+      const msg = 'Beleza.\nQuando for a hora de comprar, volta aqui.'
       iqDisqualify('disqualified_later', msg, true)
       await iqTypeHer(msg, 900)
       return
     }
     if (opt.id === 'browsing') {
-      const msg = 'Aqui é só pra quem vai comprar.\nQuando quiser pagar, volta.'
+      const msg = 'Beleza.\nQuando quiser avançar para a compra, pode voltar.'
       iqDisqualify('disqualified_browsing', msg, true)
       await iqTypeHer(msg, 900)
       return
@@ -1521,7 +1521,7 @@ async function iqAnswerInChat(opt: { id: string; label: string }) {
   if (iqStep.value === 3) {
     iqAnswers.purchase = opt.id
     if (opt.id === 'buy_no') {
-      const msg = 'WhatsApp é pra comprar, não pra flertar.\nQuando quiser pagar (R$ 99,90 pra cima), volta.'
+      const msg = 'Sem problema.\nQuando quiser finalizar a compra, volta e te encaminho.'
       iqDisqualify('disqualified_no_purchase_intent', msg, true)
       await iqTypeHer(msg, 900)
       return
@@ -1529,8 +1529,8 @@ async function iqAnswerInChat(opt: { id: string; label: string }) {
     iqPhase.value = 'result'
     iqTrack('qualified', { answers: { ...iqAnswers } })
     await iqTypeHer(
-      'Combinado 🧡\n\nO WhatsApp é pra COMPRAR, não pra papo de graça.\nSem flerte. Sem encontro.\nA partir de R$ 99,90.\n\nLá: você escolhe → paga → recebe.',
-      1000,
+      'Combinado 🧡\nVou te encaminhar para o atendimento.\nLá você escolhe a opção e recebe as instruções para finalizar.',
+      900,
     )
   }
 }
@@ -1554,9 +1554,9 @@ const iqHeaderTitle = computed(() => {
 const iqQuestionText = computed(() => {
   return [
     'O que você quer? 👀',
-    'O menor valor é R$ 99,90.\nDá pra você pagar isso?',
-    'Quando você quer comprar? ⏰',
-    'No WhatsApp é só pra comprar.\nPode ir?',
+    'O atendimento começa em R$ 99,90.\nEsse valor está dentro do que você pretende investir?',
+    'Quando você pretende comprar? ⏰',
+    'Perfeito. Vou te encaminhar para o atendimento comercial.\nLá você escolhe a opção, recebe os detalhes e pode finalizar a compra.\nPode seguir?',
   ][iqStep.value] || ''
 })
 const iqCurrentOptions = computed((): IqOpt[] => {
@@ -1578,16 +1578,16 @@ const iqCurrentOptions = computed((): IqOpt[] => {
   // ETAPA 3 — MOMENTO
   if (iqStep.value === 2) {
     return [
-      { id: 'now', label: '🔥 Agora' },
-      { id: 'today', label: '🧡 Hoje' },
-      { id: 'later', label: '🕐 Outro dia' },
-      { id: 'browsing', label: '👀 Só estou olhando' },
+      { id: 'now', label: '🔥 Quero comprar agora' },
+      { id: 'today', label: '🧡 Quero comprar hoje' },
+      { id: 'later', label: '🕐 Ainda não vou comprar' },
+      { id: 'browsing', label: '👀 Só estou conhecendo' },
     ]
   }
-  // ETAPA 4 — INTENÇÃO DE COMPRA
+  // ETAPA 4 — CONFIRMAÇÃO OPERACIONAL (encaminhar)
   return [
-    { id: 'buy_yes', label: '🔥 Sim, quero comprar' },
-    { id: 'buy_no', label: '❌ Não, só queria papo' },
+    { id: 'buy_yes', label: '✅ Sim, seguir para comprar' },
+    { id: 'buy_no', label: '❌ Não agora' },
   ]
 })
 
@@ -1684,7 +1684,7 @@ function iqStart() {
   iqTrack('quiz_started')
   nextTick(() => {
     iqTypeHer(
-      'Aqui eu vendo foto, vídeo, call e chat.\nNão é papo de graça. Não é Tinder. Não saio com ninguém.\n\n4 perguntas rápidas.\nSó quem quer comprar (a partir de R$ 99,90).',
+      'Aqui é atendimento para compra de conteúdo, call e chat.\nSão 4 perguntas rápidas para confirmar se você está no perfil de atendimento.\nOs acessos começam em R$ 99,90.',
       800,
     )
   })
@@ -1733,7 +1733,7 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'no_ticket') {
       iqDisqualify(
         'disqualified_low_ticket',
-        'O menor valor é R$ 99,90.\nMenos que isso eu não atendo.',
+        'Entendi. Nesse caso, o atendimento não é para você no momento.\nQuando estiver dentro desse valor, pode voltar.',
       )
       return
     }
@@ -1748,7 +1748,7 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'later') {
       iqDisqualify(
         'disqualified_later',
-        'Beleza.\nQuando for comprar (R$ 99,90 pra cima), volta aqui.',
+        'Beleza.\nQuando for a hora de comprar, volta aqui.',
         true,
       )
       return
@@ -1756,7 +1756,7 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'browsing') {
       iqDisqualify(
         'disqualified_browsing',
-        'Aqui é só pra quem vai comprar.\nQuando quiser pagar, volta.',
+        'Beleza.\nQuando quiser avançar para a compra, pode voltar.',
         true,
       )
       return
@@ -1773,7 +1773,7 @@ function iqAnswer(opt: IqOpt) {
     if (opt.id === 'buy_no') {
       iqDisqualify(
         'disqualified_no_purchase_intent',
-        'WhatsApp é pra comprar, não pra flertar.\nQuando quiser pagar (R$ 99,90 pra cima), volta.',
+        'Sem problema.\nQuando quiser finalizar a compra, volta e te encaminho.',
         true,
       )
       return
@@ -1797,11 +1797,11 @@ function iqBuildWaMessage(): string {
   const interest = interestMap[iqAnswers.interest] || 'conteúdo'
   const moment = momentMap[iqAnswers.moment] || 'quero comprar'
   return (
-    `Oi. Vim do site pra COMPRAR.\n` +
+    `Oi! Vim do site para comprar.\n\n` +
     `Quero: ${interest}.\n` +
-    `Posso pagar a partir de R$ 99,90.\n` +
-    `${moment}.\n` +
-    `Não vim flertar. Manda as opções pra eu pagar.`
+    `Posso investir a partir de R$ 99,90.\n` +
+    `${moment.charAt(0).toUpperCase() + moment.slice(1)}.\n\n` +
+    `Pode me mandar as opções?`
   )
 }
 
