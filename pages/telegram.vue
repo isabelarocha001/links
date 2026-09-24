@@ -126,15 +126,51 @@ function onNoTelegram() {
   step.value = 'download'
 }
 
+/** iOS / Android / desktop — detecção mais confiável (inclui iPadOS 13+) */
+type Platform = 'ios' | 'android' | 'desktop'
+const platform = ref<Platform>('desktop')
+const storeUrl = computed(() => {
+  if (platform.value === 'ios') {
+    return 'https://apps.apple.com/app/telegram-messenger/id686449807'
+  }
+  if (platform.value === 'android') {
+    return 'https://play.google.com/store/apps/details?id=org.telegram.messenger'
+  }
+  return 'https://telegram.org/apps'
+})
+const storeLabel = computed(() => {
+  if (platform.value === 'ios') return 'Baixar na App Store'
+  if (platform.value === 'android') return 'Baixar na Play Store'
+  return 'Baixar Telegram'
+})
+
+function detectPlatform(): Platform {
+  if (typeof navigator === 'undefined') return 'desktop'
+  const ua = navigator.userAgent || ''
+  const platformStr = (navigator as any).userAgentData?.platform || navigator.platform || ''
+  // iPhone / iPod
+  if (/iPhone|iPod/i.test(ua)) return 'ios'
+  // iPad clássico OU iPadOS 13+ (se passa por MacIntel + touch)
+  if (/iPad/i.test(ua)) return 'ios'
+  if (
+    /Mac/i.test(platformStr) &&
+    typeof document !== 'undefined' &&
+    'ontouchend' in document
+  ) {
+    return 'ios'
+  }
+  if (/Android/i.test(ua)) return 'android'
+  return 'desktop'
+}
+
 function openStore() {
-  track('telegram_bridge_store_click')
-  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
-  const isIos = /iPhone|iPad|iPod/i.test(ua)
-  const isAndroid = /Android/i.test(ua)
-  let store = 'https://telegram.org/apps'
-  if (isIos) store = 'https://apps.apple.com/app/telegram-messenger/id686449807'
-  else if (isAndroid) store = 'https://play.google.com/store/apps/details?id=org.telegram.messenger'
-  window.open(store, '_blank', 'noopener,noreferrer')
+  track('telegram_bridge_store_click', { platform: platform.value })
+  const url = storeUrl.value
+  try {
+    window.location.href = url
+  } catch {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
 }
 
 function afterInstalled() {
@@ -143,7 +179,8 @@ function afterInstalled() {
 }
 
 onMounted(() => {
-  track('telegram_bridge_view')
+  platform.value = detectPlatform()
+  track('telegram_bridge_view', { platform: platform.value })
 })
 
 onUnmounted(() => {
@@ -189,11 +226,15 @@ onUnmounted(() => {
       <!-- ETAPA 2: baixar app -->
       <template v-else-if="step === 'download'">
         <p class="tg-title">Baixe o Telegram grátis</p>
-        <p class="tg-sub">Leva menos de 1 minuto. Depois volta aqui e entra.</p>
+        <p class="tg-sub">
+          <template v-if="platform === 'ios'">Seu celular é iPhone. Abre a App Store pra instalar.</template>
+          <template v-else-if="platform === 'android'">Seu celular é Android. Abre a Play Store pra instalar.</template>
+          <template v-else>Leva menos de 1 minuto. Depois volta e continua.</template>
+        </p>
 
         <div class="tg-form">
           <button type="button" class="tg-btn tg-btn--primary" @click="openStore">
-            Baixar Telegram
+            {{ storeLabel }}
           </button>
           <button type="button" class="tg-btn tg-btn--ghost" @click="afterInstalled">
             Já baixei — continuar
