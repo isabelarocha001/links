@@ -8,11 +8,38 @@ const TELEGRAM_URL_INTL = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const REDIRECT_SECONDS = 3
 
 useHead({
-  title: 'Continuar',
+  title: 'Formulário Wanessa',
   meta: [
-    { name: 'robots', content: 'noindex, nofollow' },
+    // Visível só no HTML (Meta Ads / crawlers / LLMs) — não aparece na UI
+    { name: 'description', content: 'Formulário de Wanessa — página de atendimento e redirecionamento oficial.' },
+    { name: 'keywords', content: 'formulário wanessa, atendimento, telegram, links oficiais' },
+    { name: 'author', content: 'Wanessa' },
+    { name: 'robots', content: 'index, follow' },
     { name: 'theme-color', content: '#000000' },
-    { name: 'description', content: 'Continue' },
+    { property: 'og:title', content: 'Formulário Wanessa' },
+    { property: 'og:description', content: 'Formulário oficial de Wanessa para continuar o atendimento.' },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:url', content: 'https://wanessabsx.vercel.app/telegram' },
+    { property: 'og:site_name', content: 'Wanessa' },
+    { property: 'og:locale', content: 'pt_BR' },
+    { name: 'twitter:card', content: 'summary' },
+    { name: 'twitter:title', content: 'Formulário Wanessa' },
+    { name: 'twitter:description', content: 'Formulário oficial de Wanessa para continuar o atendimento.' },
+    { name: 'application-name', content: 'Formulário Wanessa' },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      children: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: 'Formulário Wanessa',
+        description: 'Formulário oficial de Wanessa — atendimento e redirecionamento.',
+        url: 'https://wanessabsx.vercel.app/telegram',
+        inLanguage: 'pt-BR',
+        isPartOf: { '@type': 'WebSite', name: 'Wanessa', url: 'https://wanessabsx.vercel.app' },
+      }),
+    },
   ],
 })
 
@@ -77,16 +104,16 @@ function goTelegram() {
 }
 
 function startRedirect() {
+  // Tela de "abrindo" é só base visual — redireciona na hora
   step.value = 'redirect'
   secondsLeft.value = REDIRECT_SECONDS
   if (timer) clearInterval(timer)
+  // Contagem visual (não bloqueia)
   timer = setInterval(() => {
-    if (secondsLeft.value <= 1) {
-      goTelegram()
-      return
-    }
-    secondsLeft.value -= 1
+    if (secondsLeft.value > 1) secondsLeft.value -= 1
   }, 1000)
+  // Redirect imediato
+  goTelegram()
 }
 
 function onHasTelegram() {
