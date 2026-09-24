@@ -302,10 +302,10 @@ onUnmounted(() => {
         </div>
       </template>
 
-      <!-- ETAPA 3: redirecionar -->
+      <!-- ETAPA 3: abrir destino -->
       <template v-else>
         <p class="tg-title">Abrindo Telegram…</p>
-        <p class="tg-sub">Você será redirecionado em {{ secondsLeft }}s</p>
+        <p class="tg-sub">Abrindo em {{ secondsLeft }}s…</p>
 
         <div class="tg-bar" aria-hidden="true">
           <div
