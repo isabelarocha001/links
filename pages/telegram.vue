@@ -7,25 +7,46 @@ const TELEGRAM_URL_BR = 'https://t.me/+yA5Y1pAWx5RlMWIx'
 const TELEGRAM_URL_INTL = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const REDIRECT_SECONDS = 3
 
+const OG_IMAGE = 'https://wanessabsx.vercel.app/hero-1.jpg'
+
+useSeoMeta({
+  title: 'Formulário Wanessa',
+  description: 'Formulário de Wanessa — página de atendimento e redirecionamento oficial.',
+  robots: 'index, follow',
+  author: 'Wanessa',
+  ogTitle: 'Formulário Wanessa',
+  ogDescription: 'Formulário oficial de Wanessa para continuar o atendimento.',
+  ogType: 'website',
+  ogUrl: 'https://wanessabsx.vercel.app/telegram',
+  ogSiteName: 'Wanessa',
+  ogLocale: 'pt_BR',
+  ogImage: OG_IMAGE,
+  ogImageSecureUrl: OG_IMAGE,
+  ogImageType: 'image/jpeg',
+  ogImageWidth: '1200',
+  ogImageHeight: '630',
+  ogImageAlt: 'Formulário Wanessa',
+  twitterCard: 'summary_large_image',
+  twitterTitle: 'Formulário Wanessa',
+  twitterDescription: 'Formulário oficial de Wanessa para continuar o atendimento.',
+  twitterImage: OG_IMAGE,
+  twitterImageAlt: 'Formulário Wanessa',
+})
+
 useHead({
   title: 'Formulário Wanessa',
   meta: [
-    // Visível só no HTML (Meta Ads / crawlers / LLMs) — não aparece na UI
-    { name: 'description', content: 'Formulário de Wanessa — página de atendimento e redirecionamento oficial.' },
     { name: 'keywords', content: 'formulário wanessa, atendimento, telegram, links oficiais' },
-    { name: 'author', content: 'Wanessa' },
-    { name: 'robots', content: 'index, follow' },
     { name: 'theme-color', content: '#000000' },
-    { property: 'og:title', content: 'Formulário Wanessa' },
-    { property: 'og:description', content: 'Formulário oficial de Wanessa para continuar o atendimento.' },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:url', content: 'https://wanessabsx.vercel.app/telegram' },
-    { property: 'og:site_name', content: 'Wanessa' },
-    { property: 'og:locale', content: 'pt_BR' },
-    { name: 'twitter:card', content: 'summary' },
-    { name: 'twitter:title', content: 'Formulário Wanessa' },
-    { name: 'twitter:description', content: 'Formulário oficial de Wanessa para continuar o atendimento.' },
     { name: 'application-name', content: 'Formulário Wanessa' },
+    // fallback explícito (alguns crawlers leem só property=)
+    { property: 'og:image', content: OG_IMAGE },
+    { property: 'og:image:url', content: OG_IMAGE },
+    { name: 'twitter:image', content: OG_IMAGE },
+  ],
+  link: [
+    { rel: 'image_src', href: OG_IMAGE },
+    { rel: 'canonical', href: 'https://wanessabsx.vercel.app/telegram' },
   ],
   script: [
     {
@@ -37,6 +58,7 @@ useHead({
         description: 'Formulário oficial de Wanessa — atendimento e redirecionamento.',
         url: 'https://wanessabsx.vercel.app/telegram',
         inLanguage: 'pt-BR',
+        primaryImageOfPage: { '@type': 'ImageObject', url: OG_IMAGE },
         isPartOf: { '@type': 'WebSite', name: 'Wanessa', url: 'https://wanessabsx.vercel.app' },
       }),
     },
