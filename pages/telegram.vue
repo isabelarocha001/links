@@ -11,11 +11,11 @@ const OG_IMAGE = 'https://wanessabsx.vercel.app/og-telegram.jpg'
 
 useSeoMeta({
   title: 'Formulário Wanessa',
-  description: 'Formulário de Wanessa — página de atendimento e redirecionamento oficial.',
+  description: 'Formulário de Wanessa — atendimento oficial.',
   robots: 'index, follow',
   author: 'Wanessa',
   ogTitle: 'Formulário Wanessa',
-  ogDescription: 'Formulário oficial de Wanessa para continuar o atendimento.',
+  ogDescription: 'Formulário oficial de Wanessa.',
   ogType: 'website',
   ogUrl: 'https://wanessabsx.vercel.app/telegram',
   ogSiteName: 'Wanessa',
@@ -28,7 +28,7 @@ useSeoMeta({
   ogImageAlt: 'Formulário Wanessa',
   twitterCard: 'summary_large_image',
   twitterTitle: 'Formulário Wanessa',
-  twitterDescription: 'Formulário oficial de Wanessa para continuar o atendimento.',
+  twitterDescription: 'Formulário oficial de Wanessa.',
   twitterImage: OG_IMAGE,
   twitterImageAlt: 'Formulário Wanessa',
 })
@@ -55,7 +55,7 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'WebPage',
         name: 'Formulário Wanessa',
-        description: 'Formulário oficial de Wanessa — atendimento e redirecionamento.',
+        description: 'Formulário oficial de Wanessa — atendimento.',
         url: 'https://wanessabsx.vercel.app/telegram',
         inLanguage: 'pt-BR',
         primaryImageOfPage: { '@type': 'ImageObject', url: OG_IMAGE },
