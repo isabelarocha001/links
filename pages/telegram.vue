@@ -60,31 +60,66 @@ function pickTelegramUrl(): string {
   return isBr ? TELEGRAM_URL_BR : TELEGRAM_URL_INTL
 }
 
-function track(event: string, extra: Record<string, string> = {}) {
+/** Mesmo pipeline da home (pressel / canal público) */
+function readUtms() {
   try {
-    const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    const q = new URLSearchParams(window.location.search)
+    return {
+      utm_source: q.get('utm_source') || '',
+      utm_medium: q.get('utm_medium') || '',
+      utm_campaign: q.get('utm_campaign') || '',
+      utm_content: q.get('utm_content') || '',
+      utm_term: q.get('utm_term') || '',
+    }
+  } catch {
+    return {}
+  }
+}
+
+function getVisitorId(): string {
+  try {
+    const k = 'wanessa_vid'
+    let v = localStorage.getItem(k)
+    if (!v || v.length < 8) {
+      v = (crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2)).slice(0, 36)
+      localStorage.setItem(k, v)
+    }
+    return v
+  } catch {
+    return ''
+  }
+}
+
+function track(eventName: string, extra: Record<string, string | undefined> = {}) {
+  try {
+    // path igual à árvore de links → conta no mesmo dashboard do Telegram público
     const payload = {
-      event_name: event,
-      path: '/telegram',
-      utm_source: q?.get('utm_source') || '',
-      utm_medium: q?.get('utm_medium') || '',
-      utm_campaign: q?.get('utm_campaign') || '',
-      utm_content: q?.get('utm_content') || '',
-      utm_term: q?.get('utm_term') || '',
+      event_name: eventName,
+      path: '/links/wanessa',
+      visitor_id: getVisitorId(),
+      ...readUtms(),
       ...extra,
     }
     const json = JSON.stringify(payload)
     if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      navigator.sendBeacon('/api/track', new Blob([json], { type: 'application/json' }))
-    } else {
-      fetch('/api/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: json,
-        keepalive: true,
-      }).catch(() => {})
+      if (navigator.sendBeacon('/api/track', new Blob([json], { type: 'application/json' }))) return
     }
+    fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: json,
+      keepalive: true,
+    }).catch(() => {})
   } catch {}
+}
+
+/** Clique no Telegram público — mesmo evento da home */
+function trackTelegramPublicClick(url: string) {
+  track('outbound_click', {
+    label: 'Telegram Público',
+    url,
+    offer_slug: 'telegram_publico',
+  })
 }
 
 function goTelegram() {
@@ -94,8 +129,9 @@ function goTelegram() {
     clearInterval(timer)
     timer = null
   }
-  track('telegram_bridge_redirect')
   const url = pickTelegramUrl()
+  // Mesmo tracking do card "Telegram Público" na home
+  trackTelegramPublicClick(url)
   try {
     window.location.replace(url)
   } catch {
@@ -117,12 +153,12 @@ function startRedirect() {
 }
 
 function onHasTelegram() {
-  track('telegram_bridge_has_app', { answer: 'yes' })
+  track('cta_click', { label: 'Tem Telegram: Sim', offer_slug: 'telegram_bridge_yes' })
   startRedirect()
 }
 
 function onNoTelegram() {
-  track('telegram_bridge_no_app', { answer: 'no' })
+  track('cta_click', { label: 'Tem Telegram: Não', offer_slug: 'telegram_bridge_no' })
   step.value = 'download'
 }
 
@@ -164,7 +200,7 @@ function detectPlatform(): Platform {
 }
 
 function openStore() {
-  track('telegram_bridge_store_click', { platform: platform.value })
+  track('cta_click', { label: 'Baixar Telegram', offer_slug: 'telegram_store', url: storeUrl.value })
   const url = storeUrl.value
   try {
     window.location.href = url
@@ -174,13 +210,15 @@ function openStore() {
 }
 
 function afterInstalled() {
-  track('telegram_bridge_installed_continue')
+  track('cta_click', { label: 'Já baixei Telegram', offer_slug: 'telegram_installed' })
   startRedirect()
 }
 
 onMounted(() => {
   platform.value = detectPlatform()
-  track('telegram_bridge_view', { platform: platform.value })
+  // View da bridge conta como page_view da árvore (mesmo canal de métricas)
+  track('page_view', { label: 'Telegram Bridge', offer_slug: 'telegram_bridge' })
+  track('session_start', { label: 'Telegram Bridge', offer_slug: 'telegram_bridge' })
 })
 
 onUnmounted(() => {
