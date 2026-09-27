@@ -83,7 +83,7 @@
         <div id="links-intro" class="links-intro">
           <span class="links-intro__eyebrow">Bem-vindo ao meu universo</span>
           <h1>Oi, eu sou a Wanessa 💜</h1>
-          <p>Conteúdo, conversa e experiências exclusivas — tudo do meu jeito, para quem quer se aproximar de verdade.</p>
+          <p>Conteúdo, conversa e experiências exclusivas. Tudo do meu jeito, para quem quer se aproximar de verdade.</p>
         </div>
         <section v-if="isPt" class="creator-signals" aria-label="Sobre a Wanessa">
           <p class="creator-signals__lead">Aqui você não encontra um catálogo qualquer. Você escolhe como quer se aproximar de mim.</p>
@@ -587,7 +587,7 @@
               </div>
               <div class="wa-profile-row">
                 <span class="wa-profile-row-label">Sobre</span>
-                <span class="wa-profile-row-value">Atendimento 100% online — packs, chat, vídeos e videochamada. Aqui a gente se diverte com calma e privacidade 🔥</span>
+                <span class="wa-profile-row-value">Atendimento 100% online. Packs, chat, vídeos e videochamada. Aqui a gente se diverte com calma e privacidade 🔥</span>
               </div>
             </div>
           </div>
@@ -3270,7 +3270,7 @@ function pushPixIntoFunnelChat() {
   ;(window as any).__pixAskedOnce = true
   pushFunnel(
     'her',
-    'Posso te passar a chave PIX agora? 💚\n\nMe responde "pode", "manda" ou "sim" que eu te envio o código na hora.\n\nSe não quiser agora, sem problema — a gente continua conversando.'
+    'Posso te passar a chave PIX agora? 💚\n\nMe responde "pode", "manda" ou "sim" que eu te envio o código na hora.\n\nSe não quiser agora, sem problema. A gente continua conversando.'
   )
   // Sem setTimeout. Só mostra quando o lead confirmar em sendFunnelFreeText.
 }
@@ -3575,7 +3575,7 @@ async function submitStripeCard() {
       } catch {}
       await closeStripeModal()
       try {
-        await funnelType('Payment confirmed 💚|||Chat unlocked — you can message me now.', 800)
+        await funnelType('Payment confirmed 💚|||Chat unlocked. You can message me now.', 800)
       } catch {}
     } else {
       stripeError.value = 'Payment status: ' + (paymentIntent?.status || 'unknown')
@@ -4253,7 +4253,7 @@ async function submitDeclineWhy() {
       'Relaxa… aqui é só nós dois, sem gravação pra fora e no seu ritmo 😌\n\nSe quiser só 10 min pra testar, eu te recebo bem gostoso. Atende na próxima?'
   } else if (/whats|zap|ligar|telefone/.test(lower)) {
     reply =
-      'A chamada é aqui mesmo no chat, com vídeo liberado depois do PIX — mais discreto que WhatsApp 🔒\n\nQuer tentar de novo?'
+      'A chamada é aqui mesmo no chat, com vídeo liberado depois do PIX. Mais discreto que WhatsApp 🔒\n\nQuer tentar de novo?'
   }
   await funnelType(reply, 1600)
   if (funnelStep.value === 'video') {
@@ -4339,7 +4339,7 @@ function endLiveVideoCall(reason: 'timer' | 'video_end' | 'hangup' = 'hangup') {
     funnelType(
       reason === 'timer' || reason === 'video_end'
         ? `Seu tempo de chamada acabou, amor ⏱ (${used})\n\nSe quiser continuar comigo, assina mais minutos:\n\n• +10 min  R$ 99,90\n• +20 min  R$ 149,90\n• +30 min  R$ 229,90\n\nBora prorrogar?`
-        : `Chamada encerrada (${used}). Seu pacote foi consumido — pra me ver de novo é só assinar mais minutos 🔥`,
+        : `Chamada encerrada (${used}). Seu pacote foi consumido. Pra me ver de novo é só assinar mais minutos 🔥`,
       1600,
     )
   }
@@ -4579,7 +4579,7 @@ async function onFunnelPaid() {
     const minutes = videoCallPurchasedMin.value || Number(String(selectedPack.value?.key || '').replace('vid_', '')) || 10
     grantCallCredit(Number(minutes) || 10, selectedPack.value?.key || 'vid_10')
     await funnelType(
-      `Recebi o PIX, amor 🔥\n\nSua videochamada (${pack?.label || 'ao vivo'}) tá liberada.\n\nVou te ligar agora — atende pra gente começar 😈`,
+      `Recebi o PIX, amor 🔥\n\nSua videochamada (${pack?.label || 'ao vivo'}) tá liberada.\n\nVou te ligar agora. Atende pra gente começar 😈`,
       1600,
     )
     funnelStep.value = 'video_call_ready'
@@ -5889,7 +5889,7 @@ async function sendFunnelFreeText() {
     // only if NO duration in message:
     funnelStep.value = 'video'
     await funnelType(
-      'Entendi o clima que você quer 😈\n\nPra gente fazer isso ao vivo, escolhe o tempo:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n• 1 hora  R$ 399,90\n• 90 min  R$ 549,90\n• 2 horas  R$ 699,90\n• 3 horas  R$ 999,90\n\nMe fala qual encaixa melhor pra você agora — ou se prefere outro tempo.',
+      'Entendi o clima que você quer 😈\n\nPra gente fazer isso ao vivo, escolhe o tempo:\n\n• 10 min  R$ 99,90\n• 20 min  R$ 149,90\n• 30 min  R$ 229,90\n• 1 hora  R$ 399,90\n• 90 min  R$ 549,90\n• 2 horas  R$ 699,90\n• 3 horas  R$ 999,90\n\nMe fala qual encaixa melhor pra você agora. Se preferir, posso te mostrar outro tempo.',
       1800,
     )
     return
@@ -6000,7 +6000,7 @@ async function sendFunnelFreeText() {
       )
     } else {
       await funnelType(
-        'Depende do que você quer, amor 😘 Pack, videochamada, webnamoro ou chat — me diz qual e eu te passo o valor.',
+        'Depende do que você quer, amor 😘 Pack, videochamada, webnamoro ou chat. Me diz qual e eu te passo o valor.',
         1100,
       )
     }
