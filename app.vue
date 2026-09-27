@@ -81,7 +81,7 @@
           </div>
         </header>
         <div id="links-intro" class="links-intro">
-          <span class="links-intro__eyebrow">Bem-vindo ao meu universo</span>
+          <span class="links-intro__eyebrow">Bem-vindo ao meu lugar secreto</span>
           <h1>Oi, eu sou a Wanessa 💜</h1>
           <p>Conteúdo, conversa e experiências exclusivas. Tudo do meu jeito, para quem quer se aproximar de verdade.</p>
         </div>
@@ -198,8 +198,9 @@
         <section v-if="isPt" class="creator-intro" aria-label="Sobre mim">
           <span class="creator-intro__eyebrow">Um pouco mais sobre mim</span>
           <h2>Quero que você conheça a Wanessa por trás da foto</h2>
-          <p>Eu gosto de conhecer quem está do outro lado, conversar sem pressa e criar uma conexão que pareça nossa. Aqui você entra no meu universo e escolhe como quer se aproximar de mim.</p>
+          <p>Eu gosto de conhecer quem está do outro lado, conversar sem pressa e criar uma conexão que pareça nossa. Aqui você entra no meu lugar secreto e escolhe como quer se aproximar de mim.</p>
           <p>Tenho 24 anos, moro em Balneário Camboriú e crio conteúdo exclusivo para meus fãs online. No chat, posso ser sua companhia, sua confidente ou até sua noiva virtual.</p>
+          <p>Você que escolhe, amor. Eu só te mostro os caminhos para chegar mais perto de mim.</p>
         </section>
 
         <Teleport to="body">
