@@ -85,9 +85,8 @@
           <p>Escolha onde prefere me ter, amor</p>
         </div>
         <section v-if="isPt" class="creator-intro" aria-label="Sobre mim">
-          <p>Oi, eu sou a Wanessa 💜 Sou criadora de conteúdo adulto e adoro conversar com quem quer me conhecer de verdade.</p>
-          <p>Nosso contato é só online: conteúdo exclusivo, conversa por mensagem e videochamada. Não faço encontros presenciais.</p>
-          <span class="creator-intro__hint">Quer olhar antes? As prévias estão no meu canal público, sem compromisso.</span>
+          <p>Meu nome é Wanessa 💜 Sou criadora de conteúdo exclusivo, tenho 24 anos e moro em Balneário Camboriú, Santa Catarina.</p>
+          <p>Aqui você encontra conteúdos que não publico em nenhum outro lugar, exclusivos para meus fãs online. Gosto de conversar no chat — posso ser sua noiva virtual.</p>
         </section>
         <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
           <div class="card-col" v-if="privsexLinkEnabled">
@@ -6411,7 +6410,7 @@ const faqItems = [
   { question: 'Você faz encontros presenciais?', answer: 'Não. Eu sou criadora de conteúdo e meu contato com você acontece somente online.' },
   { question: 'O que posso encontrar por aqui?', answer: 'Conteúdo exclusivo, conversa por mensagem (sexting) e opções de videochamada. Você escolhe o formato que combina com você.' },
   { question: 'Posso ver prévias antes de escolher?', answer: 'Sim! Meu canal público é o lugar para conhecer minhas prévias antes de decidir, sem compromisso.', preview: true },
-  { question: 'Como funcionam conversa e videochamada?', answer: 'Toque em “Conversar comigo” para conhecer as opções e condições. Tudo acontece online, sem encontros presenciais.' },
+  { question: 'Como começo?', answer: 'Toque em “Conversar comigo” para conhecer as opções, escolher o que combina com você e receber as condições.' },
 ]
 const faqActive = ref<number | null>(null)
 const faqSeen = ref<number[]>([])
