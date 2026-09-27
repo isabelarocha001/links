@@ -82,7 +82,6 @@
         </header>
         <div id="links-intro" class="links-intro">
           <span class="links-intro__eyebrow">Bem-vindo ao meu lugar secreto</span>
-          <h1>Chegue mais perto de mim 💜</h1>
           <p>Eu deixei tudo pronto para você escolher como quer me conhecer, no seu ritmo e do seu jeito.</p>
         </div>
         <section v-if="isPt" class="creator-signals" aria-label="Sobre a Wanessa">
