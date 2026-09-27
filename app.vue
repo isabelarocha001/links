@@ -87,6 +87,13 @@
         </div>
         <section v-if="isPt" class="creator-signals" aria-label="Sobre a Wanessa">
           <p class="creator-signals__lead">Aqui você não encontra um catálogo qualquer. Você escolhe como quer se aproximar de mim.</p>
+          <div class="creator-presence" :class="{ 'is-online': adminPresenceOnline }" aria-live="polite">
+            <span class="creator-presence__dot" aria-hidden="true"></span>
+            <span>{{ adminPresenceOnline ? 'Online agora' : 'Atendimento online' }}</span>
+            <span class="creator-presence__separator" aria-hidden="true">•</span>
+            <span>Wanessa em Balneário Camboriú</span>
+            <span v-if="nearPresenceReady && nearPresenceText" class="creator-presence__distance">{{ nearPresenceText }}</span>
+          </div>
           <div class="creator-signals__facts" aria-label="Informações rápidas">
             <span>24 anos</span>
             <span>Balneário Camboriú</span>
@@ -6353,16 +6360,17 @@ const gallery = ['/model.jpg', '/hero-1.jpg', '/hero-2.jpg', '/hero-3.jpg']
 const photoIndex = ref(0)
 let photoTimer: ReturnType<typeof setInterval> | null = null
 
-/** Presença regional (IP): mostra km plausíveis na mesma cidade/região do lead */
+/** Presença regional (IP): mostra somente uma distância aproximada, sem expor o IP. */
 const nearPresenceReady = ref(false)
 const nearPresenceText = ref('')
-function hashSeed(s: string): number {
-  let h = 2166136261
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
+const CREATOR_LOCATION = { lat: -26.9926, lon: -48.6352 }
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (value: number) => value * Math.PI / 180
+  const earthKm = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return earthKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 async function loadNearPresence() {
   try {
@@ -6377,39 +6385,19 @@ async function loadNearPresence() {
     if (!res.ok) throw new Error('geo fail')
     const data = await res.json()
     if (data?.error) throw new Error(String(data.reason || 'geo'))
-    const city = String(data.city || '').trim()
-    const region = String(data.region || data.region_code || '').trim()
-    const country = String(data.country_name || data.country || '').trim()
-    const place = city || region || country
-    let seed = 'anon'
-    try { seed = getOrCreateVisitorId() || seed } catch {}
-    seed += '|' + place
-    const h = hashSeed(seed)
-    // 3–27 km na mesma região (parece real, estável por visitante)
-    const km = 3 + (h % 25)
-    const online = (h % 10) !== 0 // ~90% "online agora"
-    if (isPt.value) {
-      if (place) {
-        nearPresenceText.value = online
-          ? `Online · a ~${km} km de você · ${place}`
-          : `Visto por último perto de você · ${place}`
-      } else {
-        nearPresenceText.value = online ? 'Online perto de você' : 'Esteve online perto de você'
-      }
+    const lat = Number(data.latitude)
+    const lon = Number(data.longitude)
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      const km = Math.max(1, Math.round(distanceKm(lat, lon, CREATOR_LOCATION.lat, CREATOR_LOCATION.lon)))
+      nearPresenceText.value = `aproximadamente ${km} km da sua região`
     } else {
-      if (place) {
-        nearPresenceText.value = online
-          ? `Online · ~${km} km from you · ${place}`
-          : `Last seen near you · ${place}`
-      } else {
-        nearPresenceText.value = online ? 'Online near you' : 'Last seen near you'
-      }
+      nearPresenceText.value = 'na sua região'
     }
     nearPresenceReady.value = true
   } catch {
-    // fallback mínimo (sem vazar erro)
+    // fallback mínimo sem vazar dados de localização
     try {
-      nearPresenceText.value = isPt.value ? 'Online agora' : 'Online now'
+      nearPresenceText.value = 'na sua região'
       nearPresenceReady.value = true
     } catch {}
   }
@@ -6422,6 +6410,9 @@ const faqItems = [
   { question: 'Você faz encontros presenciais?', answer: 'Não. Eu sou criadora de conteúdo e meu contato com você acontece somente online.' },
   { question: 'O que posso encontrar por aqui?', answer: 'Conteúdo exclusivo, conversa por mensagem (sexting) e opções de videochamada. Você escolhe o formato que combina com você.' },
   { question: 'Posso ver prévias antes de escolher?', answer: 'Sim! Meu canal público é o lugar para conhecer minhas prévias antes de decidir, sem compromisso.', preview: true },
+  { question: 'Você responde pessoalmente?', answer: 'Sim. Você conversa diretamente comigo pelo chat e escolhe o tipo de experiência que quer viver.' },
+  { question: 'Como funciona o pagamento e a entrega?', answer: 'Você escolhe o que quer, recebe a chave Pix no chat e envia o comprovante. Depois da confirmação, eu libero o acesso ou envio o conteúdo pelo canal combinado.' },
+  { question: 'Meus dados ficam seguros?', answer: 'Sim. O atendimento é privado e seus dados não são publicados.' },
   { question: 'Como começo?', answer: 'Toque em “Conversar comigo” para conhecer as opções, escolher o que combina com você e receber as condições.' },
 ]
 const faqActive = ref<number | null>(null)
@@ -6993,6 +6984,9 @@ onMounted(async () => {
   loadAvatarFocus()
   // restaura sessão admin se o cookie ainda for válido (não bloqueia o chat)
   restoreAdminSession()
+  // Presença e distância aproximada só para contextualizar a página pública.
+  loadNearPresence()
+  pullAdminPresence()
   // 1) PRIMEIRO: landing do chat / chamada (Telegram / ads / previas) — antes de qualquer await
   let openChatDirect = false
   let openChamadaDirect = false

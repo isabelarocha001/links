@@ -220,6 +220,12 @@
 .links-intro p { max-width: 420px; margin: 0 auto; color: rgba(245, 240, 255, 0.8); font-size: 0.9rem; line-height: 1.45; }
 .creator-signals { width: 100%; box-sizing: border-box; margin: 0 0 16px; padding: 11px 13px; border: 1px solid rgba(192, 132, 252, 0.28); border-radius: 12px; background: rgba(27, 24, 32, 0.72); }
 .creator-signals__lead { margin: 0 0 9px; color: #f4efe7; font-size: 0.78rem; line-height: 1.4; text-align: center; }
+.creator-presence { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 5px; margin: 0 0 10px; color: rgba(245, 240, 255, 0.72); font-size: 0.68rem; line-height: 1.35; text-align: center; }
+.creator-presence__dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #7b8794; }
+.creator-presence.is-online .creator-presence__dot { background: #25d366; box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55); animation: creatorPresencePulse 1.8s ease-out infinite; }
+@keyframes creatorPresencePulse { 0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55); } 70% { box-shadow: 0 0 0 7px rgba(37, 211, 102, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); } }
+.creator-presence__separator { color: rgba(192, 132, 252, 0.7); }
+.creator-presence__distance { color: #d8b4fe; }
 .creator-signals__facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 8px; }
 .creator-signals__facts span { padding: 4px 8px; border-radius: 999px; background: rgba(168, 85, 247, 0.14); color: #e9d5ff; font-size: 0.68rem; font-weight: 650; }
 .creator-intro { width: 100%; box-sizing: border-box; padding: 16px 16px 15px 17px; margin: 2px 0 22px; border: 1px solid rgba(192, 132, 252, 0.28); border-left: 3px solid #c084fc; border-radius: 14px; background: linear-gradient(145deg, rgba(35, 31, 40, 0.96), rgba(22, 20, 27, 0.98)); color: #f7f4ef; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22); }
