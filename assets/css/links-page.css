@@ -219,7 +219,7 @@
 .links-intro { width: 100%; text-align: center; padding: 0 12px; margin: 0 0 12px; box-sizing: border-box; }
 .links-intro__eyebrow { display: block; margin: 0 0 7px; color: #c084fc; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
 .links-intro h1 { margin: 0 0 6px; color: #f5f0ff; font-size: clamp(1.25rem, 5vw, 1.65rem); line-height: 1.2; }
-.links-intro p { max-width: 420px; margin: 0 auto; color: rgba(245, 240, 255, 0.8); font-size: 0.9rem; line-height: 1.45; font-family: 'Poppins', Inter, system-ui, sans-serif; }
+.links-intro p { max-width: 420px; margin: 0 auto; color: #ffffff; font-size: 0.9rem; line-height: 1.45; font-family: 'Poppins', Inter, system-ui, sans-serif; }
 .creator-signals { width: 100%; box-sizing: border-box; margin: 0 0 16px; padding: 11px 13px; border: 1px solid rgba(192, 132, 252, 0.28); border-radius: 12px; background: rgba(27, 24, 32, 0.72); }
 .creator-signals__lead { margin: 0 0 9px; color: #f4efe7; font-size: 0.78rem; line-height: 1.4; text-align: center; }
 .creator-presence { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 5px; margin: 0 0 10px; color: rgba(245, 240, 255, 0.72); font-size: 0.68rem; line-height: 1.35; text-align: center; }
