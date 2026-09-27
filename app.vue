@@ -98,27 +98,8 @@
           </div>
         </section>
         <section v-if="isPt" class="choice-guide" aria-labelledby="choice-guide-title">
-          <span class="choice-guide__eyebrow">Seu caminho começa aqui</span>
           <h2 id="choice-guide-title">Por onde você quer continuar?</h2>
           <p>Escolha uma das opções que preparei para você:</p>
-          <div class="choice-guide__options">
-            <div v-if="privsexLinkEnabled" class="choice-guide__option">
-              <strong>Quero conteúdo exclusivo</strong>
-              <span>Entre no PrivSex</span>
-            </div>
-            <div v-if="!hidePublicChannel" class="choice-guide__option">
-              <strong>Quero ver antes</strong>
-              <span>Confira as prévias grátis</span>
-            </div>
-            <div v-if="publicChannelEnabled && telegramBotEnabled" class="choice-guide__option">
-              <strong>Quero entrar no VIP</strong>
-              <span>Acesse o bot do Telegram</span>
-            </div>
-            <div v-if="privsexLinkEnabled" class="choice-guide__option">
-              <strong>Quero conversar</strong>
-              <span>Conheça as opções no WhatsApp</span>
-            </div>
-          </div>
         </section>
         <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
           <div class="card-col" v-if="privsexLinkEnabled">
