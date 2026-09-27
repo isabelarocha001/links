@@ -6338,6 +6338,7 @@ let photoTimer: ReturnType<typeof setInterval> | null = null
 /** Presença regional (IP): mostra somente uma distância aproximada, sem expor o IP. */
 const nearPresenceReady = ref(false)
 const nearPresenceText = ref('')
+const CREATOR_CITY = 'Balneário Camboriú'
 const CREATOR_LOCATION = { lat: -26.9926, lon: -48.6352 }
 function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = (value: number) => value * Math.PI / 180
@@ -6364,15 +6365,15 @@ async function loadNearPresence() {
     const lon = Number(data.longitude)
     if (Number.isFinite(lat) && Number.isFinite(lon)) {
       const km = Math.max(1, Math.round(distanceKm(lat, lon, CREATOR_LOCATION.lat, CREATOR_LOCATION.lon)))
-      nearPresenceText.value = `aproximadamente ${km} km da sua região`
+      nearPresenceText.value = `${CREATOR_CITY} · aproximadamente ${km} km de você`
     } else {
-      nearPresenceText.value = 'na sua região'
+      nearPresenceText.value = CREATOR_CITY
     }
     nearPresenceReady.value = true
   } catch {
     // fallback mínimo sem vazar dados de localização
     try {
-      nearPresenceText.value = 'na sua região'
+      nearPresenceText.value = CREATOR_CITY
       nearPresenceReady.value = true
     } catch {}
   }
