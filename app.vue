@@ -88,9 +88,11 @@
         <section v-if="isPt" class="creator-signals" aria-label="Sobre a Wanessa">
           <p class="creator-signals__lead">Aqui você não encontra um catálogo qualquer. Você escolhe como quer se aproximar de mim.</p>
           <div class="creator-presence" :class="{ 'is-online': adminPresenceOnline }" aria-live="polite">
-            <span class="creator-presence__dot" aria-hidden="true"></span>
-            <span>{{ adminPresenceOnline ? 'Online agora' : 'Atendimento online' }}</span>
-            <span class="creator-presence__separator" aria-hidden="true">•</span>
+            <template v-if="adminPresenceLoaded && (adminPresenceOnline || adminPresenceLabel)">
+              <span class="creator-presence__dot" aria-hidden="true"></span>
+              <span>{{ adminPresenceOnline ? 'Online agora' : adminPresenceLabel }}</span>
+              <span class="creator-presence__separator" aria-hidden="true">•</span>
+            </template>
             <span>Wanessa em Balneário Camboriú</span>
             <span v-if="nearPresenceReady && nearPresenceText" class="creator-presence__distance">{{ nearPresenceText }}</span>
           </div>
@@ -5034,40 +5036,35 @@ function logFunnelMessage(direction: 'lead' | 'bot' | 'system', message: string,
 }
 
 const adminPresenceOnline = ref(false)
-const adminPresenceLabel = ref('visto por último às --:--')
+const adminPresenceLoaded = ref(false)
+const adminPresenceLabel = ref('')
 let presencePollTimer: ReturnType<typeof setInterval> | null = null
-
-function fallbackLastSeenLabel(): string {
-  try {
-    const time = new Intl.DateTimeFormat('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(new Date())
-    return `visto por último às ${time}`
-  } catch {
-    return 'visto por último às 12:00'
-  }
-}
+let publicPresenceTimer: ReturnType<typeof setInterval> | null = null
 
 async function pullAdminPresence() {
   try {
     const res = await $fetch<{ online?: boolean; label?: string }>('/api/presence')
     adminPresenceOnline.value = !!res?.online
     const lbl = String(res?.label || '').trim()
-    if (res?.online) {
-      adminPresenceLabel.value = 'online'
-    } else if (lbl && lbl !== 'offline' && lbl !== 'online' && !/recentemente/i.test(lbl)) {
-      adminPresenceLabel.value = lbl
-    } else if (lbl && /às\s*\d/i.test(lbl)) {
-      adminPresenceLabel.value = lbl
-    } else {
-      adminPresenceLabel.value = fallbackLastSeenLabel()
-    }
+    adminPresenceLabel.value = res?.online ? '' : lbl
+    adminPresenceLoaded.value = true
   } catch {
     adminPresenceOnline.value = false
-    adminPresenceLabel.value = fallbackLastSeenLabel()
+    adminPresenceLabel.value = ''
+    adminPresenceLoaded.value = false
+  }
+}
+
+function startPublicPresencePoll() {
+  if (publicPresenceTimer) clearInterval(publicPresenceTimer)
+  pullAdminPresence()
+  publicPresenceTimer = setInterval(pullAdminPresence, 5000)
+}
+
+function stopPublicPresencePoll() {
+  if (publicPresenceTimer) {
+    clearInterval(publicPresenceTimer)
+    publicPresenceTimer = null
   }
 }
 
@@ -6986,7 +6983,7 @@ onMounted(async () => {
   restoreAdminSession()
   // Presença e distância aproximada só para contextualizar a página pública.
   loadNearPresence()
-  pullAdminPresence()
+  startPublicPresencePoll()
   // 1) PRIMEIRO: landing do chat / chamada (Telegram / ads / previas) — antes de qualquer await
   let openChatDirect = false
   let openChamadaDirect = false
@@ -7115,6 +7112,7 @@ onMounted(async () => {
 onUnmounted(() => {
   if (photoTimer) clearInterval(photoTimer)
   if (typingTimer) clearTimeout(typingTimer)
+  stopPublicPresencePoll()
   stopTour()
 })
 function openLogin() {

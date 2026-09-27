@@ -7,11 +7,11 @@ import { useServiceSupabase } from '../utils/supabase'
 /**
  * Status público de presença.
  * online só se is_online=true E last_seen_at há menos de 2s.
- * Sempre "visto por último às HH:MM" (nunca "recentemente").
+ * Quando não existe registro, não inventa um horário de última atividade.
  */
 const ONLINE_MS = 2_000
 
-function formatLastSeen(iso: string | null | undefined): string {
+function formatLastSeen(iso: string | null | undefined): string | null {
   try {
     const d = iso ? new Date(iso) : new Date()
     const when = Number.isNaN(d.getTime()) ? new Date() : d
@@ -32,7 +32,7 @@ function formatLastSeen(iso: string | null | undefined): string {
     if (today === that) return `visto por último às ${time}`
     return `visto por último ${that} às ${time}`
   } catch {
-    return 'visto por último às 12:00'
+    return null
   }
 }
 
@@ -49,7 +49,7 @@ export default defineEventHandler(async () => {
       ok: true,
       online: false,
       last_seen_at: null,
-      label: formatLastSeen(null),
+      label: null,
     }
   }
 
