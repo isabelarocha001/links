@@ -215,17 +215,17 @@
 .eyebrow { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #c084fc; margin: 0 0 6px; }
 .accent-line { width: 48px; height: 1px; margin: 16px auto 0; background: linear-gradient(90deg, transparent, #c084fc, transparent); }
 .links-intro { width: 100%; text-align: center; padding: 0 12px; margin: 0 0 12px; box-sizing: border-box; }
-.links-intro__eyebrow { display: block; margin: 0 0 7px; color: #d6ad68; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.links-intro__eyebrow { display: block; margin: 0 0 7px; color: #c084fc; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
 .links-intro h1 { margin: 0 0 6px; color: #f5f0ff; font-size: clamp(1.25rem, 5vw, 1.65rem); line-height: 1.2; }
 .links-intro p { max-width: 420px; margin: 0 auto; color: rgba(245, 240, 255, 0.8); font-size: 0.9rem; line-height: 1.45; }
-.creator-signals { width: 100%; box-sizing: border-box; margin: 0 0 16px; padding: 11px 13px; border: 1px solid rgba(214, 173, 104, 0.22); border-radius: 12px; background: rgba(27, 24, 32, 0.72); }
+.creator-signals { width: 100%; box-sizing: border-box; margin: 0 0 16px; padding: 11px 13px; border: 1px solid rgba(192, 132, 252, 0.28); border-radius: 12px; background: rgba(27, 24, 32, 0.72); }
 .creator-signals__lead { margin: 0 0 9px; color: #f4efe7; font-size: 0.78rem; line-height: 1.4; text-align: center; }
 .creator-signals__facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 8px; }
-.creator-signals__facts span { padding: 4px 8px; border-radius: 999px; background: rgba(214, 173, 104, 0.1); color: #dcc79e; font-size: 0.68rem; font-weight: 650; }
-.creator-intro { width: 100%; box-sizing: border-box; padding: 16px 16px 15px 17px; margin: 2px 0 22px; border: 1px solid rgba(214, 173, 104, 0.32); border-left: 3px solid #d6ad68; border-radius: 14px; background: linear-gradient(145deg, rgba(35, 31, 40, 0.96), rgba(22, 20, 27, 0.98)); color: #f7f4ef; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22); }
+.creator-signals__facts span { padding: 4px 8px; border-radius: 999px; background: rgba(168, 85, 247, 0.14); color: #e9d5ff; font-size: 0.68rem; font-weight: 650; }
+.creator-intro { width: 100%; box-sizing: border-box; padding: 16px 16px 15px 17px; margin: 2px 0 22px; border: 1px solid rgba(192, 132, 252, 0.28); border-left: 3px solid #c084fc; border-radius: 14px; background: linear-gradient(145deg, rgba(35, 31, 40, 0.96), rgba(22, 20, 27, 0.98)); color: #f7f4ef; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22); }
 .creator-intro p { margin: 0 0 10px; color: #f7f4ef; font-size: 0.86rem; line-height: 1.55; }
 .creator-intro p:last-child { margin-bottom: 0; }
-.creator-intro__eyebrow { display: block; margin: 0 0 6px; color: #d6ad68; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.creator-intro__eyebrow { display: block; margin: 0 0 6px; color: #c084fc; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
 .creator-intro h2 { margin: 0 0 10px; color: #fffaf1; font-size: 1.02rem; line-height: 1.3; }
 .creator-intro__hint { display: block; padding: 10px 12px; border-radius: 10px; background: rgba(168, 85, 247, 0.13); color: #e9d5ff; font-size: 0.78rem; line-height: 1.4; }
 /* ========== CARDS PRIVSEX + TELEGRAM ========== */
