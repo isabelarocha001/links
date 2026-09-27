@@ -6363,17 +6363,22 @@ async function loadNearPresence() {
     if (data?.error) throw new Error(String(data.reason || 'geo'))
     const lat = Number(data.latitude)
     const lon = Number(data.longitude)
+    const visitorCity = typeof data.city === 'string' ? data.city.trim() : ''
+    const visitorRegion = typeof data.region === 'string' ? data.region.trim() : ''
+    const visitorPlace = visitorCity || visitorRegion
     if (Number.isFinite(lat) && Number.isFinite(lon)) {
       const km = Math.max(1, Math.round(distanceKm(lat, lon, CREATOR_LOCATION.lat, CREATOR_LOCATION.lon)))
-      nearPresenceText.value = `${CREATOR_CITY} · aproximadamente ${km} km de você`
+      nearPresenceText.value = visitorPlace
+        ? `${visitorPlace} · aproximadamente ${km} km de ${CREATOR_CITY}`
+        : `aproximadamente ${km} km de ${CREATOR_CITY}`
     } else {
-      nearPresenceText.value = CREATOR_CITY
+      nearPresenceText.value = visitorPlace ? `${visitorPlace} · localização aproximada` : 'localização aproximada'
     }
     nearPresenceReady.value = true
   } catch {
     // fallback mínimo sem vazar dados de localização
     try {
-      nearPresenceText.value = CREATOR_CITY
+      nearPresenceText.value = 'localização aproximada'
       nearPresenceReady.value = true
     } catch {}
   }
