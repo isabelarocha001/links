@@ -91,10 +91,6 @@
             <span v-if="nearPresenceReady && nearPresenceText" class="creator-presence__separator" aria-hidden="true">•</span>
             <span v-if="nearPresenceReady && nearPresenceText" class="creator-presence__distance">{{ nearPresenceText }}</span>
           </div>
-          <div class="creator-signals__facts" aria-label="Informações rápidas">
-            <span>24 anos</span>
-            <span>Balneário Camboriú</span>
-          </div>
         </section>
         <section v-if="isPt" class="choice-guide" aria-labelledby="choice-guide-title">
           <h2 id="choice-guide-title">Por onde você quer continuar?</h2>

@@ -228,8 +228,6 @@
 @keyframes creatorPresencePulse { 0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55); } 70% { box-shadow: 0 0 0 7px rgba(37, 211, 102, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); } }
 .creator-presence__separator { color: rgba(192, 132, 252, 0.7); }
 .creator-presence__distance { color: #d8b4fe; }
-.creator-signals__facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 8px; }
-.creator-signals__facts span { padding: 4px 8px; border-radius: 999px; background: rgba(168, 85, 247, 0.14); color: #e9d5ff; font-size: 0.68rem; font-weight: 650; }
 .choice-guide { width: 100%; box-sizing: border-box; margin: 0 0 18px; padding: 15px 14px 14px; border: 1px solid rgba(192, 132, 252, 0.25); border-radius: 14px; background: linear-gradient(145deg, rgba(34, 20, 48, 0.9), rgba(25, 20, 31, 0.94)); text-align: center; }
 .choice-guide h2 { margin: 0 0 4px; color: #fffaf1; font-size: 1rem; line-height: 1.3; }
 .choice-guide > p { margin: 0; color: rgba(245, 240, 255, 0.7); font-size: 0.76rem; line-height: 1.4; }
