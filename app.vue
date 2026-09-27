@@ -82,8 +82,8 @@
         </header>
         <div id="links-intro" class="links-intro">
           <span class="links-intro__eyebrow">Bem-vindo ao meu lugar secreto</span>
-          <h1>Oi, eu sou a Wanessa 💜</h1>
-          <p>Conteúdo, conversa e experiências exclusivas. Tudo do meu jeito, para quem quer se aproximar de verdade.</p>
+          <h1>O que eu preparei exclusivamente para você 💜</h1>
+          <p>Eu deixei tudo pronto para você escolher como quer me conhecer, no seu ritmo e do seu jeito.</p>
         </div>
         <section v-if="isPt" class="creator-signals" aria-label="Sobre a Wanessa">
           <div class="creator-presence is-online" aria-live="polite">
@@ -95,6 +95,29 @@
           <div class="creator-signals__facts" aria-label="Informações rápidas">
             <span>24 anos</span>
             <span>Balneário Camboriú</span>
+          </div>
+        </section>
+        <section v-if="isPt" class="choice-guide" aria-labelledby="choice-guide-title">
+          <span class="choice-guide__eyebrow">Seu caminho começa aqui</span>
+          <h2 id="choice-guide-title">Por onde você quer continuar?</h2>
+          <p>Escolha uma das opções que preparei para você:</p>
+          <div class="choice-guide__options">
+            <div v-if="privsexLinkEnabled" class="choice-guide__option">
+              <strong>Quero conteúdo exclusivo</strong>
+              <span>Entre no PrivSex</span>
+            </div>
+            <div v-if="!hidePublicChannel" class="choice-guide__option">
+              <strong>Quero ver antes</strong>
+              <span>Confira as prévias grátis</span>
+            </div>
+            <div v-if="publicChannelEnabled && telegramBotEnabled" class="choice-guide__option">
+              <strong>Quero entrar no VIP</strong>
+              <span>Acesse o bot do Telegram</span>
+            </div>
+            <div v-if="privsexLinkEnabled" class="choice-guide__option">
+              <strong>Quero conversar</strong>
+              <span>Conheça as opções no WhatsApp</span>
+            </div>
           </div>
         </section>
         <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
@@ -6400,7 +6423,7 @@ function toggleFaq(index: number) {
 
 const TOUR_KEY = 'wanessa_links_tour_v1'
 const tourSteps = [
-  { title: 'Prazer, eu sou a Wanessa 💜', body: 'Aqui você me conhece e escolhe como prefere se aproximar. É tudo online, sem encontros.', target: 'links-intro' },
+  { title: 'Tudo foi preparado para você 💜', body: 'Aqui você escolhe como quer me conhecer e por onde prefere começar. É tudo online, sem encontros.', target: 'links-intro' },
   { title: 'Conheça antes de escolher', body: 'No canal público você vê prévias. No PrivSex encontra meu conteúdo exclusivo.', target: 'links-main-cards' },
   { title: 'Prefere conversar?', body: 'O VIP do Telegram e o WhatsApp ficam logo abaixo. No WhatsApp você vê as opções de conversa e videochamada.', target: 'links-secondary-cards' },
   { title: 'Sem dúvidas no caminho', body: 'O FAQ no final responde sobre prévias, encontros e como funciona cada opção.', target: 'links-faq' },
