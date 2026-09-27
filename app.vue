@@ -273,9 +273,9 @@
         </section>
         <section v-if="isPt" id="links-faq" class="links-faq" aria-labelledby="links-faq-title">
           <div class="links-faq__head">
-            <span class="links-faq__eyebrow">Seu guia rápido</span>
-            <h2 id="links-faq-title">Dúvidas? Vamos desbloquear ✨</h2>
-            <p>Toque nas perguntas e conheça minhas opções sem surpresa.</p>
+            <span class="links-faq__eyebrow">FAQ</span>
+            <h2 id="links-faq-title">Perguntas frequentes</h2>
+            <p>Tire suas dúvidas antes de escolher.</p>
           </div>
           <div class="links-faq__progress" role="progressbar" :aria-valuenow="faqSeen.length" :aria-valuemin="0" :aria-valuemax="faqItems.length" :aria-label="`${faqSeen.length} de ${faqItems.length} respostas vistas`">
             <span v-for="(_, index) in faqItems" :key="index" :class="{ 'is-complete': faqSeen.includes(index) }"></span>
