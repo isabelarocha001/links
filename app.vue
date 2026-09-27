@@ -81,9 +81,18 @@
           </div>
         </header>
         <div id="links-intro" class="links-intro">
-          <h1>Sua musa dos sonhos proibidos</h1>
-          <p>Escolha onde prefere me ter, amor</p>
+          <span class="links-intro__eyebrow">Bem-vindo ao meu universo</span>
+          <h1>Oi, eu sou a Wanessa 💜</h1>
+          <p>Conteúdo, conversa e experiências exclusivas — tudo do meu jeito, para quem quer se aproximar de verdade.</p>
         </div>
+        <section v-if="isPt" class="creator-signals" aria-label="Sobre a Wanessa">
+          <p class="creator-signals__lead">Aqui você não encontra um catálogo qualquer. Você escolhe como quer se aproximar de mim.</p>
+          <div class="creator-signals__facts" aria-label="Informações rápidas">
+            <span>24 anos</span>
+            <span>Balneário Camboriú</span>
+            <span>100% online</span>
+          </div>
+        </section>
         <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
           <div class="card-col" v-if="privsexLinkEnabled">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
@@ -115,7 +124,7 @@
                 <span class="card-badge badge-wa">Chat</span>
               </div>
               <h2 class="card-title">WhatsApp</h2>
-              <p class="card-desc">Conteúdo exclusivo</p>
+              <p class="card-desc">Conversar comigo no chat</p>
             </button>
             <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </div>
@@ -174,7 +183,7 @@
             </span>
             <span class="iq-open-text">
               <strong>WhatsApp</strong>
-              <small>Conteúdo exclusivo</small>
+              <small>Conhecer-me no chat</small>
             </span>
             <span class="iq-open-arrow" aria-hidden="true">→</span>
           </button>
@@ -183,8 +192,10 @@
         </div>
 
         <section v-if="isPt" class="creator-intro" aria-label="Sobre mim">
-          <p>Meu nome é Wanessa 💜 Sou criadora de conteúdo exclusivo, tenho 24 anos e moro em Balneário Camboriú, Santa Catarina.</p>
-          <p>Aqui você encontra conteúdos que não publico em nenhum outro lugar, exclusivos para meus fãs online. Gosto de conversar no chat — posso ser sua noiva virtual.</p>
+          <span class="creator-intro__eyebrow">Um pouco mais sobre mim</span>
+          <h2>Quero que você conheça a Wanessa por trás da foto</h2>
+          <p>Eu gosto de conhecer quem está do outro lado, conversar sem pressa e criar uma conexão que pareça nossa. Aqui você entra no meu universo e escolhe como quer se aproximar de mim.</p>
+          <p>Tenho 24 anos, moro em Balneário Camboriú e crio conteúdo exclusivo para meus fãs online. No chat, posso ser sua companhia, sua confidente ou até sua noiva virtual.</p>
         </section>
 
         <Teleport to="body">
