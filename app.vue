@@ -86,18 +86,15 @@
           <p>Conteúdo, conversa e experiências exclusivas. Tudo do meu jeito, para quem quer se aproximar de verdade.</p>
         </div>
         <section v-if="isPt" class="creator-signals" aria-label="Sobre a Wanessa">
-          <p class="creator-signals__lead">Aqui você não encontra um catálogo qualquer. Você escolhe como quer se aproximar de mim.</p>
           <div class="creator-presence is-online" aria-live="polite">
             <span class="creator-presence__dot" aria-hidden="true"></span>
             <span>Online agora</span>
-            <span class="creator-presence__separator" aria-hidden="true">•</span>
-            <span>Wanessa em Balneário Camboriú</span>
+            <span v-if="nearPresenceReady && nearPresenceText" class="creator-presence__separator" aria-hidden="true">•</span>
             <span v-if="nearPresenceReady && nearPresenceText" class="creator-presence__distance">{{ nearPresenceText }}</span>
           </div>
           <div class="creator-signals__facts" aria-label="Informações rápidas">
             <span>24 anos</span>
             <span>Balneário Camboriú</span>
-            <span>100% online</span>
           </div>
         </section>
         <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
@@ -594,7 +591,7 @@
               </div>
               <div class="wa-profile-row">
                 <span class="wa-profile-row-label">Sobre</span>
-                <span class="wa-profile-row-value">Atendimento 100% online. Packs, chat, vídeos e videochamada. Aqui a gente se diverte com calma e privacidade 🔥</span>
+                <span class="wa-profile-row-value">Packs, chat, vídeos e videochamada. Aqui a gente se diverte com calma e privacidade 🔥</span>
               </div>
             </div>
           </div>
