@@ -84,10 +84,6 @@
           <h1>Sua musa dos sonhos proibidos</h1>
           <p>Escolha onde prefere me ter, amor</p>
         </div>
-        <section v-if="isPt" class="creator-intro" aria-label="Sobre mim">
-          <p>Meu nome é Wanessa 💜 Sou criadora de conteúdo exclusivo, tenho 24 anos e moro em Balneário Camboriú, Santa Catarina.</p>
-          <p>Aqui você encontra conteúdos que não publico em nenhum outro lugar, exclusivos para meus fãs online. Gosto de conversar no chat — posso ser sua noiva virtual.</p>
-        </section>
         <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
           <div class="card-col" v-if="privsexLinkEnabled">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
@@ -185,6 +181,11 @@
           <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </section>
         </div>
+
+        <section v-if="isPt" class="creator-intro" aria-label="Sobre mim">
+          <p>Meu nome é Wanessa 💜 Sou criadora de conteúdo exclusivo, tenho 24 anos e moro em Balneário Camboriú, Santa Catarina.</p>
+          <p>Aqui você encontra conteúdos que não publico em nenhum outro lugar, exclusivos para meus fãs online. Gosto de conversar no chat — posso ser sua noiva virtual.</p>
+        </section>
 
         <Teleport to="body">
           <div v-if="false && iqVisible" class="iq-overlay" @click.self="iqAbandonClose">
