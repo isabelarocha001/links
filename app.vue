@@ -80,11 +80,16 @@
             </button>
           </div>
         </header>
-        <div class="links-intro">
+        <div id="links-intro" class="links-intro">
           <h1>Sua musa dos sonhos proibidos</h1>
           <p>Escolha onde prefere me ter, amor</p>
         </div>
-        <section class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
+        <section v-if="isPt" class="creator-intro" aria-label="Sobre mim">
+          <p>Oi, eu sou a Wanessa 💜 Sou criadora de conteúdo adulto e adoro conversar com quem quer me conhecer de verdade.</p>
+          <p>Nosso contato é só online: conteúdo exclusivo, conversa por mensagem e videochamada. Não faço encontros presenciais.</p>
+          <span class="creator-intro__hint">Quer olhar antes? As prévias estão no meu canal público, sem compromisso.</span>
+        </section>
+        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
           <div class="card-col" v-if="privsexLinkEnabled">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
               <div class="portal-spiral" aria-hidden="true">
@@ -102,7 +107,7 @@
               <h2 class="card-title">{{ t('privTitle') }}</h2>
               <p class="card-desc">{{ t('privDesc') }}</p>
             </a>
-            <a class="card-enter" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">{{ t('privEnter') }}</a>
+            <a class="card-enter card-enter--quest" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Explorar conteúdo' : t('privEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
           <!-- WhatsApp ocupa a esquerda somente se o link PrivSex não existir -->
           <div class="card-col" v-else-if="isPt">
@@ -117,7 +122,7 @@
               <h2 class="card-title">WhatsApp</h2>
               <p class="card-desc">Conteúdo exclusivo</p>
             </button>
-            <button type="button" class="card-enter iq-main-enter" @click="iqStart">Abrir</button>
+            <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </div>
           <div class="card-col" v-if="!hidePublicChannel">
             <!-- BR + canal desativado no admin → bot; gringa SEMPRE canal público (nunca bot) -->
@@ -131,7 +136,7 @@
                 <h2 class="card-title">{{ t('vipTitle') }}</h2>
                 <p class="card-desc">{{ t('vipDesc') }}</p>
               </a>
-              <a class="card-enter" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">{{ t('pubEnter') }}</a>
+              <a class="card-enter card-enter--quest" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Entrar no VIP' : t('pubEnter') }} <span aria-hidden="true">↗</span></a>
             </template>
             <template v-else>
               <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
@@ -143,12 +148,12 @@
                 <h2 class="card-title">{{ t('pubTitle') }}</h2>
                 <p class="card-desc">{{ t('pubDesc') }}</p>
               </a>
-              <a class="card-enter" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">{{ t('pubEnter') }}</a>
+              <a class="card-enter card-enter--quest" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)"><span aria-hidden="true">✦</span> {{ isPt ? 'Ver prévias grátis' : t('pubEnter') }} <span aria-hidden="true">↗</span></a>
             </template>
           </div>
         </section>
         <!-- Cards secundários: Telegram VIP à esquerda e WhatsApp à direita -->
-        <div class="secondary-cards" :class="{ 'secondary-cards--single': !publicChannelEnabled || !telegramBotEnabled || !privsexLinkEnabled }" v-if="configReady && isPt">
+        <div id="links-secondary-cards" class="secondary-cards" :class="{ 'secondary-cards--single': !publicChannelEnabled || !telegramBotEnabled || !privsexLinkEnabled }" v-if="configReady && isPt">
           <section class="vip-block card-col" v-if="publicChannelEnabled && telegramBotEnabled">
           <a class="lux-card vip-card" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">
             <div class="vip-shine"></div>
@@ -164,7 +169,7 @@
             </div>
             <span class="vip-arrow">→</span>
           </a>
-          <a class="card-enter" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">{{ t('pubEnter') }}</a>
+          <a class="card-enter card-enter--quest" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)"><span aria-hidden="true">✦</span> Entrar no VIP <span aria-hidden="true">↗</span></a>
           </section>
 
           <section class="iq-section card-col" v-if="privsexLinkEnabled">
@@ -178,7 +183,7 @@
             </span>
             <span class="iq-open-arrow" aria-hidden="true">→</span>
           </button>
-          <button type="button" class="card-enter iq-main-enter" @click="iqStart">Abrir</button>
+          <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </section>
         </div>
 
@@ -237,8 +242,8 @@
                     <p class="iq-final-line">✅ A partir de R$ 99,90</p>
                     <p class="iq-final-line">✅ Lá: você escolhe → paga → recebe</p>
                   </div>
-                  <p class="iq-q">Se clicar, é pra comprar. Não é pra “oi sumida” nem enrolação.</p>
-                  <button type="button" class="iq-opt iq-opt--wa" @click="iqGoWhatsApp">Ir pro WhatsApp pra comprar</button>
+                  <p class="iq-q">No chat: escolha o conteúdo → faça o Pix → envie o comprovante por aqui.</p>
+                  <button type="button" class="iq-opt iq-opt--wa" @click="iqGoWhatsApp">Continuar no chat</button>
                 </template>
               </div>
             </div>
@@ -255,6 +260,40 @@
             </a>
           </div>
         </section>
+        <section v-if="isPt" id="links-faq" class="links-faq" aria-labelledby="links-faq-title">
+          <div class="links-faq__head">
+            <span class="links-faq__eyebrow">Seu guia rápido</span>
+            <h2 id="links-faq-title">Dúvidas? Vamos desbloquear ✨</h2>
+            <p>Toque nas perguntas e conheça minhas opções sem surpresa.</p>
+          </div>
+          <div class="links-faq__progress" role="progressbar" :aria-valuenow="faqSeen.length" :aria-valuemin="0" :aria-valuemax="faqItems.length" :aria-label="`${faqSeen.length} de ${faqItems.length} respostas vistas`">
+            <span v-for="(_, index) in faqItems" :key="index" :class="{ 'is-complete': faqSeen.includes(index) }"></span>
+          </div>
+          <div class="links-faq__questions">
+            <div v-for="(item, index) in faqItems" :key="item.question" class="links-faq__item" :class="{ 'is-open': faqActive === index, 'is-seen': faqSeen.includes(index) }">
+              <button type="button" :aria-expanded="faqActive === index" :aria-controls="`faq-answer-${index}`" @click="toggleFaq(index)">
+                <span class="links-faq__number">{{ faqSeen.includes(index) ? '✓' : String(index + 1).padStart(2, '0') }}</span>
+                <span>{{ item.question }}</span>
+                <span class="links-faq__plus" aria-hidden="true">{{ faqActive === index ? '−' : '+' }}</span>
+              </button>
+              <div v-show="faqActive === index" :id="`faq-answer-${index}`" class="links-faq__answer">
+                <p>{{ item.answer }}</p>
+                <a v-if="item.preview && !hidePublicChannel" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">Ver prévias no canal público ↗</a>
+              </div>
+            </div>
+          </div>
+          <p v-if="faqSeen.length === faqItems.length" class="links-faq__complete">Todas as respostas desbloqueadas 💜 Agora escolha por onde começar.</p>
+        </section>
+
+        <div v-if="tourActive && isPt" class="links-tour" role="status" aria-live="polite">
+          <button type="button" class="links-tour__close" aria-label="Fechar tutorial" @click="stopTour">×</button>
+          <span class="links-tour__step">Guia automático · {{ tourStep + 1 }}/{{ tourSteps.length }}</span>
+          <strong>{{ tourSteps[tourStep].title }}</strong>
+          <p>{{ tourSteps[tourStep].body }}</p>
+          <button type="button" class="links-tour__jump" @click="showTourSection">Ver esta parte ↓</button>
+          <div class="links-tour__progress" aria-hidden="true"><span :style="{ width: `${((tourStep + 1) / tourSteps.length) * 100}%` }"></span></div>
+        </div>
+
         <footer class="bio-block">
           <div class="ig-card">
             <img class="ig-avatar" :src="igProfileSrc" alt="" width="72" height="72" draggable="false" />
@@ -1407,7 +1446,7 @@ const privsexUrl = 'https://privsex.com/wanessa'
 // Fluxo: Interesse → Ticket R$99,90 → Momento (agora/hoje) → Intenção de compra (anúncio já filtra 18+)
 // Só lead QUALIFIED cai no WhatsApp comercial (transacional). Número/link só após qualified + clique
 // =============================================================================
-const IQ_WA_NUMBER = '5547992750967'
+const PIX_KEY_EMAIL = 'wanessaahappn@gmail.com'
 type IqPhase = 'welcome' | 'quiz' | 'reject' | 'soft' | 'result'
 type IqOpt = { id: string; label: string }
 const iqVisible = ref(false)
@@ -1841,16 +1880,21 @@ function iqTryAutoOpenFromRoute() {
   iqAutoOpened = true
   iqStart()
 }
+function iqPixInstructionHtml() {
+  const safeKey = PIX_KEY_EMAIL.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return `<div class="iq-pix-instructions"><p><b>Perfeito, amor 💚</b></p><p>Para liberar seu conteúdo:</p><ol><li>Abra o aplicativo do seu banco.</li><li>Entre em <b>Pix</b> e escolha pagar com chave e-mail.</li><li>Cole esta chave:</li></ol><div class="iq-pix-key-row"><code class="iq-pix-key">${safeKey}</code><button type="button" class="iq-pix-copy-btn" data-action="copy-pix-email">Copiar chave Pix</button></div><ol start="4"><li>Confira o destinatário e o valor combinado antes de confirmar.</li><li>Finalize o pagamento e envie o comprovante aqui no chat.</li></ol><p>Eu confirmo o pagamento manualmente e só então passo meu WhatsApp e libero o conteúdo.</p></div>`
+}
+
 function iqGoWhatsApp() {
-  // Destino só existe após qualificação + clique (não no HTML inicial)
-  const text = iqBuildWaMessage()
-  const url = 'https://wa.me/' + IQ_WA_NUMBER + '?text=' + encodeURIComponent(text)
-  iqTrack('whatsapp_clicked', { answers: { ...iqAnswers } })
+  // O contato real só é liberado após confirmação manual do pagamento.
+  // O lead permanece no chat interno para receber a chave e enviar o comprovante.
+  iqTrack('whatsapp_clicked', { answers: { ...iqAnswers }, lead_message: iqBuildWaMessage() })
   iqVisible.value = false
-  iqChatMode.value = false
-  if (typeof window !== 'undefined') {
-    window.location.href = url
-  }
+  openWaFunnel('qualified_quiz')
+  window.setTimeout(async () => {
+    await funnelType('', 900, iqPixInstructionHtml())
+    try { saveFunnelState() } catch {}
+  }, 2600)
 }
 
 const telegramPublicUrl = 'https://t.me/+yA5Y1pAWx5RlMWIx'
@@ -2491,6 +2535,14 @@ function onFsVideoSeek(ev: Event) {
 function onFunnelMediaHtmlClick(e: Event) {
   const t = e.target as HTMLElement | null
   if (!t) return
+  // Copiar a chave Pix informada no chat
+  const pixEmailBtn = t.closest?.('[data-action="copy-pix-email"]') as HTMLButtonElement | null
+  if (pixEmailBtn) {
+    e.preventDefault()
+    e.stopPropagation()
+    copyPixEmail(pixEmailBtn)
+    return
+  }
   // Desbloquear contato (banner de sistema no chat)
   const unblockBtn = t.closest?.('[data-action="unblock-lead"]') as HTMLElement | null
   if (unblockBtn) {
@@ -3256,6 +3308,29 @@ async function copyPixCode() {
   }
   pixCopied.value = true
   setTimeout(() => { pixCopied.value = false }, 2000)
+}
+
+async function copyPixEmail(button?: HTMLButtonElement | null) {
+  const originalLabel = button?.textContent || 'Copiar chave Pix'
+  try {
+    await navigator.clipboard.writeText(PIX_KEY_EMAIL)
+  } catch {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = PIX_KEY_EMAIL
+      ta.setAttribute('readonly', '')
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    } catch {}
+  }
+  if (button) {
+    button.textContent = 'Chave copiada!'
+    window.setTimeout(() => { button.textContent = originalLabel }, 2000)
+  }
 }
 
 async function adminUnlockChat() {
@@ -6332,6 +6407,52 @@ async function loadNearPresence() {
 const gate = ref<1 | 2 | 3 | 4 | 'pass' | 'reject' | null>('pass')
 const quizAnswers = ref<Record<string, string>>({})
 const gateReady = ref(true) // true desde o start — evita flash do chat WA antigo
+const faqItems = [
+  { question: 'Você faz encontros presenciais?', answer: 'Não. Eu sou criadora de conteúdo e meu contato com você acontece somente online.' },
+  { question: 'O que posso encontrar por aqui?', answer: 'Conteúdo exclusivo, conversa por mensagem (sexting) e opções de videochamada. Você escolhe o formato que combina com você.' },
+  { question: 'Posso ver prévias antes de escolher?', answer: 'Sim! Meu canal público é o lugar para conhecer minhas prévias antes de decidir, sem compromisso.', preview: true },
+  { question: 'Como funcionam conversa e videochamada?', answer: 'Toque em “Conversar comigo” para conhecer as opções e condições. Tudo acontece online, sem encontros presenciais.' },
+]
+const faqActive = ref<number | null>(null)
+const faqSeen = ref<number[]>([])
+function toggleFaq(index: number) {
+  faqActive.value = faqActive.value === index ? null : index
+  if (!faqSeen.value.includes(index)) faqSeen.value = [...faqSeen.value, index]
+}
+
+const TOUR_KEY = 'wanessa_links_tour_v1'
+const tourSteps = [
+  { title: 'Prazer, eu sou a Wanessa 💜', body: 'Aqui você me conhece e escolhe como prefere se aproximar. É tudo online, sem encontros.', target: 'links-intro' },
+  { title: 'Conheça antes de escolher', body: 'No canal público você vê prévias. No PrivSex encontra meu conteúdo exclusivo.', target: 'links-main-cards' },
+  { title: 'Prefere conversar?', body: 'O VIP do Telegram e o WhatsApp ficam logo abaixo. No WhatsApp você vê as opções de conversa e videochamada.', target: 'links-secondary-cards' },
+  { title: 'Sem dúvidas no caminho', body: 'O FAQ no final responde sobre prévias, encontros e como funciona cada opção.', target: 'links-faq' },
+]
+const tourActive = ref(false)
+const tourStep = ref(0)
+let tourTimer: ReturnType<typeof setInterval> | null = null
+function stopTour() {
+  tourActive.value = false
+  if (tourTimer) clearInterval(tourTimer)
+  tourTimer = null
+}
+function showTourSection() {
+  document.getElementById(tourSteps[tourStep.value].target)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+watch(() => gateReady.value && gate.value === 'pass' && isPt.value && route.path === '/', (ready) => {
+  if (!ready) { stopTour(); return }
+  if (tourActive.value || showWaFunnel.value || iqVisible.value) return
+  try {
+    if (localStorage.getItem(TOUR_KEY) === '1') return
+    localStorage.setItem(TOUR_KEY, '1')
+  } catch { /* O tutorial ainda funciona se o armazenamento estiver bloqueado. */ }
+  tourStep.value = 0
+  tourActive.value = true
+  tourTimer = setInterval(() => {
+    if (tourStep.value >= tourSteps.length - 1) stopTour()
+    else tourStep.value += 1
+  }, 5000)
+})
+watch(() => showWaFunnel.value || iqVisible.value, (open) => { if (open) stopTour() })
 const chatMessages = ref<ChatMsg[]>([])
 const isTyping = ref(false)
 const chatBox = ref<HTMLElement | null>(null)
@@ -6989,6 +7110,7 @@ onMounted(async () => {
 onUnmounted(() => {
   if (photoTimer) clearInterval(photoTimer)
   if (typingTimer) clearTimeout(typingTimer)
+  stopTour()
 })
 function openLogin() {
   if (isAdmin.value) {
