@@ -220,7 +220,7 @@
               <div class="iq-body">
                 <template v-if="iqPhase === 'welcome'">
                   <div class="iq-bubble" role="status">
-                    <p class="iq-bubble-text">Aqui eu vendo foto, vídeo, call e chat.<br/>Não é papo de graça. Não é Tinder. Não saio com ninguém.</p>
+                    <p class="iq-bubble-text">Aqui eu vendo foto, vídeo, videochamada e chat.<br/>Não é papo de graça. Não é Tinder. Não saio com ninguém.</p>
                   </div>
                   <p class="iq-intro iq-intro--after-bubble">
                     4 perguntas rápidas.
@@ -254,7 +254,7 @@
                     <p class="iq-final-lead">⚠️ O WhatsApp é pra COMPRAR, não pra conversar de graça</p>
                     <p class="iq-final-line">❌ Sem flerte de graça</p>
                     <p class="iq-final-line">❌ Sem encontro</p>
-                    <p class="iq-final-line">✅ Só: foto, vídeo, call e chat pago</p>
+                    <p class="iq-final-line">✅ Só: foto, vídeo, videochamada e chat pago</p>
                     <p class="iq-final-line">✅ A partir de R$ 99,90</p>
                     <p class="iq-final-line">✅ Lá: você escolhe → paga → recebe</p>
                   </div>
@@ -1744,7 +1744,7 @@ function iqStart() {
   iqTrack('quiz_started')
   nextTick(() => {
     iqTypeHer(
-      'Aqui é atendimento para compra de conteúdo, call e chat.\nSão 4 perguntas rápidas para confirmar se você está no perfil de atendimento.\nOs acessos começam em R$ 99,90.',
+      'Aqui é atendimento para compra de conteúdo, videochamada e chat.\nSão 4 perguntas rápidas para confirmar se você está no perfil de atendimento.\nOs acessos começam em R$ 99,90.',
       800,
     )
   })
