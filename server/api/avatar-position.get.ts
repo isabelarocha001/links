@@ -1,7 +1,7 @@
 import { useServiceSupabase } from '../utils/supabase'
 
 const POSITION_KEY = 'PRIVSEX_AVATAR_POSITION'
-const DEFAULT_POSITION = { x: 50, y: 50, zoom: 1.16 }
+const DEFAULT_POSITION = { x: 50, y: 50, zoom: 1 }
 
 function isLegacyDefault(position: { x: number; y: number; zoom: number }) {
   return position.x === 50 && position.y === 50 && position.zoom === 1

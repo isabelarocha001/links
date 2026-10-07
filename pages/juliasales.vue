@@ -4,9 +4,8 @@ import { LOGO_PRIVSEX, LOGO_TG_BLUE } from '~/utils/logos'
 const PRIVSEX_URL = 'https://privsex.com/juliasalles'
 const PUBLIC_CHANNEL_URL = 'https://t.me/+VFz27CGP9IczMmUx'
 const AVATAR_URL = '/privsex-platform-avatar.jpg'
-// A arte original é retrato e possui uma borda preta fora do círculo da logo.
-// Este zoom remove essa margem sem deformar a imagem; a gestão permite refinar.
-const avatarPosition = reactive({ x: 50, y: 50, zoom: 1.16 })
+// O enquadramento inicial preserva a logo inteira; a gestão pode salvar outro zoom.
+const avatarPosition = reactive({ x: 50, y: 50, zoom: 1 })
 
 function applyAvatarPosition(saved: any) {
   if (Number.isFinite(Number(saved?.x))) avatarPosition.x = Math.min(100, Math.max(0, Number(saved.x)))
@@ -25,7 +24,7 @@ async function loadAvatarPosition() {
 
 const { data: initialAvatarPosition } = await useFetch<{ x: number; y: number; zoom: number; persisted?: boolean }>('/api/avatar-position', {
   key: 'privsex-avatar-position-landing',
-  default: () => ({ x: 50, y: 50, zoom: 1.16, persisted: false }),
+  default: () => ({ x: 50, y: 50, zoom: 1, persisted: false }),
 })
 
 if (initialAvatarPosition.value?.persisted === true) {
