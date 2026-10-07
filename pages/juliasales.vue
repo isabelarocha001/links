@@ -4,7 +4,6 @@ import { LOGO_PRIVSEX, LOGO_TG_BLUE } from '~/utils/logos'
 const PRIVSEX_URL = 'https://privsex.com/juliasalles'
 const PUBLIC_CHANNEL_URL = 'https://t.me/+VFz27CGP9IczMmUx'
 const AVATAR_URL = '/privsex-platform-avatar.jpg'
-const AVATAR_POSITION_KEY = 'privsex_avatar_position_v1'
 // A arte original é retrato e possui uma borda preta fora do círculo da logo.
 // Este zoom remove essa margem sem deformar a imagem; a gestão permite refinar.
 const avatarPosition = reactive({ x: 50, y: 50, zoom: 1.16 })
@@ -17,17 +16,20 @@ function applyAvatarPosition(saved: any) {
 
 async function loadAvatarPosition() {
   try {
-    const raw = localStorage.getItem(AVATAR_POSITION_KEY)
-    if (raw) applyAvatarPosition(JSON.parse(raw))
-  } catch {}
-
-  try {
     const saved = await $fetch<{ x: number; y: number; zoom: number; persisted?: boolean }>(`/api/avatar-position?ts=${Date.now()}`, { cache: 'no-store' })
-    if (saved.persisted !== false) {
+    if (saved.persisted === true) {
       applyAvatarPosition(saved)
-      localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(saved))
     }
   } catch {}
+}
+
+const { data: initialAvatarPosition } = await useFetch<{ x: number; y: number; zoom: number; persisted?: boolean }>('/api/avatar-position', {
+  key: 'privsex-avatar-position-landing',
+  default: () => ({ x: 50, y: 50, zoom: 1.16, persisted: false }),
+})
+
+if (initialAvatarPosition.value?.persisted === true) {
+  applyAvatarPosition(initialAvatarPosition.value)
 }
 
 onMounted(loadAvatarPosition)
@@ -198,6 +200,7 @@ useHead({
   border-radius: 50%;
   object-fit: cover;
   object-position: center;
+  transform-origin: center;
 }
 
 .julia-sales-eyebrow {
