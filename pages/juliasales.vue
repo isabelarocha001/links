@@ -7,14 +7,22 @@ const AVATAR_URL = '/privsex-platform-avatar.jpg'
 const AVATAR_POSITION_KEY = 'privsex_avatar_position_v1'
 const avatarPosition = reactive({ x: 50, y: 50, zoom: 1 })
 
-function loadAvatarPosition() {
+function applyAvatarPosition(saved: any) {
+  if (Number.isFinite(Number(saved?.x))) avatarPosition.x = Math.min(100, Math.max(0, Number(saved.x)))
+  if (Number.isFinite(Number(saved?.y))) avatarPosition.y = Math.min(100, Math.max(0, Number(saved.y)))
+  if (Number.isFinite(Number(saved?.zoom))) avatarPosition.zoom = Math.min(2, Math.max(1, Number(saved.zoom)))
+}
+
+async function loadAvatarPosition() {
   try {
     const raw = localStorage.getItem(AVATAR_POSITION_KEY)
-    if (!raw) return
-    const saved = JSON.parse(raw)
-    if (Number.isFinite(Number(saved?.x))) avatarPosition.x = Math.min(100, Math.max(0, Number(saved.x)))
-    if (Number.isFinite(Number(saved?.y))) avatarPosition.y = Math.min(100, Math.max(0, Number(saved.y)))
-    if (Number.isFinite(Number(saved?.zoom))) avatarPosition.zoom = Math.min(2, Math.max(1, Number(saved.zoom)))
+    if (raw) applyAvatarPosition(JSON.parse(raw))
+  } catch {}
+
+  try {
+    const saved = await $fetch('/api/avatar-position')
+    applyAvatarPosition(saved)
+    localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(saved))
   } catch {}
 }
 

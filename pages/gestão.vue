@@ -17,32 +17,51 @@ const avatarX = ref(50)
 const avatarY = ref(50)
 const avatarZoom = ref(1)
 
-function loadPosition() {
+function applyPosition(saved: any) {
+  if (Number.isFinite(Number(saved?.x))) avatarX.value = Math.min(100, Math.max(0, Number(saved.x)))
+  if (Number.isFinite(Number(saved?.y))) avatarY.value = Math.min(100, Math.max(0, Number(saved.y)))
+  if (Number.isFinite(Number(saved?.zoom))) avatarZoom.value = Math.min(2, Math.max(1, Number(saved.zoom)))
+}
+
+async function loadPosition() {
   try {
     const raw = localStorage.getItem(AVATAR_POSITION_KEY)
-    if (!raw) return
-    const saved = JSON.parse(raw)
-    if (Number.isFinite(Number(saved?.x))) avatarX.value = Math.min(100, Math.max(0, Number(saved.x)))
-    if (Number.isFinite(Number(saved?.y))) avatarY.value = Math.min(100, Math.max(0, Number(saved.y)))
-    if (Number.isFinite(Number(saved?.zoom))) avatarZoom.value = Math.min(2, Math.max(1, Number(saved.zoom)))
+    if (raw) applyPosition(JSON.parse(raw))
+  } catch {}
+
+  try {
+    const saved = await $fetch('/api/avatar-position')
+    applyPosition(saved)
+    localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(saved))
   } catch {}
 }
 
-function savePosition() {
+async function savePosition() {
   try {
-    localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify({
+    const position = {
       x: Number(avatarX.value),
       y: Number(avatarY.value),
       zoom: Number(avatarZoom.value),
-    }))
-    savedMessage.value = 'Posição salva neste navegador.'
+    }
+    await $fetch('/api/admin/avatar-position', { method: 'POST', body: position })
+    localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(position))
+    savedMessage.value = 'Posição salva para a landing.'
     window.setTimeout(() => { savedMessage.value = '' }, 2600)
   } catch {
-    errorMessage.value = 'Não foi possível salvar a posição.'
+    try {
+      localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify({
+        x: Number(avatarX.value),
+        y: Number(avatarY.value),
+        zoom: Number(avatarZoom.value),
+      }))
+      savedMessage.value = 'Backend indisponível: salvo apenas neste navegador.'
+    } catch {
+      errorMessage.value = 'Não foi possível salvar a posição.'
+    }
   }
 }
 
-function resetPosition() {
+async function resetPosition() {
   avatarX.value = 50
   avatarY.value = 50
   avatarZoom.value = 1
@@ -58,7 +77,7 @@ async function checkSession() {
   try {
     await $fetch('/api/admin/session')
     authed.value = true
-    loadPosition()
+    await loadPosition()
   } catch {
     authed.value = false
   } finally {
@@ -73,7 +92,7 @@ async function login() {
     await $fetch('/api/admin/login', { method: 'POST', body: { password: password.value } })
     password.value = ''
     authed.value = true
-    loadPosition()
+    await loadPosition()
   } catch (error: any) {
     errorMessage.value = error?.data?.statusMessage || 'Senha inválida.'
   } finally {
@@ -149,7 +168,7 @@ onMounted(checkSession)
       </div>
       <p v-if="savedMessage" class="gestao-success" role="status">{{ savedMessage }}</p>
       <p v-if="errorMessage" class="gestao-error" role="alert">{{ errorMessage }}</p>
-      <p class="gestao-note">A configuração é aplicada à landing neste navegador. O avatar permanece circular e responsivo.</p>
+      <p class="gestao-note">A posição é salva no backend e também fica em cache neste navegador. O avatar permanece circular e responsivo.</p>
     </section>
   </main>
 </template>
