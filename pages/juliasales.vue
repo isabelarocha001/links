@@ -18,6 +18,12 @@ function applyAvatarPosition(saved: any) {
   if (Number.isFinite(Number(saved?.zoom))) avatarPosition.zoom = Math.min(2, Math.max(1, Number(saved.zoom)))
 }
 
+function avatarTransform(position: { x: number; y: number; zoom: number }) {
+  const x = Number(position.x) - 50
+  const y = Number(position.y) - 50
+  return `translate(${x}%, ${y}%) scale(${Number(position.zoom)})`
+}
+
 async function loadAvatarPosition() {
   try {
     const saved = await $fetch<{ x: number; y: number; zoom: number; persisted?: boolean }>(`/api/avatar-position?ts=${Date.now()}`, { cache: 'no-store' })
@@ -92,7 +98,7 @@ useHead({
           alt="Logo PrivSex"
           width="94"
           height="94"
-          :style="{ objectPosition: `${avatarPosition.x}% ${avatarPosition.y}%`, transform: `scale(${avatarPosition.zoom})` }"
+          :style="{ objectPosition: `${avatarPosition.x}% ${avatarPosition.y}%`, transform: avatarTransform(avatarPosition) }"
         />
       </div>
       <button v-if="adminAuthed" type="button" class="julia-avatar-edit-trigger" @click="avatarEditorOpen = !avatarEditorOpen">

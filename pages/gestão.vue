@@ -22,6 +22,12 @@ function applyPosition(saved: any) {
   if (Number.isFinite(Number(saved?.zoom))) avatarZoom.value = Math.min(2, Math.max(1, Number(saved.zoom)))
 }
 
+function avatarTransform() {
+  const x = Number(avatarX.value) - 50
+  const y = Number(avatarY.value) - 50
+  return `translate(${x}%, ${y}%) scale(${Number(avatarZoom.value)})`
+}
+
 async function loadPosition() {
   try {
     const saved = await $fetch<{ x: number; y: number; zoom: number; persisted?: boolean }>(`/api/avatar-position?ts=${Date.now()}`, { cache: 'no-store' })
@@ -60,7 +66,7 @@ async function resetPosition() {
 
 const avatarStyle = computed(() => ({
   objectPosition: `${avatarX.value}% ${avatarY.value}%`,
-  transform: `scale(${avatarZoom.value})`,
+  transform: avatarTransform(),
 }))
 
 async function checkSession() {
