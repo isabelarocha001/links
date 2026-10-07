@@ -39,6 +39,8 @@ async function loadPosition() {
 }
 
 async function savePosition() {
+  errorMessage.value = ''
+  savedMessage.value = ''
   try {
     const position = {
       x: Number(avatarX.value),
