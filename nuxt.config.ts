@@ -78,5 +78,7 @@ export default defineNuxtConfig({
     '/moderador': { ssr: true },
     '/telegram': { ssr: true },
     '/juliasales': { ssr: true },
+    '/gestão': { ssr: true },
+    '/gestao': { ssr: true },
   },
 })

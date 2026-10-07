@@ -1439,7 +1439,7 @@ const isAdminRoute = computed(() => {
 /** Rotas isoladas: só <NuxtPage />, sem shell da home */
 const isIsolatedRoute = computed(() => {
   const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
-  return p === '/telegram' || p === '/juliasales'
+  return p === '/telegram' || p === '/juliasales' || p === '/gestão' || p === '/gestao'
 })
 /** Coluna direita sempre visível; conteúdo troca entre bot e canal público */
 const hidePublicChannel = computed(() => false)

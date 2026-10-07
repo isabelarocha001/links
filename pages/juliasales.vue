@@ -4,6 +4,21 @@ import { LOGO_PRIVSEX, LOGO_TG_BLUE } from '~/utils/logos'
 const PRIVSEX_URL = 'https://privsex.com/juliasalles'
 const PUBLIC_CHANNEL_URL = 'https://t.me/+VFz27CGP9IczMmUx'
 const AVATAR_URL = '/privsex-platform-avatar.jpg'
+const AVATAR_POSITION_KEY = 'privsex_avatar_position_v1'
+const avatarPosition = reactive({ x: 50, y: 50, zoom: 1 })
+
+function loadAvatarPosition() {
+  try {
+    const raw = localStorage.getItem(AVATAR_POSITION_KEY)
+    if (!raw) return
+    const saved = JSON.parse(raw)
+    if (Number.isFinite(Number(saved?.x))) avatarPosition.x = Math.min(100, Math.max(0, Number(saved.x)))
+    if (Number.isFinite(Number(saved?.y))) avatarPosition.y = Math.min(100, Math.max(0, Number(saved.y)))
+    if (Number.isFinite(Number(saved?.zoom))) avatarPosition.zoom = Math.min(2, Math.max(1, Number(saved.zoom)))
+  } catch {}
+}
+
+onMounted(loadAvatarPosition)
 
 useHead({
   title: 'PrivSex | Links oficiais',
@@ -28,7 +43,13 @@ useHead({
 
     <section class="julia-sales-shell" aria-labelledby="julia-sales-title">
       <div class="julia-sales-mark" aria-hidden="true">
-        <img :src="AVATAR_URL" alt="Logo PrivSex" width="94" height="94" />
+        <img
+          :src="AVATAR_URL"
+          alt="Logo PrivSex"
+          width="94"
+          height="94"
+          :style="{ objectPosition: `${avatarPosition.x}% ${avatarPosition.y}%`, transform: `scale(${avatarPosition.zoom})` }"
+        />
       </div>
       <p class="julia-sales-eyebrow">PrivSex</p>
       <h1 id="julia-sales-title">Sua conexão com criadores online</h1>
