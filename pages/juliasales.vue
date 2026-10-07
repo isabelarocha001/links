@@ -206,18 +206,23 @@ useHead({
 }
 
 h1 {
-  max-width: 620px;
+  max-width: 520px;
   margin: 0 auto;
   color: #fff;
-  font-size: clamp(1.75rem, 5vw, 2.45rem);
-  line-height: 1.12;
-  letter-spacing: -0.02em;
+  font-family: 'Poppins', Inter, system-ui, sans-serif;
+  font-size: clamp(1.2rem, 3.8vw, 1.65rem);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 .julia-sales-subtitle {
-  margin: 10px auto 28px;
+  margin: 8px auto 25px;
   color: rgba(245, 240, 255, 0.82);
-  font-size: 0.94rem;
+  font-family: 'Poppins', Inter, system-ui, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 .julia-sales-links {
@@ -247,9 +252,39 @@ h1 {
 }
 
 .julia-sales-link--privsex {
-  border-color: rgba(255, 255, 255, 0.48);
-  background: linear-gradient(145deg, rgba(42, 42, 46, 0.98), rgba(11, 11, 12, 0.99) 72%);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.52), 0 0 28px rgba(255, 255, 255, 0.06);
+  isolation: isolate;
+  border-color: rgba(168, 85, 247, 0.46);
+  background:
+    radial-gradient(circle at 78% 22%, rgba(168, 85, 247, 0.24), transparent 44%),
+    linear-gradient(165deg, #170b25, #030106 72%);
+  box-shadow:
+    0 0 0 1px rgba(192, 132, 252, 0.12),
+    0 18px 42px rgba(0, 0, 0, 0.58),
+    0 0 30px rgba(126, 34, 206, 0.22),
+    inset 0 0 36px rgba(0, 0, 0, 0.85);
+}
+
+.julia-sales-link--privsex::before {
+  content: '';
+  position: absolute;
+  width: 145px;
+  height: 145px;
+  right: -34px;
+  top: 50%;
+  border: 1px solid rgba(192, 132, 252, 0.36);
+  border-right-color: rgba(168, 85, 247, 0.7);
+  border-radius: 50%;
+  transform: translateY(-50%) rotate(-16deg);
+  box-shadow: 0 0 22px rgba(168, 85, 247, 0.2), inset 0 0 16px rgba(168, 85, 247, 0.1);
+  animation: julia-sales-portal 5.5s linear infinite;
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+@keyframes julia-sales-portal {
+  from { transform: translateY(-50%) rotate(-16deg) scale(1); }
+  50% { transform: translateY(-50%) rotate(164deg) scale(0.94); }
+  to { transform: translateY(-50%) rotate(344deg) scale(1); }
 }
 
 .julia-sales-link:hover,
@@ -261,7 +296,17 @@ h1 {
 }
 
 .julia-sales-link:active { transform: scale(0.985); }
-.julia-sales-link--telegram { border-color: rgba(148, 163, 184, 0.34); }
+.julia-sales-link--telegram {
+  border-color: rgba(34, 158, 217, 0.72);
+  background: linear-gradient(145deg, rgba(34, 158, 217, 0.96), rgba(10, 92, 147, 0.98) 72%);
+  box-shadow: 0 18px 42px rgba(5, 47, 78, 0.42), 0 0 28px rgba(34, 158, 217, 0.2);
+}
+
+.julia-sales-link--telegram:hover,
+.julia-sales-link--telegram:focus-visible {
+  border-color: rgba(125, 211, 252, 0.92);
+  box-shadow: 0 20px 44px rgba(5, 47, 78, 0.54), 0 0 32px rgba(34, 158, 217, 0.34);
+}
 
 .julia-sales-link__icon {
   width: 54px;
@@ -272,7 +317,7 @@ h1 {
   background: rgba(255, 255, 255, 0.09);
 }
 
-.julia-sales-link__icon--telegram { background: rgba(71, 85, 105, 0.28); }
+.julia-sales-link__icon--telegram { background: rgba(3, 49, 79, 0.42); border-color: rgba(186, 230, 253, 0.3); }
 .julia-sales-link__icon img { object-fit: contain; }
 
 .julia-sales-link__copy {
