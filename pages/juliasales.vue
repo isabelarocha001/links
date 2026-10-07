@@ -3,7 +3,7 @@ import { LOGO_PRIVSEX, LOGO_TG_BLUE } from '~/utils/logos'
 
 const PRIVSEX_URL = 'https://privsex.com/juliasalles'
 const PUBLIC_CHANNEL_URL = 'https://t.me/+VFz27CGP9IczMmUx'
-const AVATAR_URL = '/privsex-platform-avatar.jpg'
+const AVATAR_URL = '/api/avatar-image'
 // O enquadramento inicial preserva a logo inteira; a gestão pode salvar outro zoom.
 const avatarPosition = reactive({ x: 50, y: 50, zoom: 1 })
 

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-const AVATAR_URL = '/privsex-platform-avatar.jpg'
-const AVATAR_POSITION_KEY = 'privsex_avatar_position_v1'
+const AVATAR_URL = '/api/avatar-image'
 
 useHead({
   title: 'Gestão · Avatar PrivSex',
@@ -25,15 +24,9 @@ function applyPosition(saved: any) {
 
 async function loadPosition() {
   try {
-    const raw = localStorage.getItem(AVATAR_POSITION_KEY)
-    if (raw) applyPosition(JSON.parse(raw))
-  } catch {}
-
-  try {
     const saved = await $fetch<{ x: number; y: number; zoom: number; persisted?: boolean }>(`/api/avatar-position?ts=${Date.now()}`, { cache: 'no-store' })
     if (saved.persisted !== false) {
       applyPosition(saved)
-      localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(saved))
     }
   } catch {}
 }
@@ -51,7 +44,6 @@ async function savePosition() {
     if (result?.ok !== true) throw new Error('O backend não confirmou o salvamento.')
     const confirmed = await $fetch<{ x: number; y: number; zoom: number; persisted?: boolean }>(`/api/avatar-position?ts=${Date.now()}`, { cache: 'no-store' })
     if (confirmed.persisted !== true) throw new Error('O Supabase não confirmou a posição salva.')
-    localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(position))
     savedMessage.value = 'Posição salva para a landing.'
     window.setTimeout(() => { savedMessage.value = '' }, 2600)
   } catch (error: any) {
@@ -166,7 +158,7 @@ onMounted(checkSession)
       </div>
       <p v-if="savedMessage" class="gestao-success" role="status">{{ savedMessage }}</p>
       <p v-if="errorMessage" class="gestao-error" role="alert">{{ errorMessage }}</p>
-      <p class="gestao-note">A posição é salva no backend e também fica em cache neste navegador. O avatar permanece circular e responsivo.</p>
+      <p class="gestao-note">A imagem e a posição são lidas do backend. Nada é salvo neste navegador; o avatar permanece circular e responsivo.</p>
     </section>
   </main>
 </template>
