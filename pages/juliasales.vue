@@ -3,6 +3,7 @@ import { LOGO_PRIVSEX, LOGO_TG_BLUE } from '~/utils/logos'
 
 const PRIVSEX_URL = 'https://privsex.com/juliasalles'
 const PUBLIC_CHANNEL_URL = 'https://t.me/+VFz27CGP9IczMmUx'
+const AVATAR_URL = '/privsex-platform-avatar.jpg'
 
 useHead({
   title: 'PrivSex | Links oficiais',
@@ -27,7 +28,7 @@ useHead({
 
     <section class="julia-sales-shell" aria-labelledby="julia-sales-title">
       <div class="julia-sales-mark" aria-hidden="true">
-        <img :src="LOGO_PRIVSEX" alt="" width="42" height="42" />
+        <img :src="AVATAR_URL" alt="Logo PrivSex" width="94" height="94" />
       </div>
       <p class="julia-sales-eyebrow">PrivSex</p>
       <h1 id="julia-sales-title">Sua conexão com criadores online</h1>
@@ -100,6 +101,8 @@ useHead({
 .julia-sales-page {
   min-height: 100vh;
   min-height: 100dvh;
+  width: 100%;
+  max-width: 100vw;
   position: relative;
   display: flex;
   align-items: flex-start;
@@ -111,6 +114,7 @@ useHead({
     #100817;
   color: #fff;
   font-family: Poppins, Inter, system-ui, sans-serif;
+  overflow-wrap: anywhere;
 }
 
 .julia-sales-glow {
@@ -133,24 +137,27 @@ useHead({
 .julia-sales-shell {
   position: relative;
   z-index: 1;
+  min-width: 0;
+  max-width: 100%;
   width: min(100%, 760px);
   margin: 0 auto;
   text-align: center;
 }
 
 .julia-sales-mark {
-  width: 68px;
-  height: 68px;
+  width: 94px;
+  height: 94px;
   display: grid;
   place-items: center;
   margin: 8px auto 18px;
   border: 1px solid rgba(216, 180, 254, 0.45);
-  border-radius: 22px;
+  border-radius: 28px;
   background: linear-gradient(145deg, rgba(168, 85, 247, 0.52), rgba(88, 28, 135, 0.72));
   box-shadow: 0 0 34px rgba(168, 85, 247, 0.3), inset 0 1px rgba(255, 255, 255, 0.22);
 }
 
-.julia-sales-mark img { object-fit: contain; }
+.julia-sales-mark { overflow: hidden; }
+.julia-sales-mark img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
 
 .julia-sales-eyebrow {
   margin: 0 0 7px;
@@ -197,6 +204,8 @@ h1 {
   background: linear-gradient(145deg, rgba(46, 24, 65, 0.97), rgba(24, 12, 37, 0.98));
   box-shadow: 0 15px 34px rgba(0, 0, 0, 0.25);
   text-decoration: none;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
@@ -231,6 +240,7 @@ h1 {
 
 .julia-sales-link__copy {
   min-width: 0;
+  max-width: 100%;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -243,6 +253,8 @@ h1 {
 
 .julia-sales-info {
   display: grid;
+  min-width: 0;
+  max-width: 100%;
   gap: 17px;
   margin-top: 30px;
   padding: 25px 24px;
@@ -259,7 +271,7 @@ h1 {
 
 .julia-sales-info h2 { margin: 0 0 7px; color: #f3e8ff; font-size: 1rem; }
 .julia-sales-info p, .julia-sales-info li { color: rgba(245, 240, 255, 0.76); font-size: 0.84rem; line-height: 1.55; }
-.julia-sales-info ul { display: grid; gap: 5px; padding-left: 19px; }
+.julia-sales-info ul { display: grid; gap: 5px; min-width: 0; padding-left: 19px; }
 .julia-sales-info li::marker { color: #d8b4fe; }
 
 .julia-sales-footer { margin: 25px 0 0; color: rgba(245, 240, 255, 0.48); font-size: 0.72rem; }
