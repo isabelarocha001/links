@@ -11,6 +11,9 @@ const avatarEditorOpen = ref(false)
 const avatarSaving = ref(false)
 const avatarSaveMessage = ref('')
 const avatarSaveError = ref('')
+const route = useRoute()
+const avatarEditMode = computed(() => route.query.edit_avatar === '1')
+const showAvatarEditor = computed(() => adminAuthed.value && avatarEditMode.value)
 
 function applyAvatarPosition(saved: any) {
   if (Number.isFinite(Number(saved?.x))) avatarPosition.x = Math.min(100, Math.max(0, Number(saved.x)))
@@ -101,10 +104,10 @@ useHead({
           :style="{ objectPosition: `${avatarPosition.x}% ${avatarPosition.y}%`, transform: avatarTransform(avatarPosition) }"
         />
       </div>
-      <button v-if="adminAuthed" type="button" class="julia-avatar-edit-trigger" @click="avatarEditorOpen = !avatarEditorOpen">
+      <button v-if="showAvatarEditor" type="button" class="julia-avatar-edit-trigger" @click="avatarEditorOpen = !avatarEditorOpen">
         {{ avatarEditorOpen ? 'Fechar ajuste' : 'Ajustar avatar' }}
       </button>
-      <section v-if="adminAuthed && avatarEditorOpen" class="julia-avatar-editor" aria-label="Ajustar enquadramento do avatar">
+      <section v-if="showAvatarEditor && avatarEditorOpen" class="julia-avatar-editor" aria-label="Ajustar enquadramento do avatar">
         <label>
           <span>Horizontal <output>{{ avatarPosition.x }}%</output></span>
           <input v-model.number="avatarPosition.x" type="range" min="0" max="100" step="1" />
