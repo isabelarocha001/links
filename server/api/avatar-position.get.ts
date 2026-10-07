@@ -16,6 +16,10 @@ function normalizePosition(value: any) {
   }
 }
 
+function parseStoredValue(value: any) {
+  return typeof value === 'string' ? JSON.parse(value) : value
+}
+
 export default defineEventHandler(async () => {
   try {
     const supabase = useServiceSupabase()
@@ -26,8 +30,9 @@ export default defineEventHandler(async () => {
       .maybeSingle()
 
     if (!error && data?.value) {
-      const position = normalizePosition(data.value)
-      if (!isLegacyDefault(position)) return { ...position, persisted: true }
+      const raw = parseStoredValue(data.value)
+      const position = normalizePosition(raw)
+      if (raw?.version === 2 || !isLegacyDefault(position)) return { ...position, persisted: true }
     }
   } catch {}
 

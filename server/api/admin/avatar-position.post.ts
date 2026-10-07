@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const supabase = useServiceSupabase()
   const { error } = await supabase
     .from('app_secrets')
-    .upsert({ key: POSITION_KEY, value: JSON.stringify(position) }, { onConflict: 'key' })
+    .upsert({ key: POSITION_KEY, value: JSON.stringify({ version: 2, ...position }) }, { onConflict: 'key' })
 
   if (error) {
     throw createError({ statusCode: 500, statusMessage: `Não foi possível salvar a posição: ${error.message}` })
