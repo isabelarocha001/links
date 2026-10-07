@@ -266,10 +266,11 @@
         </Teleport>
 
         <!-- Contato direto: TG só gringa (WA já está sob a foto) -->
-        <section v-if="!isPt" class="direct-section">
+        <!-- Telegram privado removido para todos os visitantes; manter apenas PrivSex, WhatsApp e canais públicos. -->
+        <section v-if="false" class="direct-section">
           <p class="direct-label">{{ t('directLabel') }}</p>
           <div class="direct-stack direct-stack--intl">
-            <a class="direct-btn direct-tg direct-btn--primary" :href="telegramPrivateUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Privado', telegramPrivateUrl)">
+            <a class="direct-btn direct-tg direct-btn--primary" href="#" aria-hidden="true" tabindex="-1">
               <span class="d-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></span>
               <span class="d-btn-text"><span class="d-btn-title">{{ t('tgPrivTitle') }}</span><span class="d-btn-sub">{{ t('tgPrivSub') }}</span></span>
             </a>
@@ -6327,7 +6328,7 @@ if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30' || opt.
   }
 }
 
-const telegramPrivateUrl = 'https://t.me/wanessabsx'
+// O contato privado via Telegram foi desativado para brasileiros e estrangeiros.
 const logoPriv = LOGO_PRIVSEX
 const logoTg = LOGO_TG_BLUE
 const logoTgPurple = LOGO_TG_PURPLE
