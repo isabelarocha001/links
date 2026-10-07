@@ -110,8 +110,8 @@ useHead({
   overflow: hidden;
   padding: max(32px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
   background:
-    radial-gradient(circle at 50% -10%, rgba(168, 85, 247, 0.26), transparent 42%),
-    #100817;
+    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.09), transparent 42%),
+    #050505;
   color: #fff;
   font-family: Poppins, Inter, system-ui, sans-serif;
   overflow-wrap: anywhere;
@@ -122,7 +122,7 @@ useHead({
   inset: -28% -20% auto;
   height: 430px;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(192, 132, 252, 0.18), transparent 66%);
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.08), transparent 66%);
   filter: blur(12px);
 }
 
@@ -150,10 +150,10 @@ useHead({
   display: grid;
   place-items: center;
   margin: 8px auto 18px;
-  border: 1px solid rgba(216, 180, 254, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 28px;
-  background: linear-gradient(145deg, rgba(168, 85, 247, 0.52), rgba(88, 28, 135, 0.72));
-  box-shadow: 0 0 34px rgba(168, 85, 247, 0.3), inset 0 1px rgba(255, 255, 255, 0.22);
+  background: linear-gradient(145deg, rgba(38, 38, 42, 0.96), rgba(8, 8, 9, 0.98));
+  box-shadow: 0 0 34px rgba(0, 0, 0, 0.65), inset 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .julia-sales-mark { overflow: hidden; }
@@ -161,7 +161,7 @@ useHead({
 
 .julia-sales-eyebrow {
   margin: 0 0 7px;
-  color: #d8b4fe;
+  color: #d6d7dc;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -199,9 +199,9 @@ h1 {
   align-items: flex-start;
   gap: 16px;
   padding: 20px 18px 18px;
-  border: 1px solid rgba(192, 132, 252, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 20px;
-  background: linear-gradient(145deg, rgba(46, 24, 65, 0.97), rgba(24, 12, 37, 0.98));
+  background: linear-gradient(145deg, rgba(26, 26, 29, 0.98), rgba(10, 10, 11, 0.99));
   box-shadow: 0 15px 34px rgba(0, 0, 0, 0.25);
   text-decoration: none;
   overflow: hidden;
@@ -210,21 +210,21 @@ h1 {
 }
 
 .julia-sales-link--privsex {
-  border-color: rgba(216, 180, 254, 0.7);
-  background: linear-gradient(145deg, rgba(126, 34, 206, 0.86), rgba(55, 19, 80, 0.98) 72%);
-  box-shadow: 0 18px 42px rgba(88, 28, 135, 0.3), 0 0 28px rgba(168, 85, 247, 0.2);
+  border-color: rgba(255, 255, 255, 0.48);
+  background: linear-gradient(145deg, rgba(42, 42, 46, 0.98), rgba(11, 11, 12, 0.99) 72%);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.52), 0 0 28px rgba(255, 255, 255, 0.06);
 }
 
 .julia-sales-link:hover,
 .julia-sales-link:focus-visible {
   transform: translateY(-3px);
-  border-color: rgba(233, 213, 255, 0.9);
-  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.34), 0 0 28px rgba(168, 85, 247, 0.25);
+  border-color: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.55), 0 0 28px rgba(255, 255, 255, 0.08);
   outline: none;
 }
 
 .julia-sales-link:active { transform: scale(0.985); }
-.julia-sales-link--telegram { border-color: rgba(96, 165, 250, 0.34); }
+.julia-sales-link--telegram { border-color: rgba(148, 163, 184, 0.34); }
 
 .julia-sales-link__icon {
   width: 54px;
@@ -232,10 +232,10 @@ h1 {
   display: grid;
   place-items: center;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.09);
 }
 
-.julia-sales-link__icon--telegram { background: rgba(37, 99, 235, 0.24); }
+.julia-sales-link__icon--telegram { background: rgba(71, 85, 105, 0.28); }
 .julia-sales-link__icon img { object-fit: contain; }
 
 .julia-sales-link__copy {
@@ -249,7 +249,7 @@ h1 {
 
 .julia-sales-link__copy strong { color: #fff; font-size: 1.05rem; line-height: 1.2; }
 .julia-sales-link__copy small { color: rgba(245, 240, 255, 0.76); font-size: 0.78rem; line-height: 1.42; }
-.julia-sales-link__arrow { position: absolute; top: 18px; right: 18px; color: #f3e8ff; font-size: 1.25rem; font-weight: 700; }
+.julia-sales-link__arrow { position: absolute; top: 18px; right: 18px; color: #e5e7eb; font-size: 1.25rem; font-weight: 700; }
 
 .julia-sales-info {
   display: grid;
@@ -258,9 +258,9 @@ h1 {
   gap: 17px;
   margin-top: 30px;
   padding: 25px 24px;
-  border: 1px solid rgba(192, 132, 252, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 20px;
-  background: rgba(24, 12, 36, 0.72);
+  background: rgba(17, 17, 19, 0.86);
   text-align: left;
 }
 
@@ -269,10 +269,10 @@ h1 {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.julia-sales-info h2 { margin: 0 0 7px; color: #f3e8ff; font-size: 1rem; }
+.julia-sales-info h2 { margin: 0 0 7px; color: #f3f4f6; font-size: 1rem; }
 .julia-sales-info p, .julia-sales-info li { color: rgba(245, 240, 255, 0.76); font-size: 0.84rem; line-height: 1.55; }
 .julia-sales-info ul { display: grid; gap: 5px; min-width: 0; padding-left: 19px; }
-.julia-sales-info li::marker { color: #d8b4fe; }
+.julia-sales-info li::marker { color: #d1d5db; }
 
 .julia-sales-footer { margin: 25px 0 0; color: rgba(245, 240, 255, 0.48); font-size: 0.72rem; }
 
