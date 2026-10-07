@@ -30,9 +30,11 @@ async function loadPosition() {
   } catch {}
 
   try {
-    const saved = await $fetch('/api/avatar-position')
-    applyPosition(saved)
-    localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(saved))
+    const saved = await $fetch<{ x: number; y: number; zoom: number; persisted?: boolean }>(`/api/avatar-position?ts=${Date.now()}`, { cache: 'no-store' })
+    if (saved.persisted !== false) {
+      applyPosition(saved)
+      localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(saved))
+    }
   } catch {}
 }
 
@@ -43,21 +45,15 @@ async function savePosition() {
       y: Number(avatarY.value),
       zoom: Number(avatarZoom.value),
     }
-    await $fetch('/api/admin/avatar-position', { method: 'POST', body: position })
+    const result = await $fetch<{ ok?: boolean }>('/api/admin/avatar-position', { method: 'POST', body: position })
+    if (result?.ok !== true) throw new Error('O backend não confirmou o salvamento.')
+    const confirmed = await $fetch<{ x: number; y: number; zoom: number; persisted?: boolean }>(`/api/avatar-position?ts=${Date.now()}`, { cache: 'no-store' })
+    if (confirmed.persisted !== true) throw new Error('O Supabase não confirmou a posição salva.')
     localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(position))
     savedMessage.value = 'Posição salva para a landing.'
     window.setTimeout(() => { savedMessage.value = '' }, 2600)
-  } catch {
-    try {
-      localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify({
-        x: Number(avatarX.value),
-        y: Number(avatarY.value),
-        zoom: Number(avatarZoom.value),
-      }))
-      savedMessage.value = 'Backend indisponível: salvo apenas neste navegador.'
-    } catch {
-      errorMessage.value = 'Não foi possível salvar a posição.'
-    }
+  } catch (error: any) {
+    errorMessage.value = error?.data?.statusMessage || error?.message || 'Não foi possível salvar a posição no Supabase.'
   }
 }
 
@@ -65,7 +61,7 @@ async function resetPosition() {
   avatarX.value = 50
   avatarY.value = 50
   avatarZoom.value = 1.16
-  savePosition()
+  await savePosition()
 }
 
 const avatarStyle = computed(() => ({

@@ -13,3 +13,5 @@ Por segurança, a posição é persistida no `app_secrets` do Supabase pelo endp
 administrativo e fica em cache no `localStorage` do navegador em uso
 (`privsex_avatar_position_v1`). A landing lê o valor público filtrado por
 `/api/avatar-position`; nenhuma chave administrativa é exposta ao visitante.
+O botão de salvar relê o valor logo depois da gravação e só mostra confirmação
+quando o Supabase devolve a mesma configuração persistida.

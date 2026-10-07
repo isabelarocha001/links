@@ -21,8 +21,8 @@ export default defineEventHandler(async () => {
       .eq('key', POSITION_KEY)
       .maybeSingle()
 
-    if (!error && data?.value) return normalizePosition(data.value)
+    if (!error && data?.value) return { ...normalizePosition(data.value), persisted: true }
   } catch {}
 
-  return DEFAULT_POSITION
+  return { ...DEFAULT_POSITION, persisted: false }
 })

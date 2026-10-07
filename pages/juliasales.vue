@@ -22,9 +22,11 @@ async function loadAvatarPosition() {
   } catch {}
 
   try {
-    const saved = await $fetch('/api/avatar-position')
-    applyAvatarPosition(saved)
-    localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(saved))
+    const saved = await $fetch<{ x: number; y: number; zoom: number; persisted?: boolean }>(`/api/avatar-position?ts=${Date.now()}`, { cache: 'no-store' })
+    if (saved.persisted !== false) {
+      applyAvatarPosition(saved)
+      localStorage.setItem(AVATAR_POSITION_KEY, JSON.stringify(saved))
+    }
   } catch {}
 }
 
