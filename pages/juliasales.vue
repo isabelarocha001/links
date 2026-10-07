@@ -6,6 +6,11 @@ const PUBLIC_CHANNEL_URL = 'https://t.me/+VFz27CGP9IczMmUx'
 const AVATAR_URL = '/api/avatar-image'
 // O enquadramento inicial preserva a logo inteira; a gestão pode salvar outro zoom.
 const avatarPosition = reactive({ x: 50, y: 50, zoom: 1 })
+const adminAuthed = ref(false)
+const avatarEditorOpen = ref(false)
+const avatarSaving = ref(false)
+const avatarSaveMessage = ref('')
+const avatarSaveError = ref('')
 
 function applyAvatarPosition(saved: any) {
   if (Number.isFinite(Number(saved?.x))) avatarPosition.x = Math.min(100, Math.max(0, Number(saved.x)))
@@ -23,7 +28,41 @@ async function loadAvatarPosition() {
 }
 
 // A posição é carregada somente no cliente para não reaproveitar payload SSR antigo.
-onMounted(loadAvatarPosition)
+async function checkAdminSession() {
+  try {
+    await $fetch('/api/admin/session')
+    adminAuthed.value = true
+  } catch {
+    adminAuthed.value = false
+  }
+}
+
+async function saveAvatarPosition() {
+  avatarSaving.value = true
+  avatarSaveMessage.value = ''
+  avatarSaveError.value = ''
+  try {
+    const position = {
+      x: Number(avatarPosition.x),
+      y: Number(avatarPosition.y),
+      zoom: Number(avatarPosition.zoom),
+    }
+    await $fetch('/api/admin/avatar-position', { method: 'POST', body: position })
+    const confirmed = await $fetch<{ x: number; y: number; zoom: number; persisted?: boolean }>(`/api/avatar-position?ts=${Date.now()}`, { cache: 'no-store' })
+    if (confirmed.persisted !== true) throw new Error('O Supabase não confirmou a posição.')
+    applyAvatarPosition(confirmed)
+    avatarSaveMessage.value = 'Posição salva no Supabase.'
+  } catch (error: any) {
+    avatarSaveError.value = error?.data?.statusMessage || error?.message || 'Não foi possível salvar a posição.'
+  } finally {
+    avatarSaving.value = false
+  }
+}
+
+onMounted(async () => {
+  await loadAvatarPosition()
+  await checkAdminSession()
+})
 
 useHead({
   title: 'PrivSex | Links oficiais',
@@ -56,6 +95,28 @@ useHead({
           :style="{ objectPosition: `${avatarPosition.x}% ${avatarPosition.y}%`, transform: `scale(${avatarPosition.zoom})` }"
         />
       </div>
+      <button v-if="adminAuthed" type="button" class="julia-avatar-edit-trigger" @click="avatarEditorOpen = !avatarEditorOpen">
+        {{ avatarEditorOpen ? 'Fechar ajuste' : 'Ajustar avatar' }}
+      </button>
+      <section v-if="adminAuthed && avatarEditorOpen" class="julia-avatar-editor" aria-label="Ajustar enquadramento do avatar">
+        <label>
+          <span>Horizontal <output>{{ avatarPosition.x }}%</output></span>
+          <input v-model.number="avatarPosition.x" type="range" min="0" max="100" step="1" />
+        </label>
+        <label>
+          <span>Vertical <output>{{ avatarPosition.y }}%</output></span>
+          <input v-model.number="avatarPosition.y" type="range" min="0" max="100" step="1" />
+        </label>
+        <label>
+          <span>Zoom <output>{{ Number(avatarPosition.zoom).toFixed(2) }}x</output></span>
+          <input v-model.number="avatarPosition.zoom" type="range" min="1" max="2" step="0.01" />
+        </label>
+        <button type="button" class="julia-avatar-editor__save" :disabled="avatarSaving" @click="saveAvatarPosition">
+          {{ avatarSaving ? 'Salvando…' : 'Salvar no Supabase' }}
+        </button>
+        <p v-if="avatarSaveMessage" class="julia-avatar-editor__success" role="status">{{ avatarSaveMessage }}</p>
+        <p v-if="avatarSaveError" class="julia-avatar-editor__error" role="alert">{{ avatarSaveError }}</p>
+      </section>
       <p class="julia-sales-eyebrow">PrivSex</p>
       <h1 id="julia-sales-title">Sua conexão com criadores online</h1>
       <p class="julia-sales-subtitle">Conheça a plataforma e escolha como quer continuar.</p>
@@ -194,6 +255,47 @@ useHead({
   object-position: center;
   transform-origin: center;
 }
+
+.julia-avatar-edit-trigger {
+  margin: -8px auto 16px;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  border-radius: 999px;
+  padding: 7px 13px;
+  background: rgba(126, 34, 206, 0.16);
+  color: #e9d5ff;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.julia-avatar-edit-trigger:hover,
+.julia-avatar-edit-trigger:focus-visible {
+  border-color: rgba(216, 180, 254, 0.8);
+  background: rgba(126, 34, 206, 0.3);
+  outline: none;
+}
+
+.julia-avatar-editor {
+  display: grid;
+  gap: 12px;
+  margin: 0 auto 22px;
+  padding: 14px;
+  border: 1px solid rgba(192, 132, 252, 0.28);
+  border-radius: 14px;
+  background: rgba(25, 13, 37, 0.9);
+  text-align: left;
+}
+
+.julia-avatar-editor label { display: grid; gap: 6px; }
+.julia-avatar-editor label span { display: flex; justify-content: space-between; gap: 12px; color: #f3e8ff; font-size: 0.76rem; }
+.julia-avatar-editor output { color: #d8b4fe; font-variant-numeric: tabular-nums; }
+.julia-avatar-editor input { width: 100%; accent-color: #c084fc; cursor: pointer; }
+.julia-avatar-editor__save { border: 0; border-radius: 10px; padding: 10px 12px; background: #c084fc; color: #170b25; font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+.julia-avatar-editor__save:disabled { cursor: wait; opacity: 0.65; }
+.julia-avatar-editor__success, .julia-avatar-editor__error { margin: 0; font-size: 0.72rem; line-height: 1.4; }
+.julia-avatar-editor__success { color: #a7f3d0; }
+.julia-avatar-editor__error { color: #fca5a5; }
 
 .julia-sales-eyebrow {
   margin: 0 0 7px;
