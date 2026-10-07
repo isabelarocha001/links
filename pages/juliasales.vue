@@ -145,19 +145,27 @@ useHead({
 }
 
 .julia-sales-mark {
-  width: 94px;
-  height: 94px;
+  width: clamp(76px, 22vw, 104px);
+  height: auto;
+  aspect-ratio: 1;
   display: grid;
   place-items: center;
   margin: 8px auto 18px;
   border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 28px;
+  border-radius: 50%;
   background: linear-gradient(145deg, rgba(38, 38, 42, 0.96), rgba(8, 8, 9, 0.98));
   box-shadow: 0 0 34px rgba(0, 0, 0, 0.65), inset 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .julia-sales-mark { overflow: hidden; }
-.julia-sales-mark img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.julia-sales-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+}
 
 .julia-sales-eyebrow {
   margin: 0 0 7px;
