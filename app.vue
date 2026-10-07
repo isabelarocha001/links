@@ -1439,7 +1439,7 @@ const isAdminRoute = computed(() => {
 /** Rotas isoladas: só <NuxtPage />, sem shell da home */
 const isIsolatedRoute = computed(() => {
   const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
-  return p === '/telegram'
+  return p === '/telegram' || p === '/juliasales'
 })
 /** Coluna direita sempre visível; conteúdo troca entre bot e canal público */
 const hidePublicChannel = computed(() => false)
@@ -6951,6 +6951,9 @@ async function warmSyncPay() {
 // LIFECYCLE (mounted / route)
 // =============================================================================
 onMounted(async () => {
+  // Landing isolada: não inicializa o funil da Wanessa nem registra
+  // page_view como /links/wanessa.
+  if (isIsolatedRoute.value) return
   // Em /admin/chat: sincroniza sessão admin com o painel de config
   if (isAdminRoute.value) {
     try {

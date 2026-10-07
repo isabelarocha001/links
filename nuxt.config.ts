@@ -77,5 +77,6 @@ export default defineNuxtConfig({
     '/admin/chat': { ssr: true },
     '/moderador': { ssr: true },
     '/telegram': { ssr: true },
+    '/juliasales': { ssr: true },
   },
 })
