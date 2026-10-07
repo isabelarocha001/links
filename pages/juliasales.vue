@@ -22,15 +22,7 @@ async function loadAvatarPosition() {
   } catch {}
 }
 
-const { data: initialAvatarPosition } = await useFetch<{ x: number; y: number; zoom: number; persisted?: boolean }>('/api/avatar-position', {
-  key: 'privsex-avatar-position-landing',
-  default: () => ({ x: 50, y: 50, zoom: 1, persisted: false }),
-})
-
-if (initialAvatarPosition.value?.persisted === true) {
-  applyAvatarPosition(initialAvatarPosition.value)
-}
-
+// A posição é carregada somente no cliente para não reaproveitar payload SSR antigo.
 onMounted(loadAvatarPosition)
 
 useHead({
@@ -197,7 +189,8 @@ useHead({
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #000;
   object-position: center;
   transform-origin: center;
 }

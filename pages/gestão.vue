@@ -215,7 +215,7 @@ h1 { margin: 0; color: #fff; font-size: clamp(1.45rem, 5vw, 2rem); line-height: 
 .gestao-ghost { border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 9px 13px; background: transparent; color: #d1d5db; font: inherit; cursor: pointer; }
 .gestao-preview-wrap { display: grid; place-items: center; margin: 28px 0; }
 .gestao-preview { width: min(62vw, 250px); aspect-ratio: 1; overflow: hidden; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; background: #000; box-shadow: 0 0 0 8px rgba(255,255,255,.035), 0 18px 44px rgba(0,0,0,.5); }
-.gestao-preview img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; transition: transform 120ms ease; }
+.gestao-preview img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; background: #000; transition: transform 120ms ease; }
 .gestao-controls { display: grid; gap: 17px; }
 .gestao-controls label { display: grid; gap: 7px; min-width: 0; }
 .gestao-controls span { display: flex; justify-content: space-between; gap: 12px; color: #e5e7eb; font-size: .82rem; }
