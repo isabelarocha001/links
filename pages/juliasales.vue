@@ -5,7 +5,9 @@ const PRIVSEX_URL = 'https://privsex.com/juliasalles'
 const PUBLIC_CHANNEL_URL = 'https://t.me/+VFz27CGP9IczMmUx'
 const AVATAR_URL = '/privsex-platform-avatar.jpg'
 const AVATAR_POSITION_KEY = 'privsex_avatar_position_v1'
-const avatarPosition = reactive({ x: 50, y: 50, zoom: 1 })
+// A arte original é retrato e possui uma borda preta fora do círculo da logo.
+// Este zoom remove essa margem sem deformar a imagem; a gestão permite refinar.
+const avatarPosition = reactive({ x: 50, y: 50, zoom: 1.16 })
 
 function applyAvatarPosition(saved: any) {
   if (Number.isFinite(Number(saved?.x))) avatarPosition.x = Math.min(100, Math.max(0, Number(saved.x)))

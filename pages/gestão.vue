@@ -15,7 +15,7 @@ const errorMessage = ref('')
 const savedMessage = ref('')
 const avatarX = ref(50)
 const avatarY = ref(50)
-const avatarZoom = ref(1)
+const avatarZoom = ref(1.16)
 
 function applyPosition(saved: any) {
   if (Number.isFinite(Number(saved?.x))) avatarX.value = Math.min(100, Math.max(0, Number(saved.x)))
@@ -64,7 +64,7 @@ async function savePosition() {
 async function resetPosition() {
   avatarX.value = 50
   avatarY.value = 50
-  avatarZoom.value = 1
+  avatarZoom.value = 1.16
   savePosition()
 }
 

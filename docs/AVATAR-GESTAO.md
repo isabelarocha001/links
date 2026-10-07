@@ -5,7 +5,9 @@ circular do avatar usado na landing `/juliasales`.
 
 O acesso reaproveita a sessão do painel administrativo. Depois de entrar, use
 os controles de posição horizontal, posição vertical e zoom para encaixar a
-logo na máscara circular. Salve a posição e atualize a landing para conferir.
+logo na máscara circular. A landing começa com um enquadramento automático
+que remove a margem preta da arte retrato sem deformá-la. Salve a posição e
+atualize a landing para conferir.
 
 Por segurança, a posição é persistida no `app_secrets` do Supabase pelo endpoint
 administrativo e fica em cache no `localStorage` do navegador em uso

@@ -1,7 +1,7 @@
 import { useServiceSupabase } from '../utils/supabase'
 
 const POSITION_KEY = 'PRIVSEX_AVATAR_POSITION'
-const DEFAULT_POSITION = { x: 50, y: 50, zoom: 1 }
+const DEFAULT_POSITION = { x: 50, y: 50, zoom: 1.16 }
 
 function normalizePosition(value: any) {
   const parsed = typeof value === 'string' ? JSON.parse(value) : value

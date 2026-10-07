@@ -6,7 +6,7 @@ function normalizePosition(body: any) {
   return {
     x: Math.min(100, Math.max(0, Number.isFinite(Number(body?.x)) ? Number(body.x) : 50)),
     y: Math.min(100, Math.max(0, Number.isFinite(Number(body?.y)) ? Number(body.y) : 50)),
-    zoom: Math.min(2, Math.max(1, Number.isFinite(Number(body?.zoom)) ? Number(body.zoom) : 1)),
+    zoom: Math.min(2, Math.max(1, Number.isFinite(Number(body?.zoom)) ? Number(body.zoom) : 1.16)),
   }
 }
 
