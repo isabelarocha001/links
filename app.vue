@@ -2913,6 +2913,7 @@ async function sendMimoGift() {
       },
     })
     if (!res?.ok || !res.pix_code) throw new Error(res?.error || 'Falha ao gerar PIX')
+    try { metaInitiateCheckout('mimo_gift', amount, 'Mimo pra Wanessa') } catch {}
     pixPaid.value = false
     pixCopyCode.value = res.pix_code
     funnelPixCode.value = res.pix_code
@@ -3578,6 +3579,10 @@ async function submitStripeCard() {
           status: paymentIntent.status,
         })
       } catch {}
+      try {
+        const amt = Number(selectedChatPlan.value?.price || priceToNumber(selectedPack.value?.price || '0') || 0)
+        metaPurchase(String(stripePendingPlanKey || 'stripe'), amt, String(paymentIntent.id || pixExternalId.value || ''), String(selectedChatPlan.value?.title || selectedPack.value?.label || 'stripe'))
+      } catch {}
       await closeStripeModal()
       try {
         await funnelType('Payment confirmed 💚|||Chat unlocked. You can message me now.', 800)
@@ -3729,6 +3734,9 @@ async function startUnifiedCheckout(opts: {
   if (!res?.ok || !res.pix_code) {
     throw new Error(res?.error || 'Falha ao gerar PIX')
   }
+  try {
+    metaInitiateCheckout(opts.plan_key, opts.amount, opts.title)
+  } catch {}
   pixPaid.value = false
   pixCopyCode.value = res.pix_code
   const isEmv = /^000201/.test(res.pix_code)
@@ -3804,6 +3812,11 @@ async function checkPixStatus(silent = false) {
       pixStatusText.value = 'Pagamento confirmado junto ao Banco Central do Brasil ✅'
       if (pixPollTimer) { clearInterval(pixPollTimer); pixPollTimer = null }
       try { track('chat_plan_paid', { offer_slug: selectedChatPlan.value?.key || selectedPack.value?.key || 'chat' }) } catch {}
+      try {
+        const pk = String(selectedChatPlan.value?.key || selectedPack.value?.key || 'purchase')
+        const amt = Number(selectedChatPlan.value?.price || priceToNumber(selectedPack.value?.price || '0') || 0)
+        metaPurchase(pk, amt, id, String(selectedChatPlan.value?.title || selectedPack.value?.label || pk))
+      } catch {}
       if (funnelStep.value === 'awaiting_payment' || funnelStep.value === 'pix') {
         stopFunnelPayPoll()
         showPixModal.value = false
@@ -4078,6 +4091,9 @@ async function generateFunnelPix() {
     funnelPixCode.value = res.pix_code
     funnelPaymentId.value = res.payment_id || ''
     funnelExternalId.value = res.external_id || res.payment_id || ''
+    try {
+      metaInitiateCheckout(String(pack.key || ''), amount, String(pack.label || ''))
+    } catch {}
     return true
   } catch (e: any) {
     console.error('[funnel pix]', e)
@@ -4529,6 +4545,11 @@ async function onFunnelPaid() {
   const planKey = String(pack?.key || selectedChatPlan.value?.key || '')
   funnelStep.value = 'paid'
   track('whatsapp_funnel_paid', { offer_slug: planKey || 'paid' })
+  try {
+    const amt = Number(selectedChatPlan.value?.price || priceToNumber(pack?.price || '0') || 0)
+    const payId = String(funnelPaymentId.value || funnelExternalId.value || pixPaymentId.value || pixExternalId.value || planKey)
+    metaPurchase(planKey || 'paid', amt, payId, String(pack?.label || selectedChatPlan.value?.title || planKey))
+  } catch {}
   const isSegunda = planKey === 'chat_unlock_segunda_chance' || planKey === 'chat_unlock_blocked'
   const isChat = planKey.startsWith('chat_')
   const isVideo = planKey.startsWith('vid_')
@@ -6905,6 +6926,40 @@ function track(eventName: string, extra: Record<string, any> = {}) {
     fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true }).catch(() => {})
   } catch {}
 }
+
+/** Meta Pixel helper — evita erro se fbq ainda não carregou */
+const _metaPurchasedIds = new Set<string>()
+function metaTrack(event: string, params: Record<string, any> = {}) {
+  try {
+    if (typeof window !== 'undefined' && typeof (window as any).fbq === 'function') {
+      ;(window as any).fbq('track', event, params)
+    }
+  } catch {}
+}
+function metaInitiateCheckout(planKey: string, amount: number, title?: string) {
+  metaTrack('InitiateCheckout', {
+    value: Number(amount) || 0,
+    currency: 'BRL',
+    content_name: title || planKey || 'checkout',
+    content_ids: [String(planKey || 'checkout')],
+    content_type: 'product',
+    num_items: 1,
+  })
+}
+function metaPurchase(planKey: string, amount: number, paymentId?: string, title?: string) {
+  const id = String(paymentId || planKey || '')
+  if (id && _metaPurchasedIds.has(id)) return
+  if (id) _metaPurchasedIds.add(id)
+  metaTrack('Purchase', {
+    value: Number(amount) || 0,
+    currency: 'BRL',
+    content_name: title || planKey || 'purchase',
+    content_ids: [String(planKey || 'purchase')],
+    content_type: 'product',
+    num_items: 1,
+  })
+}
+
 function onCardClick(label: string, url: string) {
   const slug = offerFromLabel(label)
   if (alreadyClickedToday(slug)) return
