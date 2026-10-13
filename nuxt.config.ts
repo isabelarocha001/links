@@ -63,8 +63,7 @@ t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', '1909299113374031');
-fbq('track', 'PageView');
-fbq('track', 'ViewContent');
+// PageView + ViewContent: 1x por sessão no plugin meta-pixel.client.ts
           `.trim()
         }
       ],
