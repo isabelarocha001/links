@@ -132,8 +132,8 @@
             <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </div>
           <div class="card-col" v-if="!hidePublicChannel">
-            <!-- BR + canal desativado no admin → bot; gringa SEMPRE canal público (nunca bot) -->
-            <template v-if="isPt && !publicChannelEnabled && telegramBotEnabled">
+            <!-- BR: bot VIP ao lado do PrivSex; gringa SEMPRE canal público (nunca bot) -->
+            <template v-if="isPt && telegramBotEnabled">
               <a class="lux-card lux-card--right" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
                 <div class="card-glow"></div>
                 <div class="card-top">
@@ -159,24 +159,24 @@
             </template>
           </div>
         </section>
-        <!-- Cards secundários: Telegram VIP à esquerda e WhatsApp à direita -->
-        <div id="links-secondary-cards" class="secondary-cards" :class="{ 'secondary-cards--single': !publicChannelEnabled || !telegramBotEnabled || !privsexLinkEnabled }" v-if="configReady && isPt">
+        <!-- Cards secundários: Canal Público (prévias) abaixo quando bot está no card principal -->
+        <div id="links-secondary-cards" class="secondary-cards" :class="{ 'secondary-cards--single': !publicChannelEnabled || !privsexLinkEnabled }" v-if="configReady && isPt">
           <section class="vip-block card-col" v-if="publicChannelEnabled && telegramBotEnabled">
-          <a class="lux-card vip-card" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">
+          <a class="lux-card vip-card" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
             <div class="vip-shine"></div>
             <div class="vip-content">
-              <span class="vip-icon vip-icon-stack" aria-hidden="true" title="Bot Telegram">
-                <span class="vip-robot">🤖</span>
-                <img class="vip-tg-logo" :src="logoTgPurple" alt="Telegram" width="18" height="18" />
+              <span class="vip-icon vip-icon-stack" aria-hidden="true" title="Canal Público">
+                <span class="vip-robot">📱</span>
+                <img class="vip-tg-logo" :src="logoTg" alt="Telegram" width="18" height="18" />
               </span>
               <div>
-                <h3 class="vip-title">{{ t('vipTitle') }}</h3>
-                <p class="vip-desc">{{ t('vipDesc') }}</p>
+                <h3 class="vip-title">{{ t('pubTitle') }}</h3>
+                <p class="vip-desc">{{ t('pubDesc') }}</p>
               </div>
             </div>
             <span class="vip-arrow">→</span>
           </a>
-          <a class="card-enter card-enter--quest" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)"><span aria-hidden="true">✦</span> Entrar no VIP <span aria-hidden="true">↗</span></a>
+          <a class="card-enter card-enter--quest" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)"><span aria-hidden="true">✦</span> Ver prévias grátis <span aria-hidden="true">↗</span></a>
           </section>
 
           <section class="iq-section card-col" v-if="false && privsexLinkEnabled">
@@ -6910,6 +6910,20 @@ function onCardClick(label: string, url: string) {
   if (alreadyClickedToday(slug)) return
   markClickedToday(slug)
   track('outbound_click', { label, url, offer_slug: slug })
+
+  // Meta Pixel — eventos personalizados de clique (não são conversão)
+  try {
+    if (typeof window !== 'undefined' && typeof (window as any).fbq === 'function') {
+      const lab = (label || '').toLowerCase()
+      if (/privsex|priv\s*sex/i.test(lab)) {
+        ;(window as any).fbq('trackCustom', 'ClickPrivsex', { content_name: label, url })
+      } else if (/telegram\s*p[uú]blico|canal\s*p[uú]blico|pr[eé]via/i.test(lab)) {
+        ;(window as any).fbq('trackCustom', 'ClickCanalPublico', { content_name: label, url })
+      } else if (/telegram\s*bot|vip\s*bot|bot\s*telegram|vip/i.test(lab)) {
+        ;(window as any).fbq('trackCustom', 'ClickTelegramBot', { content_name: label, url })
+      }
+    }
+  } catch {}
 }
 function attachLogo(l: LinkItem): LinkItem {
   const lab = (l.label || '').toLowerCase()
