@@ -80,21 +80,42 @@
             </button>
           </div>
         </header>
-        <div id="links-intro" class="links-intro">
-          <span class="links-intro__eyebrow">Bem-vindo ao meu lugar secreto</span>
-          <p>Eu deixei tudo pronto para você escolher como quer me conhecer, no seu ritmo e do seu jeito.</p>
-        </div>
-        <section v-if="isPt" class="creator-signals" aria-label="Sobre a Wanessa">
-          <div class="creator-presence is-online" aria-live="polite">
-            <span class="creator-presence__dot" aria-hidden="true"></span>
-            <span>Online agora</span>
-            <span v-if="nearPresenceReady && nearPresenceText" class="creator-presence__separator" aria-hidden="true">•</span>
-            <span v-if="nearPresenceReady && nearPresenceText" class="creator-presence__distance">{{ nearPresenceText }}</span>
+        <!-- Bio em tópicos + ações (chat / chamada) + redes -->
+        <section v-if="isPt" class="creator-bio-topics" aria-label="Sobre a Wanessa">
+          <ul class="bio-topics">
+            <li>24 anos · Balneário Camboriú</li>
+            <li>Conteúdo exclusivo online</li>
+            <li>Chat, videochamada e packs</li>
+            <li>Presença digital · +30k pessoas</li>
+          </ul>
+          <div class="bio-actions">
+            <button type="button" class="bio-action-btn bio-action-btn--chat" @click="openWaFunnel('landing_chat')">
+              <span aria-hidden="true">💬</span> Chat
+            </button>
+            <button type="button" class="bio-action-btn bio-action-btn--call" @click="openWaFunnel('landing_call')">
+              <span aria-hidden="true">📹</span> Chamada
+            </button>
           </div>
-        </section>
-        <section v-if="isPt" class="choice-guide" aria-labelledby="choice-guide-title">
-          <h2 id="choice-guide-title">Por onde você quer continuar?</h2>
-          <p>Escolha uma das opções que preparei para você:</p>
+          <div class="bio-socials">
+            <a
+              class="bio-social-link"
+              href="https://instagram.com/wanessabsx_"
+              target="_blank"
+              rel="noopener noreferrer"
+              @pointerdown.passive="onCardClick('Instagram', 'https://instagram.com/wanessabsx_')"
+            >
+              <span aria-hidden="true">📸</span> Instagram
+            </a>
+            <a
+              class="bio-social-link"
+              href="https://www.tiktok.com/@wanessabsx"
+              target="_blank"
+              rel="noopener noreferrer"
+              @pointerdown.passive="onCardClick('TikTok', 'https://www.tiktok.com/@wanessabsx')"
+            >
+              <span aria-hidden="true">🎵</span> TikTok
+            </a>
+          </div>
         </section>
         <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
           <div class="card-col" v-if="privsexLinkEnabled">
@@ -194,13 +215,7 @@
           </section>
         </div>
 
-        <section v-if="isPt" class="creator-intro" aria-label="Sobre mim">
-          <span class="creator-intro__eyebrow">Um pouco mais sobre mim</span>
-          <h2>Quero que você conheça a Wanessa por trás da foto</h2>
-          <p>Eu gosto de conhecer quem está do outro lado, conversar sem pressa e criar uma conexão que pareça nossa. Aqui você entra no meu lugar secreto e escolhe como quer se aproximar de mim.</p>
-          <p>Tenho 24 anos, moro em Balneário Camboriú e crio conteúdo exclusivo para meus fãs online. No chat, posso ser sua companhia, sua confidente ou até sua noiva virtual.</p>
-          <p>Você que escolhe, amor. Eu só te mostro os caminhos para chegar mais perto de mim.</p>
-        </section>
+        <!-- creator-intro longo removido: bio em tópicos fica acima dos cards -->
 
         <Teleport to="body">
           <div v-if="false && iqVisible" class="iq-overlay" @click.self="iqAbandonClose">
@@ -6427,7 +6442,7 @@ function toggleFaq(index: number) {
 
 const TOUR_KEY = 'wanessa_links_tour_v1'
 const tourSteps = [
-  { title: 'Tudo foi preparado para você 💜', body: 'Aqui você escolhe como quer me conhecer e por onde prefere começar. É tudo online, sem encontros.', target: 'links-intro' },
+  { title: 'Tudo foi preparado para você 💜', body: 'Aqui você escolhe como quer me conhecer e por onde prefere começar. É tudo online, sem encontros.', target: 'links-main-cards' },
   { title: 'Conheça antes de escolher', body: 'No canal público você vê prévias. No PrivSex encontra meu conteúdo exclusivo.', target: 'links-main-cards' },
   { title: 'Prefere conversar?', body: 'O VIP do Telegram e o WhatsApp ficam logo abaixo. No WhatsApp você vê as opções de conversa e videochamada.', target: 'links-secondary-cards' },
   { title: 'Sem dúvidas no caminho', body: 'O FAQ no final responde sobre prévias, encontros e como funciona cada opção.', target: 'links-faq' },
@@ -7960,5 +7975,80 @@ useHead({
   background: rgba(255,255,255,0.06) !important;
 }
 .iq-wa-btn:active { transform: scale(0.98) !important; }
+
+/* Bio em tópicos + chat/chamada + redes */
+.creator-bio-topics {
+  margin: 8px 0 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.bio-topics {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bio-topics li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.88);
+}
+.bio-topics li::before {
+  content: '•';
+  position: absolute;
+  left: 4px;
+  color: #a78bfa;
+}
+.bio-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.bio-action-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+}
+.bio-action-btn--chat {
+  background: linear-gradient(135deg, #25D366, #128C7E);
+}
+.bio-action-btn--call {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+.bio-action-btn:active { transform: scale(0.98); }
+.bio-socials {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.bio-social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.9);
+  text-decoration: none;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.bio-social-link:active { transform: scale(0.98); }
 </style>
 
