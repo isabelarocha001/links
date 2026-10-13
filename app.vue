@@ -80,43 +80,6 @@
             </button>
           </div>
         </header>
-        <!-- Bio em tópicos + ações (chat / chamada) + redes -->
-        <section v-if="isPt" class="creator-bio-topics" aria-label="Sobre a Wanessa">
-          <ul class="bio-topics">
-            <li>24 anos · Balneário Camboriú</li>
-            <li>Conteúdo exclusivo online</li>
-            <li>Chat, videochamada e packs</li>
-            <li>Presença digital · +30k pessoas</li>
-          </ul>
-          <div class="bio-actions">
-            <button type="button" class="bio-action-btn bio-action-btn--chat" @click="openWaFunnel('landing_chat')">
-              <span aria-hidden="true">💬</span> Chat
-            </button>
-            <button type="button" class="bio-action-btn bio-action-btn--call" @click="openWaFunnel('landing_call')">
-              <span aria-hidden="true">📹</span> Chamada
-            </button>
-          </div>
-          <div class="bio-socials">
-            <a
-              class="bio-social-link"
-              href="https://instagram.com/wanessabsx_"
-              target="_blank"
-              rel="noopener noreferrer"
-              @pointerdown.passive="onCardClick('Instagram', 'https://instagram.com/wanessabsx_')"
-            >
-              <span aria-hidden="true">📸</span> Instagram
-            </a>
-            <a
-              class="bio-social-link"
-              href="https://www.tiktok.com/@wanessabsx"
-              target="_blank"
-              rel="noopener noreferrer"
-              @pointerdown.passive="onCardClick('TikTok', 'https://www.tiktok.com/@wanessabsx')"
-            >
-              <span aria-hidden="true">🎵</span> TikTok
-            </a>
-          </div>
-        </section>
         <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
           <div class="card-col" v-if="privsexLinkEnabled">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
@@ -324,6 +287,44 @@
           <button type="button" class="links-tour__jump" @click="showTourSection">Ver esta parte ↓</button>
           <div class="links-tour__progress" aria-hidden="true"><span :style="{ width: `${((tourStep + 1) / tourSteps.length) * 100}%` }"></span></div>
         </div>
+
+        <!-- Bio em tópicos + chat/chamada + redes (rodapé da página) -->
+        <section v-if="isPt" class="creator-bio-topics" aria-label="Sobre a Wanessa">
+          <ul class="bio-topics">
+            <li>24 anos · Balneário Camboriú</li>
+            <li>Conteúdo exclusivo online</li>
+            <li>Chat, videochamada e packs</li>
+            <li>Presença digital · +30k pessoas</li>
+          </ul>
+          <div class="bio-actions">
+            <button type="button" class="bio-action-btn bio-action-btn--chat" @click="openWaFunnel('landing_chat')">
+              <span aria-hidden="true">💬</span> Chat
+            </button>
+            <button type="button" class="bio-action-btn bio-action-btn--call" @click="openWaFunnel('landing_call')">
+              <span aria-hidden="true">📹</span> Chamada
+            </button>
+          </div>
+          <div class="bio-socials">
+            <a
+              class="bio-social-link"
+              href="https://instagram.com/wanessabsx_"
+              target="_blank"
+              rel="noopener noreferrer"
+              @pointerdown.passive="onCardClick('Instagram', 'https://instagram.com/wanessabsx_')"
+            >
+              <span aria-hidden="true">📸</span> Instagram
+            </a>
+            <a
+              class="bio-social-link"
+              href="https://www.tiktok.com/@wanessabsx"
+              target="_blank"
+              rel="noopener noreferrer"
+              @pointerdown.passive="onCardClick('TikTok', 'https://www.tiktok.com/@wanessabsx')"
+            >
+              <span aria-hidden="true">🎵</span> TikTok
+            </a>
+          </div>
+        </section>
 
         <footer class="bio-block">
           <div class="ig-card">
