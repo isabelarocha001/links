@@ -160,6 +160,64 @@ export default defineEventHandler(async (event) => {
     return { status: 'unknown', message: 'Pagamento não encontrado' }
   }
 
+  // Pix Automático tem endpoint de assinatura próprio; não consultar como transação avulsa.
+  const paymentMeta = row.metadata && typeof row.metadata === 'object' ? row.metadata : {}
+  const subscriptionToken = String((paymentMeta as any).subscription_token || '')
+  if ((paymentMeta as any).billing_method === 'pix_automatico' && subscriptionToken) {
+    try {
+      const { clientId, clientSecret } = await loadSyncPayCredentials()
+      if (clientId && clientSecret) {
+        const token = await getSyncPayToken(clientId, clientSecret)
+        if (token) {
+          const response = await fetch(`https://api.syncpayments.com.br/api/partner/v1/subscriptions/${encodeURIComponent(subscriptionToken)}`, {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+          })
+          const payload = await response.json().catch(() => ({} as any))
+          if (response.ok) {
+            const root = payload?.data && typeof payload.data === 'object' ? { ...payload, ...payload.data } : payload
+            const subscription = root?.subscription || root
+            const mandate = root?.mandate || subscription?.mandate || {}
+            const charge = root?.latest_charge || root?.first_payment || root?.charge || subscription?.latest_charge || subscription?.charge || {}
+            const subscriptionStatus = String(subscription?.status || root?.subscription_status || '').toLowerCase()
+            const mandateStatus = String(mandate?.status || root?.mandate_status || subscription?.mandate_status || (paymentMeta as any).mandate_status || '')
+            const chargeStatus = String(charge?.status || root?.charge_status || root?.payment_status || '').toLowerCase()
+            const isPaid = ['approved', 'paid', 'completed', 'confirmed', 'success'].includes(chargeStatus) || ['active', 'approved', 'paid'].includes(subscriptionStatus)
+            const mapped = isPaid ? 'approved' : ['cancelled', 'canceled', 'failed', 'expired'].includes(subscriptionStatus) ? subscriptionStatus : 'pending'
+            const safeMeta = {
+              ...paymentMeta,
+              subscription_status: subscriptionStatus || (paymentMeta as any).subscription_status || 'pending',
+              mandate_status: mandateStatus || (paymentMeta as any).mandate_status || 'CREATED',
+              charge_status: chargeStatus || undefined,
+              status_checked_at: new Date().toISOString(),
+            }
+            const update: Record<string, any> = { metadata: safeMeta }
+            if (mapped === 'approved') { update.status = 'approved'; update.approved_at = new Date().toISOString() }
+            else if (['cancelled', 'canceled', 'failed', 'expired'].includes(mapped)) update.status = mapped
+            await supabase.from('payments').update(update).eq('id', row.id)
+            return {
+              status: mapped,
+              payment_id: row.id,
+              external_id: row.external_id,
+              amount: row.amount,
+              mandate_status: safeMeta.mandate_status,
+              subscription_status: safeMeta.subscription_status,
+              message: mapped === 'approved' ? 'Assinatura confirmada' : 'Aguardando autorização ou primeira cobrança',
+            }
+          }
+          console.error('[checkout/status] subscription lookup failed', response.status)
+        }
+      }
+    } catch (e: any) {
+      console.error('[checkout/status] subscription status', e?.name || 'provider_error')
+    }
+    return {
+      status: row.status || 'pending', payment_id: row.id, external_id: row.external_id,
+      amount: row.amount, mandate_status: (paymentMeta as any).mandate_status || 'CREATED',
+      subscription_status: (paymentMeta as any).subscription_status || 'pending',
+      message: 'Aguardando autorização ou primeira cobrança',
+    }
+  }
+
   // Se já aprovado no banco, retorna (e garante metadata.chat_unlocked na conversa)
   if (['approved', 'paid', 'completed'].includes(String(row.status || '').toLowerCase())) {
     try {
