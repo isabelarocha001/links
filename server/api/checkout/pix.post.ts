@@ -18,6 +18,16 @@ import { useServiceSupabase, getClientIp } from '../../utils/supabase'
 
 // Valores default por plan_key (chat_quick = desbloqueio do chat pago)
 const PLAN_FALLBACK: Record<string, { title: string; amount: number }> = {
+  // VIP prices are authoritative on the server. Ignore client-submitted amounts
+  // for these plans so editing a request cannot lower the charge.
+  vip_monthly: { title: 'Canal VIP mensal', amount: 29.9 },
+  vip_lifetime: { title: 'Canal VIP vitalício', amount: 109.9 },
+  vip_bump_companion: { title: 'Conteúdo acompanhado', amount: 99.9 },
+  vip_bump_companion_discount: { title: 'Conteúdo acompanhado com desconto', amount: 69.93 },
+  vip_upsell_lesbian: { title: 'Conteúdo lésbico', amount: 99.9 },
+  vip_upsell_lesbian_discount: { title: 'Conteúdo lésbico com desconto', amount: 69.93 },
+  vip_bump_video_call: { title: 'Videochamada 10 minutos', amount: 99.9 },
+  vip_bump_video_call_discount: { title: 'Videochamada 10 minutos com desconto', amount: 69.93 },
   chat_quick: { title: 'Chat rápido 10 min', amount: 9.9 },
   chat_basic: { title: 'Chat 30 min', amount: 19.9 },
   chat_midia: { title: 'Chat + mídias', amount: 29.9 },
@@ -147,8 +157,10 @@ export default defineEventHandler(async (event) => {
   const planKey = String(body?.plan_key || '').trim() || 'custom'
   const plan = PLAN_FALLBACK[planKey]
   const amount = Number(body?.amount)
-  const finalAmount =
-    Number.isFinite(amount) && amount > 0
+  const isFixedVipPlan = planKey.startsWith('vip_')
+  const finalAmount = isFixedVipPlan
+    ? plan?.amount
+    : Number.isFinite(amount) && amount > 0
       ? Number(amount.toFixed(2))
       : plan?.amount
   if (!finalAmount || finalAmount <= 0) {
@@ -157,6 +169,10 @@ export default defineEventHandler(async (event) => {
   const title = String(body?.title || plan?.title || planKey).slice(0, 80)
   const visitor_id = body?.visitor_id ? String(body.visitor_id).slice(0, 120) : null
   const source = String(body?.source || 'links_chat_lock').slice(0, 60)
+  const requestedCallStyle = String(body?.call_style || '').trim().toLowerCase()
+  const callStyle = planKey.startsWith('vid_') && ['carinhosa', 'provocante'].includes(requestedCallStyle)
+    ? requestedCallStyle
+    : null
 
   const { clientId, clientSecret, hasId, hasSecret } = await loadSyncPayCredentials()
   const ip = getClientIp(event)
@@ -232,6 +248,7 @@ export default defineEventHandler(async (event) => {
               plan_key: planKey,
               title,
               visitor_id,
+              ...(callStyle ? { call_style: callStyle, quiz: 'video_call_v2' } : {}),
               ip,
               provider: 'syncpay',
               syncpay: payData,
