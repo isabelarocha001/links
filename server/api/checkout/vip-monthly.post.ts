@@ -52,15 +52,40 @@ function isValidCpf(value: string) {
 
 function extractEnrollment(payload: any) {
   const root = payload?.data && typeof payload.data === 'object' ? { ...payload, ...payload.data } : payload
-  const payment = root?.payment || root?.first_payment || root?.charge || root?.subscription?.payment || {}
+  const subscription = root?.subscription || {}
+  const charges = Array.isArray(root?.charges) ? root.charges : Array.isArray(subscription?.charges) ? subscription.charges : []
+  const latestCharge = root?.latest_charge || root?.first_payment || root?.charge ||
+    charges.find((charge: any) => String(charge?.status || '').toLowerCase() === 'pending') || charges[0] || {}
+  const payment = root?.payment || latestCharge?.payment || root?.first_payment?.payment ||
+    root?.charge?.payment || subscription?.payment || {}
+  const mandate = root?.mandate || payment?.mandate || subscription?.mandate || {}
+  const qrSources = [payment, mandate, root?.first_payment, latestCharge, subscription, root]
+  const qrFields = ['qr_code', 'qrCode', 'qr_code_value', 'qr_code_text', 'pix_code', 'pix_copy_paste', 'copy_paste', 'emv']
+  const qrCode = qrSources.flatMap((source: any) => qrFields.map((field) => source?.[field]))
+    .find((value) => typeof value === 'string' && value.trim()) || ''
   return {
     root,
     payment,
-    subscriptionToken: String(root?.subscription_token || root?.token || root?.subscription?.token || ''),
-    mandateId: String(payment?.mandate_id || root?.mandate_id || ''),
-    mandateStatus: String(payment?.mandate_status || root?.mandate_status || ''),
-    qrCode: String(payment?.qr_code || payment?.pix_code || payment?.copy_paste || payment?.emv || root?.qr_code || root?.pix_code || root?.pix_copy_paste || ''),
-    expiresAt: readPixExpiry({ ...root, payment, mandate: root?.mandate || payment?.mandate }),
+    subscriptionToken: String(root?.subscription_token || root?.token || subscription?.token || ''),
+    mandateId: String(payment?.mandate_id || mandate?.id || mandate?.mandate_id || root?.mandate_id || ''),
+    mandateStatus: String(payment?.mandate_status || mandate?.status || root?.mandate_status || ''),
+    qrCode: String(qrCode),
+    expiresAt: readPixExpiry({ ...root, payment, charge: latestCharge, mandate }),
+  }
+}
+
+function responseShape(payload: any) {
+  const root = payload?.data && typeof payload.data === 'object' ? { ...payload, ...payload.data } : payload
+  const subscription = root?.subscription || {}
+  const charges = Array.isArray(root?.charges) ? root.charges : Array.isArray(subscription?.charges) ? subscription.charges : []
+  const payment = root?.payment || root?.first_payment?.payment || root?.charge?.payment || subscription?.payment || {}
+  const mandate = root?.mandate || payment?.mandate || subscription?.mandate || {}
+  return {
+    rootKeys: Object.keys(root || {}).slice(0, 40),
+    paymentKeys: Object.keys(payment || {}).slice(0, 30),
+    mandateKeys: Object.keys(mandate || {}).slice(0, 30),
+    latestChargeKeys: Object.keys(charges[0] || root?.latest_charge || root?.first_payment || root?.charge || {}).slice(0, 30),
+    chargeCount: charges.length,
   }
 }
 
@@ -118,6 +143,44 @@ export default defineEventHandler(async (event) => {
 
   const supabase = useServiceSupabase()
   const cached = await findPendingVipPix(supabase, { visitorId, planKey: storedPlanKey, paymentMethod: 'pix_automatico' })
+  if (cached && !cached.pix_qr_code) {
+    if (cached.external_id) {
+      try {
+        const statusResponse = await fetch(`${base}/subscriptions/${encodeURIComponent(cached.external_id)}`, {
+          headers, signal: AbortSignal.timeout(6000),
+        })
+        if (statusResponse.ok) {
+          const statusPayload = await statusResponse.json().catch(() => ({} as any))
+          const recovered = extractEnrollment(statusPayload)
+          if (recovered.qrCode) {
+            const metadata = {
+              ...(cached.metadata || {}),
+              ...(recovered.mandateId ? { mandate_id: recovered.mandateId } : {}),
+              mandate_status: recovered.mandateStatus || cached.metadata?.mandate_status || 'CREATED',
+              ...(recovered.expiresAt ? { pix_expires_at: recovered.expiresAt } : {}),
+              pix_qr_code_missing: false,
+            }
+            const { error } = await supabase.from('payments').update({ pix_qr_code: recovered.qrCode, metadata }).eq('id', cached.id)
+            if (!error) {
+              return {
+                ok: true,
+                reused: true,
+                payment_id: cached.id,
+                subscription_status: String(recovered.root?.status || 'pending_first_payment'),
+                mandate_id: recovered.mandateId || metadata.mandate_id || null,
+                mandate_status: metadata.mandate_status,
+                pix_code: recovered.qrCode,
+                amount: expectedAmount,
+                periodicity_days: expectedPeriodDays,
+                expires_at: recovered.expiresAt,
+              }
+            }
+          }
+        }
+      } catch { /* Keep the existing enrollment; never create a duplicate subscription. */ }
+    }
+    throw createError({ statusCode: 502, statusMessage: 'A autorização já foi criada, mas a SyncPay ainda não disponibilizou o QR Code. Tente novamente em alguns instantes; não gere outra autorização.' })
+  }
   if (cached?.pix_qr_code) {
     let cachedExpiry = getVipPixExpiry(cached, false)
     let cachedStatus = String(cached.metadata?.subscription_status || '').toLowerCase()
@@ -213,13 +276,61 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 502, statusMessage: 'A SyncPay não conseguiu iniciar a autorização. Confira os dados e tente novamente.' })
     }
 
-    const enrollment = extractEnrollment(enrollPayload)
+    let enrollment = extractEnrollment(enrollPayload)
+    if (!enrollment.qrCode && enrollment.subscriptionToken) {
+      try {
+        const recoveryResponse = await fetch(`${base}/subscriptions/${encodeURIComponent(enrollment.subscriptionToken)}`, {
+          headers, signal: AbortSignal.timeout(6000),
+        })
+        if (recoveryResponse.ok) {
+          const recovered = extractEnrollment(await recoveryResponse.json().catch(() => ({} as any)))
+          enrollment = {
+            ...enrollment,
+            ...recovered,
+            subscriptionToken: enrollment.subscriptionToken,
+            mandateId: recovered.mandateId || enrollment.mandateId,
+            mandateStatus: recovered.mandateStatus || enrollment.mandateStatus,
+            qrCode: recovered.qrCode || enrollment.qrCode,
+            expiresAt: recovered.expiresAt || enrollment.expiresAt,
+          }
+        }
+      } catch { /* Persist the provider identifiers below so a retry cannot create a duplicate. */ }
+    }
+    if (enrollment.subscriptionToken && enrollment.mandateId && !enrollment.qrCode) {
+      const metadata = {
+        source: 'assinaturavip',
+        plan_key: storedPlanKey,
+        visitor_id: visitorId,
+        billing_method: 'pix_automatico',
+        subscription_token: enrollment.subscriptionToken,
+        mandate_id: enrollment.mandateId,
+        mandate_status: enrollment.mandateStatus || 'CREATED',
+        subscription_status: String(enrollment.root?.status || 'pending_first_payment'),
+        pix_qr_code_missing: true,
+        ...(enrollment.expiresAt ? { pix_expires_at: enrollment.expiresAt } : {}),
+      }
+      const { error: persistError } = await supabase.from('payments').update({
+        external_id: enrollment.subscriptionToken,
+        metadata,
+      }).eq('id', payment.id)
+      if (persistError) {
+        console.error('[checkout/vip-monthly] mandate persistence failed', persistError.code || 'unknown')
+        throw createError({ statusCode: 503, statusMessage: 'A autorização foi criada, mas não consegui salvar o acompanhamento. Não tente gerar outra; fale com o suporte.' })
+      }
+      console.error('[checkout/vip-monthly] mandate QR missing', {
+        hasSubscription: true,
+        hasMandate: true,
+        shape: responseShape(enrollPayload),
+      })
+      throw createError({ statusCode: 502, statusMessage: 'A autorização foi criada, mas a SyncPay não retornou o QR Code. Tente novamente em alguns instantes; não gere outra autorização.' })
+    }
     if (!enrollment.subscriptionToken || !enrollment.mandateId || !enrollment.qrCode) {
       await supabase.from('payments').update({ status: 'failed', failed_at: new Date().toISOString() }).eq('id', payment.id)
       console.error('[checkout/vip-monthly] incomplete mandate response', {
         hasSubscription: !!enrollment.subscriptionToken,
         hasMandate: !!enrollment.mandateId,
         hasQr: !!enrollment.qrCode,
+        shape: responseShape(enrollPayload),
       })
       throw createError({ statusCode: 502, statusMessage: 'A SyncPay não retornou os dados do mandato Pix Automático.' })
     }
