@@ -48,7 +48,10 @@ export async function ensureOwnerChatId(chatId: string | number) {
 }
 
 /** sendTelegramOwnerMessage */
-export async function sendTelegramOwnerMessage(text: string) {
+export async function sendTelegramOwnerMessage(
+  text: string,
+  options?: { reply_markup?: Record<string, unknown> }
+) {
   const { botToken, ownerChatId } = await getTelegramConfig()
   if (!botToken) return { ok: false as const, error: 'bot_token_missing' }
   if (!ownerChatId) return { ok: false as const, error: 'owner_chat_missing' }
@@ -60,6 +63,7 @@ export async function sendTelegramOwnerMessage(text: string) {
         chat_id: ownerChatId,
         text: text.slice(0, 3900),
         disable_web_page_preview: true,
+        ...(options?.reply_markup ? { reply_markup: options.reply_markup } : {}),
       }),
     })
     const data = await res.json().catch(() => ({} as any))

@@ -46,7 +46,7 @@ function safeEqualStr(a: string, b: string): boolean {
 }
 
 function verifySyncPaySignature(rawBody: string, headerValue: string | undefined, secret: string): boolean {
-  if (!secret) return true // sem secret configurado, não bloqueia (dev)
+  if (!secret) return false
   if (!headerValue) return false
 
   const provided = headerValue.trim()
@@ -205,7 +205,11 @@ export default defineEventHandler(async (event) => {
     getHeader(event, 'x-signature')
 
   const secret = await loadWebhookSecret()
-  if (secret && !verifySyncPaySignature(rawBody, signature || undefined, secret)) {
+  if (!secret) {
+    console.error('[webhook/syncpay] webhook secret is not configured')
+    throw createError({ statusCode: 503, statusMessage: 'Webhook SyncPay não configurado' })
+  }
+  if (!verifySyncPaySignature(rawBody, signature || undefined, secret)) {
     console.error('[webhook/syncpay] invalid signature', {
       hasHeader: !!signature,
       bodyLen: rawBody.length,

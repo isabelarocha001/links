@@ -15,6 +15,8 @@
  * Sem credenciais SyncPay válidas → 503 (não gera QR falso).
  */
 import { useServiceSupabase, getClientIp } from '../../utils/supabase'
+import { loadVipCheckoutPrices } from '../../utils/vip-checkout-prices'
+import { findPendingVipPix, getVipPixExpiry, isVipPixExpired, readPixExpiry, VIP_PIX_SESSION_TTL_MS } from '../../utils/vip-pix-cache'
 
 // Valores default por plan_key (chat_quick = desbloqueio do chat pago)
 const PLAN_FALLBACK: Record<string, { title: string; amount: number }> = {
@@ -148,6 +150,10 @@ function extractQrImage(payData: any, pixCode: string): string {
   return ''
 }
 
+function readRemoteStatus(payload: any) {
+  return String(payload?.status || payload?.data?.status || payload?.transaction?.status || '').toLowerCase()
+}
+
 export default defineEventHandler(async (event) => {
   if (getMethod(event) !== 'POST') {
     throw createError({ statusCode: 405, statusMessage: 'Method Not Allowed' })
@@ -155,19 +161,28 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event).catch(() => ({} as any))
   const planKey = String(body?.plan_key || '').trim() || 'custom'
+  if (planKey === 'vip_monthly' || planKey === 'vip_six_months') {
+    throw createError({ statusCode: 400, statusMessage: 'Planos recorrentes do Canal VIP devem usar o fluxo de Pix Automático.' })
+  }
   const plan = PLAN_FALLBACK[planKey]
   const amount = Number(body?.amount)
   const isFixedVipPlan = planKey.startsWith('vip_')
-  const finalAmount = isFixedVipPlan
+  let finalAmount = isFixedVipPlan
     ? plan?.amount
     : Number.isFinite(amount) && amount > 0
       ? Number(amount.toFixed(2))
       : plan?.amount
+  if (planKey === 'vip_lifetime') {
+    finalAmount = (await loadVipCheckoutPrices()).lifetimeBrl
+  }
   if (!finalAmount || finalAmount <= 0) {
     throw createError({ statusCode: 400, statusMessage: 'Valor inválido' })
   }
   const title = String(body?.title || plan?.title || planKey).slice(0, 80)
   const visitor_id = body?.visitor_id ? String(body.visitor_id).slice(0, 120) : null
+  if (planKey === 'vip_lifetime' && visitor_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(visitor_id)) {
+    throw createError({ statusCode: 400, statusMessage: 'Não consegui identificar esta visita. Atualize a página e tente novamente.' })
+  }
   const source = String(body?.source || 'links_chat_lock').slice(0, 60)
   const requestedCallStyle = String(body?.call_style || '').trim().toLowerCase()
   const callStyle = planKey.startsWith('vid_') && ['carinhosa', 'provocante'].includes(requestedCallStyle)
@@ -182,6 +197,61 @@ export default defineEventHandler(async (event) => {
   if (clientId && clientSecret) {
     try {
       const token = await getSyncPayToken(clientId, clientSecret)
+
+      // Reuse the pending QR for this visitor and offer. SyncPay's cash-in API
+      // does not document a QR expiry or an idempotency key, so keep a local
+      // 30-minute session expiry unless the provider returns an explicit one.
+      if (planKey === 'vip_lifetime' && visitor_id) {
+        const cached = await findPendingVipPix(supabase, { visitorId: visitor_id, planKey, paymentMethod: 'pix' })
+        if (cached?.pix_qr_code) {
+          const cachedExpiry = getVipPixExpiry(cached, true)
+          if (isVipPixExpired(cachedExpiry)) {
+            await supabase.from('payments').update({ status: 'expired', metadata: { ...(cached.metadata || {}), pix_expired_at: new Date().toISOString() } }).eq('id', cached.id)
+          } else {
+            let remoteStatus = ''
+            if (cached.external_id) {
+              try {
+                const check = await fetch(`https://api.syncpayments.com.br/api/partner/v1/transaction/${encodeURIComponent(cached.external_id)}`, {
+                  headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+                  signal: AbortSignal.timeout(5000),
+                })
+                if (check.ok) remoteStatus = readRemoteStatus(await check.json().catch(() => ({})))
+              } catch { /* Reuse the saved QR if status lookup is temporarily unavailable. */ }
+            }
+            if (['approved', 'paid', 'completed', 'confirmed', 'success'].includes(remoteStatus)) {
+              await supabase.from('payments').update({ status: 'approved', approved_at: new Date().toISOString() }).eq('id', cached.id)
+              return {
+                ok: true,
+                reused: true,
+                status: 'approved',
+                mode: 'syncpay',
+                payment_id: cached.id,
+                external_id: cached.external_id,
+                pix_code: cached.pix_qr_code,
+                qr_image: extractQrImage({ qr_code_image: cached.metadata?.syncpay?.qr_code_image }, cached.pix_qr_code),
+                amount: cached.amount,
+                plan_key: planKey,
+                expires_at: cachedExpiry,
+              }
+            } else if (['expired', 'failed', 'cancelled', 'canceled'].includes(remoteStatus)) {
+              await supabase.from('payments').update({ status: remoteStatus === 'cancelled' ? 'canceled' : remoteStatus }).eq('id', cached.id)
+            } else {
+              return {
+                ok: true,
+                reused: true,
+                mode: 'syncpay',
+                payment_id: cached.id,
+                external_id: cached.external_id,
+                pix_code: cached.pix_qr_code,
+                qr_image: extractQrImage({ qr_code_image: cached.metadata?.syncpay?.qr_code_image }, cached.pix_qr_code),
+                amount: cached.amount,
+                plan_key: planKey,
+                expires_at: cachedExpiry,
+              }
+            }
+          }
+        }
+      }
       // Webhook: env OU origem do request (auto)
       let webhookUrl = String(
         (useRuntimeConfig() as any).syncpayWebhookUrl || process.env.SYNCPAY_WEBHOOK_URL || process.env.NUXT_SYNCPAY_WEBHOOK_URL || '',
@@ -226,6 +296,7 @@ export default defineEventHandler(async (event) => {
       const externalId = String(payData?.id || payData?.identifier || payData?.transaction_id || '')
       const pixCode = extractPixCode(payData)
       const qrImage = extractQrImage(payData, pixCode)
+      const pixExpiry = readPixExpiry(payData) || new Date(Date.now() + VIP_PIX_SESSION_TTL_MS).toISOString()
 
       if (!pixCode) {
         console.error('[checkout/pix] missing pix code payload', JSON.stringify(payData).slice(0, 800))
@@ -251,6 +322,7 @@ export default defineEventHandler(async (event) => {
               ...(callStyle ? { call_style: callStyle, quiz: 'video_call_v2' } : {}),
               ip,
               provider: 'syncpay',
+              pix_expires_at: pixExpiry,
               syncpay: payData,
             },
           })
@@ -270,6 +342,7 @@ export default defineEventHandler(async (event) => {
         qr_image: qrImage || null,
         amount: finalAmount,
         plan_key: planKey,
+        expires_at: pixExpiry,
       }
     } catch (e: any) {
       console.error('[checkout/pix] syncpay path failed', e?.message || e)

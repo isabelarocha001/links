@@ -3,8 +3,9 @@
  * Webhook do bot Telegram (mensagens, callbacks).
  */
 import { useServiceSupabase } from '../../utils/supabase'
-import { getTelegramConfig, ensureOwnerChatId } from '../../utils/telegram'
+import { getTelegramConfig, ensureOwnerChatId, sendTelegramOwnerMessage } from '../../utils/telegram'
 import { ingestTelegramFile, deleteTempMediaByUrl } from '../../utils/media'
+import { randomUUID } from 'node:crypto'
 
 /**
  * Webhook @wanessabsxbot
@@ -20,6 +21,114 @@ export default defineEventHandler(async (event) => {
     update = await readBody(event)
   } catch {
     throw createError({ statusCode: 400, statusMessage: 'invalid body' })
+  }
+
+  // Add one positive reaction to each new post in the configured preview channel.
+  // The deterministic rotation spreads emojis across posts while keeping the
+  // official Bot API limit of one reaction per bot per message.
+  const channelPost = update?.channel_post
+  if (channelPost) {
+    const configuredChannelId = String(process.env.TELEGRAM_PREVIEW_CHANNEL_ID || '').trim()
+    const channelId = String(channelPost.chat?.id || '')
+    if (!configuredChannelId || channelId !== configuredChannelId) {
+      return { ok: true, ignored: 'channel_not_configured_or_mismatch' }
+    }
+
+    const positiveReactions = ['🔥', '❤️', '😍', '👏', '🥰', '💚']
+    const messageId = Number(channelPost.message_id)
+    const reaction = positiveReactions[Math.abs(messageId - 1) % positiveReactions.length]
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/setMessageReaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: channelId,
+          message_id: messageId,
+          reaction: [{ type: 'emoji', emoji: reaction }],
+          is_big: false
+        })
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok || !result?.ok) {
+        console.error('[telegram/webhook] channel post reaction failed', {
+          channelId,
+          messageId,
+          description: result?.description || response.status
+        })
+        return { ok: true, reacted: false, error: 'reaction_failed' }
+      }
+      console.info('[telegram/webhook] channel post reacted', { channelId, messageId, reaction })
+      return { ok: true, reacted: true, reaction }
+    } catch (error: any) {
+      console.error('[telegram/webhook] channel post reaction failed', error?.message || error)
+      return { ok: true, reacted: false, error: 'reaction_failed' }
+    }
+  }
+
+  // Track human members joining the configured Telegram preview channel.
+  // Telegram only sends this update when chat_member is enabled in setWebhook.
+  const memberUpdate = update?.chat_member
+  if (memberUpdate) {
+    const configuredChannelId = String(process.env.TELEGRAM_PREVIEW_CHANNEL_ID || '').trim()
+    const channelId = String(memberUpdate.chat?.id || '')
+    if (!configuredChannelId || channelId !== configuredChannelId) {
+      return { ok: true, ignored: 'channel_not_configured_or_mismatch' }
+    }
+
+    const oldMember = memberUpdate.old_chat_member || {}
+    const newMember = memberUpdate.new_chat_member || {}
+    const wasMember = ['member', 'administrator', 'creator'].includes(String(oldMember.status)) ||
+      (oldMember.status === 'restricted' && oldMember.is_member === true)
+    const isMember = ['member', 'administrator', 'creator'].includes(String(newMember.status)) ||
+      (newMember.status === 'restricted' && newMember.is_member === true)
+    const joinedUser = newMember.user || {}
+    const usedInviteLink = String(memberUpdate.invite_link?.invite_link || '')
+    const firstName = String(joinedUser.first_name || '').trim()
+    const lastName = String(joinedUser.last_name || '').trim()
+    const displayName = [firstName, lastName].filter(Boolean).join(' ').slice(0, 100) || 'Uma pessoa'
+    const username = String(joinedUser.username || '').trim().slice(0, 64)
+
+    if (wasMember || !isMember || !joinedUser.id || joinedUser.is_bot) {
+      return { ok: true, ignored: 'not_a_new_human_member' }
+    }
+
+    try {
+      const supabase = useServiceSupabase()
+      const { error } = await supabase.from('tracking_events').insert({
+        visitor_id: randomUUID(),
+        event_name: 'telegram_channel_join',
+        occurred_at: new Date(Number(memberUpdate.date || 0) * 1000).toISOString(),
+        path: '/telegram/channel',
+        offer_slug: 'telegram_preview_channel',
+        utm_source: 'telegram',
+        utm_medium: 'channel_member',
+        utm_campaign: channelId,
+        utm_content: String(joinedUser.id),
+        utm_term: username ? `@${username}` : null,
+        metadata: {
+          display_name: displayName,
+          username: username || null,
+          invite_link: usedInviteLink || null,
+          telegram_update_id: update?.update_id ?? null
+        }
+      })
+      if (error) console.error('[telegram/webhook] channel join tracking failed', error.message)
+      else console.info('[telegram/webhook] channel join tracked', { channelId, telegramUserId: String(joinedUser.id) })
+    } catch (error: any) {
+      console.error('[telegram/webhook] channel join tracking failed', error?.message || error)
+    }
+    const nameText = username ? `${displayName} (@${username})` : displayName
+    const notice = `👋 ${nameText} entrou no canal de prévias!\n🆔 ID do Telegram: ${String(joinedUser.id)}`
+    const profileUrl = username
+      ? `https://t.me/${encodeURIComponent(username)}`
+      : `tg://user?id=${String(joinedUser.id)}`
+    const notification = await sendTelegramOwnerMessage(notice, {
+      reply_markup: {
+        inline_keyboard: [[{ text: '👤 Ver perfil', url: profileUrl }]]
+      }
+    })
+    if (!notification.ok) console.error('[telegram/webhook] join notification failed', notification.error)
+    return { ok: true, tracked: true }
   }
 
   const msg = update?.message || update?.edited_message

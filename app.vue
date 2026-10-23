@@ -60,8 +60,7 @@
         <header class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
-              <img v-for="(src, i) in gallery" :key="src + i" :src="src" :class="['hero-photo', { 'is-active': i === photoIndex }]" alt="" decoding="async" draggable="false" />
-              <div class="photo-shine" aria-hidden="true"></div>
+              <img v-for="(src, i) in gallery" :key="src" :src="src" :class="['hero-photo', { 'is-active': i === photoIndex }]" alt="" decoding="async" draggable="false" />
               <div class="photo-vignette" aria-hidden="true"></div>
             </div>
             <div class="photo-dots" aria-hidden="true">
@@ -82,16 +81,7 @@
         </header>
         <div id="links-intro" class="links-intro">
           <span class="links-intro__eyebrow">Bem-vindo ao meu lugar secreto</span>
-          <p>Eu deixei tudo pronto para você escolher como quer me conhecer, no seu ritmo e do seu jeito.</p>
         </div>
-        <section v-if="isPt" class="creator-signals" aria-label="Sobre a Wanessa">
-          <div class="creator-presence is-online" aria-live="polite">
-            <span class="creator-presence__dot" aria-hidden="true"></span>
-            <span>Online agora</span>
-            <span v-if="nearPresenceReady && nearPresenceText" class="creator-presence__separator" aria-hidden="true">•</span>
-            <span v-if="nearPresenceReady && nearPresenceText" class="creator-presence__distance">{{ nearPresenceText }}</span>
-          </div>
-        </section>
         <section v-if="isPt" class="choice-guide" aria-labelledby="choice-guide-title">
           <h2 id="choice-guide-title">Por onde você quer continuar?</h2>
           <p>Escolha uma das opções que preparei para você:</p>
@@ -114,7 +104,7 @@
               <h2 class="card-title">{{ t('privTitle') }}</h2>
               <p class="card-desc">{{ t('privDesc') }}</p>
             </a>
-            <a class="card-enter card-enter--quest" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Explorar conteúdo' : t('privEnter') }} <span aria-hidden="true">↗</span></a>
+            <a class="card-enter card-enter--quest" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Ver conteúdo exclusivo' : t('privEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
           <!-- WhatsApp ocupa a esquerda somente se o link PrivSex não existir -->
           <div class="card-col" v-else-if="false && isPt">
@@ -132,9 +122,9 @@
             <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </div>
           <div class="card-col" v-if="!hidePublicChannel">
-            <!-- BR + canal desativado no admin → bot; gringa SEMPRE canal público (nunca bot) -->
-            <template v-if="isPt && !publicChannelEnabled && telegramBotEnabled">
-              <a class="lux-card lux-card--right" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
+            <!-- BR: bot VIP ao lado do PrivSex; o canal público fica no card abaixo. -->
+            <template v-if="isPt">
+              <a class="lux-card lux-card--right lux-card--vip" href="/assinaturavip" @pointerdown.passive="onCardClick('Checkout Canal VIP', '/assinaturavip')">
                 <div class="card-glow"></div>
                 <div class="card-top">
                   <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
@@ -143,40 +133,35 @@
                 <h2 class="card-title">{{ t('vipTitle') }}</h2>
                 <p class="card-desc">{{ t('vipDesc') }}</p>
               </a>
-              <a class="card-enter card-enter--quest" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Entrar no VIP' : t('pubEnter') }} <span aria-hidden="true">↗</span></a>
+              <a class="card-enter card-enter--quest" href="/assinaturavip" @pointerdown.passive="onCardClick('Checkout Canal VIP', '/assinaturavip')"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar canal VIP' : t('pubEnter') }} <span aria-hidden="true">↗</span></a>
             </template>
             <template v-else>
-              <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
+              <a class="lux-card lux-card--right lux-card--previews" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
                 <div class="card-glow"></div>
                 <div class="card-top">
                   <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
-                  <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
+                  <span class="card-badge badge-tg">{{ isPt ? 'PRÉVIAS GRÁTIS' : t('tgBadge') }}</span>
                 </div>
                 <h2 class="card-title">{{ t('pubTitle') }}</h2>
                 <p class="card-desc">{{ t('pubDesc') }}</p>
               </a>
-              <a class="card-enter card-enter--quest" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)"><span aria-hidden="true">✦</span> {{ isPt ? 'Ver prévias grátis' : t('pubEnter') }} <span aria-hidden="true">↗</span></a>
+              <a class="card-enter card-enter--quest card-enter--previews" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)"><span aria-hidden="true">✦</span> {{ isPt ? 'Ver prévias grátis' : t('pubEnter') }} <span aria-hidden="true">↗</span></a>
             </template>
           </div>
         </section>
-        <!-- Cards secundários: Telegram VIP à esquerda e WhatsApp à direita -->
-        <div id="links-secondary-cards" class="secondary-cards" :class="{ 'secondary-cards--single': !publicChannelEnabled || !telegramBotEnabled || !privsexLinkEnabled }" v-if="configReady && isPt">
+        <!-- Card secundário: canal público de prévias -->
+        <div id="links-secondary-cards" class="secondary-cards" :class="{ 'secondary-cards--single': !publicChannelEnabled || !privsexLinkEnabled }" v-if="configReady && isPt">
           <section class="vip-block card-col" v-if="publicChannelEnabled && telegramBotEnabled">
-          <a class="lux-card vip-card" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)">
-            <div class="vip-shine"></div>
-            <div class="vip-content">
-              <span class="vip-icon vip-icon-stack" aria-hidden="true" title="Bot Telegram">
-                <span class="vip-robot">🤖</span>
-                <img class="vip-tg-logo" :src="logoTgPurple" alt="Telegram" width="18" height="18" />
-              </span>
-              <div>
-                <h3 class="vip-title">{{ t('vipTitle') }}</h3>
-                <p class="vip-desc">{{ t('vipDesc') }}</p>
-              </div>
+          <a class="lux-card lux-card--right lux-card--previews" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
+            <div class="card-glow"></div>
+            <div class="card-top">
+              <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
+              <span class="card-badge badge-tg">PRÉVIAS GRÁTIS</span>
             </div>
-            <span class="vip-arrow">→</span>
+            <h2 class="card-title">{{ t('pubTitle') }}</h2>
+            <p class="card-desc">{{ t('pubDesc') }}</p>
           </a>
-          <a class="card-enter card-enter--quest" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('VIP Bot', vipBotUrl)"><span aria-hidden="true">✦</span> Entrar no VIP <span aria-hidden="true">↗</span></a>
+          <a class="card-enter card-enter--quest card-enter--previews" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)"><span aria-hidden="true">✦</span> Ver prévias grátis <span aria-hidden="true">↗</span></a>
           </section>
 
           <section class="iq-section card-col" v-if="false && privsexLinkEnabled">
@@ -194,12 +179,119 @@
           </section>
         </div>
 
-        <section v-if="isPt" class="creator-intro" aria-label="Sobre mim">
+        <section v-if="isPt" class="creator-intro" :class="{ 'is-revealed': bioHasEntered }" aria-label="Sobre mim">
+          <div class="creator-intro__typing-head">
+            <span class="creator-intro__typing-icon" aria-hidden="true">
+              <span v-if="bioTyping" class="creator-intro__typing-dots"><i></i><i></i><i></i></span>
+              <span v-else>♡</span>
+            </span>
+            <span class="creator-intro__typing-label">Um recadinho meu pra você</span>
+          </div>
           <span class="creator-intro__eyebrow">Um pouco mais sobre mim</span>
-          <h2>Quero que você conheça a Wanessa por trás da foto</h2>
-          <p>Eu gosto de conhecer quem está do outro lado, conversar sem pressa e criar uma conexão que pareça nossa. Aqui você entra no meu lugar secreto e escolhe como quer se aproximar de mim.</p>
-          <p>Tenho 24 anos, moro em Balneário Camboriú e crio conteúdo exclusivo para meus fãs online. No chat, posso ser sua companhia, sua confidente ou até sua noiva virtual.</p>
-          <p>Você que escolhe, amor. Eu só te mostro os caminhos para chegar mais perto de mim.</p>
+          <h2>Quer me conhecer melhor?</h2>
+          <div class="creator-intro__items">
+            <p class="creator-intro__item" style="--bio-step: 0"><b>📍 Minha vida</b><br />Tenho 24 anos, moro em Balneário Camboriú e crio conteúdo exclusivo para meus fãs.</p>
+            <p class="creator-intro__item" style="--bio-step: 1"><b>🐱 Coisas que eu amo</b><br />Gatos, comida do mar, praia e piscina. Amo viver a vida intensamente!</p>
+            <p class="creator-intro__item" style="--bio-step: 2"><b>✨ Minha rotina</b><br />Gosto de me cuidar e vou à academia três vezes por semana.</p>
+            <p class="creator-intro__item" style="--bio-step: 3"><b>🔥 Meu jeito</b><br />Tenho personalidade forte, sou bem ansiosa e gosto de tomar a iniciativa. Se quero alguma coisa, gosto de resolver na hora.</p>
+            <p class="creator-intro__item" style="--bio-step: 4"><b>💬 Como gosto de conversar</b><br />Gosto de conversar com carinho e respeito. Quero que seja assim dos dois lados.</p>
+            <p class="creator-intro__item" style="--bio-step: 5"><b>💜 No amor</b><br />Amo fazer novas amizades e estou à procura de um amor. Quem sabe não pode ser você?</p>
+            <p class="creator-intro__item" style="--bio-step: 6"><b>💬 Quer conversar comigo?</b><br />O chat e o acesso ao meu WhatsApp pessoal são para assinantes do meu perfil no PrivSex ou do canal privado VIP do Telegram, pelo bot.</p>
+            <button v-if="configReady && privsexLinkEnabled" type="button" class="contact-entry__button" @click="showSubscribeChoice = true">
+              <span aria-hidden="true">💬</span>
+              <span>Conversar comigo</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+          <div v-if="showSubscribeChoice" class="subscribe-choice-overlay" role="presentation" @click.self="showSubscribeChoice = false" @keydown.esc="showSubscribeChoice = false">
+            <section class="subscribe-choice" role="dialog" aria-modal="true" aria-labelledby="subscribe-choice-title">
+              <button type="button" class="subscribe-choice__close" aria-label="Fechar opções" @click="showSubscribeChoice = false">×</button>
+              <span class="subscribe-choice__icon" aria-hidden="true">💜</span>
+              <h2 id="subscribe-choice-title">Escolha onde quer assinar</h2>
+              <p>As duas opções dão acesso ao chat e ao meu WhatsApp pessoal.</p>
+              <a class="subscribe-choice__option" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
+                <span class="subscribe-choice__option-icon" aria-hidden="true">🔥</span>
+                <span><b>PrivSex</b><small>Assinar meu perfil e ver o conteúdo exclusivo</small></span>
+                <span aria-hidden="true">↗</span>
+              </a>
+              <a class="subscribe-choice__option" href="/assinaturavip" @pointerdown.passive="onCardClick('Checkout Canal VIP', '/assinaturavip')">
+                <span class="subscribe-choice__option-icon" aria-hidden="true">🤖</span>
+                <span><b>Canal VIP</b><small>Escolha um plano e pague por Pix</small></span>
+                <span aria-hidden="true">→</span>
+              </a>
+            </section>
+          </div>
+          <div v-if="callQuizOpen" class="call-quiz-overlay" role="presentation" @click.self="closeCallQuiz" @keydown.esc="closeCallQuiz">
+            <section class="call-quiz" role="dialog" aria-modal="true" aria-labelledby="call-quiz-title">
+              <button type="button" class="call-quiz__close" aria-label="Fechar" @click="closeCallQuiz">×</button>
+              <span class="call-quiz__icon" aria-hidden="true">▻</span>
+              <template v-if="callQuizStep === 'style'">
+                <p class="call-quiz__step">Pergunta 1 de 2</p>
+                <h2 id="call-quiz-title">Qual clima você prefere?</h2>
+                <p>Escolha uma opção para personalizar seu pedido.</p>
+                <button type="button" class="call-quiz__option" :class="{ 'is-selected': callQuizStyle === 'carinhosa' }" @click="callQuizStyle = 'carinhosa'">💜 Uma conversa carinhosa</button>
+                <button type="button" class="call-quiz__option" :class="{ 'is-selected': callQuizStyle === 'provocante' }" @click="callQuizStyle = 'provocante'">🔥 Um clima mais provocante</button>
+                <button type="button" class="call-quiz__primary" :disabled="!callQuizStyle" @click="callQuizStep = 'duration'">Continuar</button>
+              </template>
+              <template v-else-if="callQuizStep === 'duration'">
+                <p class="call-quiz__step">Pergunta 2 de 2</p>
+                <h2 id="call-quiz-title">Quanto tempo você quer?</h2>
+                <p>Escolha o tempo. Você verá o valor antes de pagar.</p>
+                <div class="call-quiz__howto">
+                  <b>Como funciona</b>
+                  <span>1. Escolha o tempo e pague pelo Pix.</span>
+                  <span>2. O pagamento é confirmado aqui.</span>
+                  <span>3. Depois do Pix, meu WhatsApp aparece aqui. Toque no botão e me chame para começarmos a chamada 💜</span>
+                </div>
+                <button v-for="plan in callQuizPlans" :key="plan.key" type="button" class="call-quiz__option call-quiz__duration" :class="{ 'is-selected': callQuizPlan?.key === plan.key }" @click="callQuizPlan = plan">
+                  <span>{{ plan.minutes }} minutos</span><b>R$ {{ plan.priceLabel }}</b>
+                </button>
+                <div class="call-quiz__trust" aria-label="Informações de confiança">
+                  <span><i aria-hidden="true">🔒</i><b>Pagamento por Pix</b></span>
+                  <span><i aria-hidden="true">✓</i><b>Confirmação automática</b></span>
+                  <span><i aria-hidden="true">💬</i><b>WhatsApp após confirmar</b></span>
+                </div>
+                <button type="button" class="call-quiz__primary" :disabled="!callQuizPlan || callQuizLoading" @click="createCallQuizPix">{{ callQuizLoading ? 'Preparando Pix…' : callQuizPlan ? `Gerar Pix · R$ ${callQuizPlan.priceLabel}` : 'Escolha o tempo' }}</button>
+                <button type="button" class="call-quiz__back" @click="callQuizStep = 'style'">Voltar</button>
+              </template>
+              <template v-else-if="callQuizStep === 'payment'">
+                <p class="call-quiz__step">Videochamada · {{ callQuizPlan?.minutes }} minutos</p>
+                <h2 id="call-quiz-title">Pague com Pix</h2>
+                <p>Total: <b>R$ {{ callQuizPlan?.priceLabel }}</b></p>
+                <p>Depois que o Pix for confirmado, meu WhatsApp aparece aqui. Toque no botão para me chamar e começarmos a videochamada.</p>
+                <div class="call-quiz__trust" aria-label="Informações de confiança">
+                  <span><i aria-hidden="true">🔒</i><b>Pagamento por Pix</b></span>
+                  <span><i aria-hidden="true">✓</i><b>Confirmação automática</b></span>
+                  <span><i aria-hidden="true">💬</i><b>Contato após confirmar</b></span>
+                </div>
+                <img v-if="callQuizQr" class="call-quiz__qr" :src="callQuizQr" alt="QR Code para pagar com Pix" />
+                <label class="call-quiz__pix-label" for="call-quiz-pix">Pix copia e cola</label>
+                <textarea id="call-quiz-pix" class="call-quiz__pix" readonly rows="3" :value="callQuizPixCode"></textarea>
+                <button type="button" class="call-quiz__primary" @click="copyCallQuizPix">{{ callQuizCopied ? 'Código copiado!' : 'Copiar código Pix' }}</button>
+                <p class="call-quiz__status" :class="{ 'is-paid': callQuizPaid }">{{ callQuizStatus }}</p>
+                <button type="button" class="call-quiz__back" :disabled="callQuizChecking" @click="checkCallQuizPayment">Consultar Pix agora</button>
+              </template>
+              <template v-else>
+                <p class="call-quiz__step">Pagamento confirmado</p>
+                <h2 id="call-quiz-title">Tudo certo, meu amor 💜</h2>
+                <p>O Pix foi confirmado, meu amor. Toque no botão e me chame para começarmos nossa videochamada especial.</p>
+                <a class="call-quiz__primary call-quiz__whatsapp" :href="callQuizWhatsAppUrl" target="_blank" rel="noopener noreferrer">Começar videochamada</a>
+                <p class="call-quiz__number">Wanessa · +55 47 99275-0967</p>
+              </template>
+              <p v-if="callQuizError" class="call-quiz__error" role="alert">{{ callQuizError }}</p>
+            </section>
+          </div>
+        </section>
+
+        <section v-if="isPt" class="call-quiz-card" aria-label="Videochamada ao vivo">
+          <img class="call-quiz-card__avatar" src="/model.jpg" alt="Wanessa" width="76" height="76" draggable="false" />
+          <button type="button" class="call-quiz-entry" @click="openCallQuiz">
+            <span class="call-quiz-entry__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg>
+            </span>
+            <span><b>Fazer videochamada ao vivo</b><small>Escolha como quer a chamada</small></span>
+            <span class="call-quiz-entry__arrow" aria-hidden="true">→</span>
+          </button>
         </section>
 
         <Teleport to="body">
@@ -314,7 +406,7 @@
           <div class="ig-card">
             <img class="ig-avatar" :src="igProfileSrc" alt="" width="72" height="72" draggable="false" />
             <div class="ig-info">
-              <p class="ig-user">wanessabsx_</p>
+              <p class="ig-user">wanessa_bsx</p>
               <p class="ig-name">Wanessa Borges</p>
               <div class="ig-stats">
                 <span><b>22</b> {{ t('posts') }}</span>
@@ -325,19 +417,33 @@
           </div>
           <p class="bio-meta">{{ t('bioMeta') }}</p>
           <p class="bio-text">{{ t('bioText') }}</p>
-          <a
-            class="x-profile-link"
-            href="https://x.com/wanessabsx"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Perfil no X"
-          >
-            <svg class="x-profile-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.451L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-            </svg>
-          </a>
+          <section class="bio-socials" aria-labelledby="bio-socials-title">
+            <h2 id="bio-socials-title">Minhas redes sociais</h2>
+            <div class="bio-socials__links">
+              <a class="bio-social-link" href="https://x.com/wanessabsx" target="_blank" rel="noopener noreferrer" aria-label="Abrir meu perfil no X">
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.451L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                <span>X</span>
+              </a>
+              <a class="bio-social-link" href="https://www.instagram.com/wanessa_bsx/" target="_blank" rel="noopener noreferrer" aria-label="Abrir meu perfil no Instagram">
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor" stroke="none"/></svg>
+                <span>Instagram</span>
+              </a>
+              <span class="bio-social-link bio-social-link--pending" aria-label="TikTok, link ainda não configurado">
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><path d="M19.6 7.1a6.8 6.8 0 0 1-4.1-1.4v8.1a5.8 5.8 0 1 1-5-5.7v3a2.8 2.8 0 1 0 2 2.7V2.5h3a3.8 3.8 0 0 0 4.1 3.6v3Z"/></svg>
+                <span>TikTok · em breve</span>
+              </span>
+            </div>
+          </section>
           <p class="bio-copy">© Wanessa</p>
         </footer>
+        <section v-if="isPt && clientTestimonials.length" class="client-testimonials" aria-labelledby="client-testimonials-title">
+          <span class="client-testimonials__eyebrow">Experiências reais</span>
+          <h2 id="client-testimonials-title">O que dizem sobre meu conteúdo</h2>
+          <article v-for="(item, index) in clientTestimonials" :key="index" class="client-testimonial">
+            <p>“{{ item.quote }}”</p>
+            <span>{{ item.label }}</span>
+          </article>
+        </section>
       </template>
     </main>
   </div>
@@ -1440,7 +1546,7 @@ const isAdminRoute = computed(() => {
 /** Rotas isoladas: só <NuxtPage />, sem shell da home */
 const isIsolatedRoute = computed(() => {
   const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
-  return p === '/telegram' || p === '/juliasales' || p === '/gestão' || p === '/gestao'
+  return p === '/telegram' || p === '/juliasales' || p === '/gestão' || p === '/gestao' || p === '/assinaturavip' || p === '/dashboard'
 })
 /** Coluna direita sempre visível; conteúdo troca entre bot e canal público */
 const hidePublicChannel = computed(() => false)
@@ -1452,7 +1558,9 @@ import '~/assets/css/links-page.css'
 const DEFAULT_HIGHLIGHT = 'PrivSex'
 const VID_KEY = 'wanessa_vid'
 const VIEW_DAY_KEY = 'wanessa_view_day'
+const VIEW_CONTENT_SESSION_KEY = 'wanessa_view_content_telegram_session_v2'
 const CLICK_DAY_PREFIX = 'wanessa_click_'
+const CLICK_SEQUENCE_KEY = 'wanessa_click_sequence_v1'
 const GATE_KEY = 'wanessa_gate_v1'
 
 const privsexUrl = 'https://privsex.com/wanessa'
@@ -3935,25 +4043,6 @@ function onFunnelInputBlur() {
   }, 100)
 }
 
-let funnelBodyScrollY = 0
-
-function lockBodyScrollForFunnel() {
-  try {
-    // evita lock duplo
-    if (document.body.classList.contains('wa-funnel-open')) return
-    funnelBodyScrollY = window.scrollY || window.pageYOffset || 0
-    document.documentElement.classList.add('wa-funnel-open')
-    document.body.classList.add('wa-funnel-open')
-    document.documentElement.style.overflow = 'hidden'
-    document.body.style.overflow = 'hidden'
-    document.body.style.position = 'fixed'
-    document.body.style.top = `-${funnelBodyScrollY}px`
-    document.body.style.left = '0'
-    document.body.style.right = '0'
-    document.body.style.width = '100%'
-  } catch {}
-}
-
 function unlockBodyScrollForFunnel() {
   try {
     document.documentElement.classList.remove('wa-funnel-open')
@@ -3967,13 +4056,6 @@ function unlockBodyScrollForFunnel() {
     document.body.style.width = ''
     document.documentElement.style.touchAction = ''
     document.body.style.touchAction = ''
-    const y = funnelBodyScrollY || 0
-    // restaura scroll da home
-    window.scrollTo(0, y)
-    // fallback iOS
-    requestAnimationFrame(() => {
-      try { window.scrollTo(0, y) } catch {}
-    })
   } catch {}
 }
 
@@ -5391,7 +5473,6 @@ function openWaFunnel(source = 'whatsapp') {
   try { startLeadPresenceHeartbeat() } catch {}
   try { startLiveChatPoll() } catch {}
   funnelKeyboardOpen.value = false
-  lockBodyScrollForFunnel()
   startPresencePoll()
   showFunnelPhoto.value = false
   showFunnelProfile.value = false
@@ -6335,7 +6416,10 @@ const logoTgPurple = LOGO_TG_PURPLE
 const gallery = ['/model.jpg', '/hero-1.jpg', '/hero-2.jpg', '/hero-3.jpg']
 const photoIndex = ref(0)
 let photoTimer: ReturnType<typeof setInterval> | null = null
-
+const bioHasEntered = ref(false)
+const bioTyping = ref(false)
+let bioIntroObserver: IntersectionObserver | null = null
+let bioTypingTimer: ReturnType<typeof setTimeout> | null = null
 /** Presença regional (IP): mostra somente uma distância aproximada, sem expor o IP. */
 const nearPresenceReady = ref(false)
 const nearPresenceText = ref('')
@@ -6397,6 +6481,8 @@ const faqItems = [
   { question: 'Meus dados ficam seguros?', answer: 'Sim. O atendimento é privado e seus dados não são publicados.' },
   { question: 'Como começo?', answer: 'Toque em “Conversar comigo” para conhecer as opções, escolher o que combina com você e receber as condições.' },
 ]
+// Adicionar somente relatos reais enviados com autorização do cliente.
+const clientTestimonials: Array<{ quote: string; label: string }> = []
 const faqActive = ref<number | null>(null)
 const faqSeen = ref<number[]>([])
 function toggleFaq(index: number) {
@@ -6408,7 +6494,7 @@ const TOUR_KEY = 'wanessa_links_tour_v1'
 const tourSteps = [
   { title: 'Tudo foi preparado para você 💜', body: 'Aqui você escolhe como quer me conhecer e por onde prefere começar. É tudo online, sem encontros.', target: 'links-intro' },
   { title: 'Conheça antes de escolher', body: 'No canal público você vê prévias. No PrivSex encontra meu conteúdo exclusivo.', target: 'links-main-cards' },
-  { title: 'Prefere conversar?', body: 'O VIP do Telegram e o WhatsApp ficam logo abaixo. No WhatsApp você vê as opções de conversa e videochamada.', target: 'links-secondary-cards' },
+  { title: 'Quer ver as prévias?', body: 'O bot VIP fica ao lado do PrivSex. Logo abaixo, você encontra as prévias grátis do canal público.', target: 'links-main-cards' },
   { title: 'Sem dúvidas no caminho', body: 'O FAQ no final responde sobre prévias, encontros e como funciona cada opção.', target: 'links-faq' },
 ]
 const tourActive = ref(false)
@@ -6595,6 +6681,137 @@ const telegramBotEnabled = computed(() => {
   })
 })
 const showLogin = ref(false)
+const showSubscribeChoice = ref(false)
+type CallQuizPlan = { key: 'vid_10' | 'vid_20' | 'vid_30'; minutes: number; price: number; priceLabel: string }
+const callQuizOpen = ref(false)
+const callQuizStep = ref<'style' | 'duration' | 'payment' | 'paid'>('style')
+const callQuizStyle = ref('')
+const callQuizPlan = ref<CallQuizPlan | null>(null)
+const callQuizLoading = ref(false)
+const callQuizChecking = ref(false)
+const callQuizPaid = ref(false)
+const callQuizCopied = ref(false)
+const callQuizError = ref('')
+const callQuizPixCode = ref('')
+const callQuizQr = ref('')
+const callQuizPaymentId = ref('')
+const callQuizExternalId = ref('')
+const callQuizStatus = ref('Aguardando confirmação do Pix…')
+const callQuizPlans: CallQuizPlan[] = [
+  { key: 'vid_10', minutes: 10, price: 99.9, priceLabel: '99,90' },
+  { key: 'vid_20', minutes: 20, price: 149.9, priceLabel: '149,90' },
+  { key: 'vid_30', minutes: 30, price: 229.9, priceLabel: '229,90' },
+]
+const callQuizWhatsAppUrl = computed(() => {
+  const plan = callQuizPlan.value
+  const style = callQuizStyle.value === 'carinhosa' ? 'conversa carinhosa' : 'clima provocante'
+  const message = `Oi, Wanessa! Meu Pix da videochamada de ${plan?.minutes || ''} minutos foi confirmado. Escolhi ${style}. Vamos começar a chamada?`
+  return `https://wa.me/5547992750967?text=${encodeURIComponent(message)}`
+})
+let callQuizPoll: ReturnType<typeof setInterval> | null = null
+
+function openCallQuiz() {
+  if (callQuizPaymentId.value) {
+    callQuizStep.value = callQuizPaid.value ? 'paid' : 'payment'
+  } else {
+    callQuizStep.value = 'style'
+    callQuizStyle.value = ''
+    callQuizPlan.value = null
+    callQuizError.value = ''
+    callQuizPaid.value = false
+    callQuizPixCode.value = ''
+  }
+  callQuizOpen.value = true
+  try { track('video_call_quiz_open', { quiz: 'video_call_v2' }) } catch {}
+}
+
+function closeCallQuiz() {
+  callQuizOpen.value = false
+}
+
+async function createCallQuizPix() {
+  const plan = callQuizPlan.value
+  if (!plan || callQuizLoading.value) return
+  callQuizLoading.value = true
+  callQuizError.value = ''
+  try {
+    const visitor_id = getOrCreateVisitorId()
+    const res = await $fetch<{ ok?: boolean; pix_code?: string; qr_image?: string; payment_id?: string; external_id?: string }>('/api/checkout/pix', {
+      method: 'POST',
+      body: {
+        plan_key: plan.key,
+        amount: plan.price,
+        title: `Videochamada ${plan.minutes} min · ${callQuizStyle.value}`,
+        visitor_id,
+        source: 'links_video_call_quiz_v2',
+        call_style: callQuizStyle.value,
+      },
+    })
+    if (!res?.ok || !res.pix_code) throw new Error('Não foi possível gerar o Pix agora.')
+    callQuizPixCode.value = res.pix_code
+    callQuizQr.value = String(res.qr_image || (/^000201/.test(res.pix_code) ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(res.pix_code)}` : ''))
+    callQuizPaymentId.value = res.payment_id || ''
+    callQuizExternalId.value = res.external_id || res.payment_id || ''
+    callQuizStatus.value = 'Aguardando confirmação do Pix…'
+    callQuizStep.value = 'payment'
+    try { track('video_call_quiz_checkout', { quiz: 'video_call_v2', offer_slug: plan.key, call_style: callQuizStyle.value, amount: plan.price }) } catch {}
+    startCallQuizPoll()
+  } catch (error: any) {
+    callQuizError.value = error?.data?.statusMessage || error?.message || 'Erro ao gerar o Pix. Tente de novo.'
+  } finally {
+    callQuizLoading.value = false
+  }
+}
+
+function startCallQuizPoll() {
+  if (callQuizPoll) clearInterval(callQuizPoll)
+  let attempts = 0
+  callQuizPoll = setInterval(() => {
+    attempts += 1
+    if (attempts > 150 || callQuizPaid.value) {
+      if (callQuizPoll) clearInterval(callQuizPoll)
+      callQuizPoll = null
+      return
+    }
+    checkCallQuizPayment()
+  }, 5000)
+}
+
+async function checkCallQuizPayment() {
+  const id = callQuizPaymentId.value || callQuizExternalId.value
+  if (!id || callQuizChecking.value || callQuizPaid.value) return
+  callQuizChecking.value = true
+  try {
+    const status = await $fetch<{ status?: string }>('/api/checkout/status', { query: { id } })
+    const value = String(status?.status || '').toLowerCase()
+    if (['approved', 'paid', 'completed'].includes(value)) {
+      callQuizPaid.value = true
+      callQuizStep.value = 'paid'
+      callQuizStatus.value = 'Pix confirmado! Seu WhatsApp foi liberado.'
+      if (callQuizPoll) clearInterval(callQuizPoll)
+      callQuizPoll = null
+      try { track('video_call_quiz_paid', { quiz: 'video_call_v2', offer_slug: callQuizPlan.value?.key, call_style: callQuizStyle.value }) } catch {}
+    } else {
+      callQuizStatus.value = 'Ainda aguardando o pagamento do Pix…'
+    }
+  } catch {
+    callQuizStatus.value = 'Não consegui consultar agora. Tente novamente em instantes.'
+  } finally {
+    callQuizChecking.value = false
+  }
+}
+
+async function copyCallQuizPix() {
+  if (!callQuizPixCode.value) return
+  try {
+    await navigator.clipboard.writeText(callQuizPixCode.value)
+    callQuizCopied.value = true
+    setTimeout(() => { callQuizCopied.value = false }, 2000)
+  } catch {
+    callQuizError.value = 'Selecione e copie o código Pix manualmente.'
+  }
+}
+
 const isAdmin = ref(false)
 const showAdminPanel = ref(false)
 const videoCallVideos = ref<string[]>([])
@@ -6876,6 +7093,17 @@ function alreadyViewedToday() { try { return localStorage.getItem(VIEW_DAY_KEY) 
 function markViewedToday() { try { localStorage.setItem(VIEW_DAY_KEY, todayKey()) } catch {} }
 function alreadyClickedToday(slug: string) { try { return localStorage.getItem(CLICK_DAY_PREFIX + slug) === todayKey() } catch { return false } }
 function markClickedToday(slug: string) { try { localStorage.setItem(CLICK_DAY_PREFIX + slug, todayKey()) } catch {} }
+function nextClickSequence() {
+  try {
+    const previous = Number.parseInt(localStorage.getItem(CLICK_SEQUENCE_KEY) || '0', 10)
+    const next = (Number.isFinite(previous) ? previous : 0) + 1
+    localStorage.setItem(CLICK_SEQUENCE_KEY, String(next))
+    return next
+  } catch { return 1 }
+}
+function cachedDeviceFingerprint() {
+  try { return localStorage.getItem('wanessa_fp_v1') || '' } catch { return '' }
+}
 function readUtms() {
   if (typeof window === 'undefined') return {}
   const p = new URLSearchParams(window.location.search)
@@ -6905,11 +7133,61 @@ function track(eventName: string, extra: Record<string, any> = {}) {
     fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true }).catch(() => {})
   } catch {}
 }
+let viewContentObserver: IntersectionObserver | null = null
+function observeBioIntro() {
+  const bioIntro = document.querySelector('.creator-intro')
+  if (!bioIntro) return
+  if (!('IntersectionObserver' in window)) {
+    bioHasEntered.value = true
+    return
+  }
+  bioIntroObserver?.disconnect()
+  bioIntroObserver = new IntersectionObserver((entries) => {
+    if (!entries.some((entry) => entry.isIntersecting)) return
+    bioHasEntered.value = true
+    bioTyping.value = true
+    bioTypingTimer = setTimeout(() => { bioTyping.value = false }, 850)
+    bioIntroObserver?.disconnect()
+    bioIntroObserver = null
+  }, { threshold: 0.2 })
+  bioIntroObserver.observe(bioIntro)
+}
+function observeViewContent() {
+  if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return
+  try { if (sessionStorage.getItem(VIEW_CONTENT_SESSION_KEY)) return } catch {}
+  const bioSection = document.querySelector('.bio-block')
+  if (!bioSection) return
+
+  viewContentObserver?.disconnect()
+  viewContentObserver = new IntersectionObserver((entries) => {
+    if (!entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.2)) return
+    try { sessionStorage.setItem(VIEW_CONTENT_SESSION_KEY, '1') } catch {}
+    const content = {
+      content_name: 'biografia_faq_redes_sociais',
+      content_category: 'perfil',
+      content_type: 'content'
+    }
+    track('ViewContent', content)
+    try {
+      const fbq = (window as any).fbq
+      if (typeof fbq === 'function') fbq('track', 'ViewContent', content)
+    } catch {}
+    viewContentObserver?.disconnect()
+    viewContentObserver = null
+  }, { threshold: 0.2 })
+  viewContentObserver.observe(bioSection)
+}
 function onCardClick(label: string, url: string) {
   const slug = offerFromLabel(label)
   if (alreadyClickedToday(slug)) return
   markClickedToday(slug)
-  track('outbound_click', { label, url, offer_slug: slug })
+  track('outbound_click', {
+    label,
+    url,
+    offer_slug: slug,
+    visit_number: nextClickSequence(),
+    device_fingerprint: cachedDeviceFingerprint(),
+  })
 }
 function attachLogo(l: LinkItem): LinkItem {
   const lab = (l.label || '').toLowerCase()
@@ -7066,7 +7344,8 @@ onMounted(async () => {
   locale.value = detectLocale()
   try { document.documentElement.lang = locale.value } catch {}
   const visitor_id = getOrCreateVisitorId()
-  if (!alreadyViewedToday() && !openChatDirect) {
+  const isTelegramBridgePage = String(route.path || '').replace(/\/+$/, '') === '/telegram'
+  if (!isTelegramBridgePage && !alreadyViewedToday() && !openChatDirect) {
     markViewedToday()
     track('page_view', { offer_slug: 'wanessa_links' })
   }
@@ -7094,9 +7373,34 @@ onMounted(async () => {
     } catch {}
   }
 
+  if (!openChatDirect && !isTelegramBridgePage) {
+    nextTick(() => {
+      observeViewContent()
+      observeBioIntro()
+    })
+  }
+
+  // Decodifica as fotos antes de começar as transições, evitando quadros vazios.
+  await Promise.all(gallery.map(async (src) => {
+    const image = new Image()
+    image.src = src
+    try {
+      if (typeof image.decode === 'function') await image.decode()
+      else await new Promise<void>((resolve) => {
+        if (image.complete) return resolve()
+        image.onload = () => resolve()
+        image.onerror = () => resolve()
+      })
+    } catch {}
+  }))
   photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 5500)
 })
 onUnmounted(() => {
+  viewContentObserver?.disconnect()
+  viewContentObserver = null
+  bioIntroObserver?.disconnect()
+  bioIntroObserver = null
+  if (bioTypingTimer) clearTimeout(bioTypingTimer)
   if (photoTimer) clearInterval(photoTimer)
   if (typingTimer) clearTimeout(typingTimer)
   stopTour()

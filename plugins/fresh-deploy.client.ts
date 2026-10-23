@@ -5,6 +5,17 @@
  */
 export default defineNuxtPlugin(() => {
   if (!import.meta.client) return
+  const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
+  if (isLocalHost) {
+    const url = new URL(window.location.href)
+    if (url.searchParams.has('_v')) {
+      url.searchParams.delete('_v')
+      window.history.replaceState(window.history.state, '', url.toString())
+    }
+  }
+  // O endpoint local usa uma versão de desenvolvimento, não um deploy real.
+  // Evita recargas e parâmetros _v mudando no servidor local.
+  if (import.meta.dev || isLocalHost) return
   const KEY = 'wanessa_build_id_v1'
   const check = async () => {
     try {

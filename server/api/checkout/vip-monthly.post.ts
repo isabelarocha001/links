@@ -1,8 +1,8 @@
 import { useServiceSupabase } from '../../utils/supabase'
+import { loadVipCheckoutPrices } from '../../utils/vip-checkout-prices'
 import { getCachedSyncPayToken } from './warm.get'
+import { findPendingVipPix, getVipPixExpiry, isVipPixExpired, readPixExpiry } from '../../utils/vip-pix-cache'
 
-const EXPECTED_AMOUNT = 29.9
-const EXPECTED_PERIOD_DAYS = 30
 const enrollRateLimit = new Map<string, number>()
 
 function enforceEnrollRateLimit(event: any) {
@@ -19,13 +19,20 @@ function enforceEnrollRateLimit(event: any) {
   enrollRateLimit.set(ip, now)
 }
 
-async function loadPlanToken() {
-  let token = String(process.env.SYNCPAY_VIP_MONTHLY_PLAN_TOKEN || '').trim()
+type VipRecurringKey = 'monthly' | 'six_months'
+
+const PLAN_TOKEN_KEYS: Record<VipRecurringKey, string> = {
+  monthly: 'SYNCPAY_VIP_MONTHLY_PLAN_TOKEN',
+  six_months: 'SYNCPAY_VIP_SIX_MONTH_PLAN_TOKEN',
+}
+
+async function loadPlanToken(planKey: VipRecurringKey) {
+  let token = planKey === 'monthly' ? String(process.env.SYNCPAY_VIP_MONTHLY_PLAN_TOKEN || '').trim() : ''
   if (token) return token
   try {
     const supabase = useServiceSupabase()
     const { data } = await supabase.from('app_secrets').select('value')
-      .eq('key', 'SYNCPAY_VIP_MONTHLY_PLAN_TOKEN').maybeSingle()
+      .eq('key', PLAN_TOKEN_KEYS[planKey]).maybeSingle()
     token = String(data?.value || '').trim()
   } catch { /* Return a generic configuration error below. */ }
   return token
@@ -53,12 +60,21 @@ function extractEnrollment(payload: any) {
     mandateId: String(payment?.mandate_id || root?.mandate_id || ''),
     mandateStatus: String(payment?.mandate_status || root?.mandate_status || ''),
     qrCode: String(payment?.qr_code || payment?.pix_code || payment?.copy_paste || payment?.emv || root?.qr_code || root?.pix_code || root?.pix_copy_paste || ''),
+    expiresAt: readPixExpiry({ ...root, payment, mandate: root?.mandate || payment?.mandate }),
   }
 }
 
 export default defineEventHandler(async (event) => {
   enforceEnrollRateLimit(event)
   const body = await readBody(event).catch(() => ({} as any))
+  if (body?.plan_key && !['monthly', 'six_months'].includes(String(body.plan_key))) {
+    throw createError({ statusCode: 400, statusMessage: 'Plano recorrente inválido.' })
+  }
+  const planKey: VipRecurringKey = body?.plan_key === 'six_months' ? 'six_months' : 'monthly'
+  const prices = await loadVipCheckoutPrices()
+  const expectedAmount = planKey === 'monthly' ? prices.monthlyBrl : prices.sixMonthBrl
+  const expectedPeriodDays = planKey === 'monthly' ? prices.monthlyPeriodDays : prices.sixMonthPeriodDays
+  const storedPlanKey = planKey === 'monthly' ? 'vip_monthly' : 'vip_six_months'
   const name = String(body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 100)
   const email = String(body?.email || '').trim().toLowerCase().slice(0, 254)
   const document = String(body?.document || '').replace(/\D/g, '')
@@ -71,12 +87,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Não consegui identificar esta visita. Atualize a página e tente novamente.' })
   }
   if (body?.accepted_recurring !== true) {
-    throw createError({ statusCode: 400, statusMessage: 'Confirme que entendeu a cobrança mensal automática.' })
+    throw createError({ statusCode: 400, statusMessage: 'Confirme que entendeu as cobranças recorrentes pelo Pix Automático.' })
   }
 
-  const planToken = await loadPlanToken()
+  const planToken = await loadPlanToken(planKey)
   if (!/^[0-9a-f-]{36}$/i.test(planToken)) {
-    throw createError({ statusCode: 503, statusMessage: 'O plano mensal Pix Automático ainda não está configurado na SyncPay.' })
+    throw createError({ statusCode: 503, statusMessage: 'Este plano Pix Automático ainda não está configurado na SyncPay.' })
   }
   const accessToken = await getCachedSyncPayToken()
   if (!accessToken) throw createError({ statusCode: 503, statusMessage: 'A SyncPay não está configurada neste ambiente.' })
@@ -86,28 +102,97 @@ export default defineEventHandler(async (event) => {
   const planResponse = await fetch(`${base}/subscription-plans/${planToken}`, { headers, signal: AbortSignal.timeout(8000) })
   const planPayload = await planResponse.json().catch(() => ({} as any))
   if (!planResponse.ok) {
-    console.error('[checkout/vip-monthly] plan lookup failed', planResponse.status)
-    throw createError({ statusCode: 503, statusMessage: 'Não consegui verificar o plano mensal na SyncPay.' })
+    console.error('[checkout/vip-recurring] plan lookup failed', planResponse.status)
+    throw createError({ statusCode: 503, statusMessage: 'Não consegui verificar este plano na SyncPay.' })
   }
   const plan = planPayload?.data ?? planPayload
   if (String(plan?.billing_method || '').toLowerCase() !== 'pix_automatico') {
     throw createError({ statusCode: 409, statusMessage: 'O plano configurado não usa Pix Automático.' })
   }
   if (String(plan?.status || '').toLowerCase() !== 'active') {
-    throw createError({ statusCode: 409, statusMessage: 'O plano mensal está inativo na SyncPay.' })
+    throw createError({ statusCode: 409, statusMessage: 'Este plano está inativo na SyncPay.' })
   }
-  if (Number(plan?.amount) !== EXPECTED_AMOUNT || Number(plan?.periodicity_days) !== EXPECTED_PERIOD_DAYS) {
-    throw createError({ statusCode: 409, statusMessage: 'O plano SyncPay precisa estar configurado em R$ 29,90 a cada 30 dias.' })
+  if (Number(plan?.amount) !== expectedAmount || Number(plan?.periodicity_days) !== expectedPeriodDays) {
+    throw createError({ statusCode: 409, statusMessage: 'O valor ou o ciclo do plano na SyncPay não corresponde ao checkout configurado.' })
   }
 
   const supabase = useServiceSupabase()
+  const cached = await findPendingVipPix(supabase, { visitorId, planKey: storedPlanKey, paymentMethod: 'pix_automatico' })
+  if (cached?.pix_qr_code) {
+    let cachedExpiry = getVipPixExpiry(cached, false)
+    let cachedStatus = String(cached.metadata?.subscription_status || '').toLowerCase()
+    let cachedMandateStatus = String(cached.metadata?.mandate_status || '').toLowerCase()
+    let cachedChargeStatus = ''
+    let cacheIsPaid = ['active', 'approved', 'paid'].includes(cachedStatus)
+    let cacheIsTerminal = ['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'declined'].includes(cachedStatus) || ['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'declined'].includes(cachedMandateStatus)
+
+    if (cached.external_id) {
+      try {
+        const statusResponse = await fetch(`${base}/subscriptions/${encodeURIComponent(cached.external_id)}`, {
+          headers, signal: AbortSignal.timeout(6000),
+        })
+        const statusPayload = await statusResponse.json().catch(() => ({} as any))
+        if (statusResponse.ok) {
+          const root = statusPayload?.data && typeof statusPayload.data === 'object' ? { ...statusPayload, ...statusPayload.data } : statusPayload
+          const subscription = root?.subscription || root
+          const mandate = root?.mandate || subscription?.mandate || {}
+          const charges = Array.isArray(root?.charges) ? root.charges : Array.isArray(subscription?.charges) ? subscription.charges : []
+          const latestCharge = root?.latest_charge || root?.first_payment || root?.charge || charges.find((charge: any) => String(charge?.status || '').toLowerCase() === 'pending') || charges[0] || {}
+          cachedExpiry = cachedExpiry || readPixExpiry({ ...root, charge: latestCharge, mandate })
+          cachedStatus = String(subscription?.status || root?.subscription_status || cachedStatus).toLowerCase()
+          cachedMandateStatus = String(mandate?.status || root?.mandate_status || subscription?.mandate_status || cachedMandateStatus).toLowerCase()
+          cachedChargeStatus = String(latestCharge?.status || root?.charge_status || '').toLowerCase()
+          cacheIsPaid = ['approved', 'paid', 'completed', 'confirmed', 'success'].includes(cachedChargeStatus) || ['active', 'approved', 'paid'].includes(cachedStatus)
+          cacheIsTerminal = ['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'declined'].includes(cachedStatus) || ['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'declined'].includes(cachedMandateStatus) || ['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'declined'].includes(cachedChargeStatus)
+        }
+      } catch { /* Keep using the saved authorization if the provider is temporarily unavailable. */ }
+    }
+
+    if (cachedExpiry && isVipPixExpired(cachedExpiry)) cacheIsTerminal = true
+    if (cacheIsPaid || cacheIsTerminal) {
+      await supabase.from('payments').update({
+        status: cacheIsPaid ? 'approved' : cachedExpiry && isVipPixExpired(cachedExpiry) ? 'expired' : ['cancelled', 'canceled'].includes(cachedStatus) ? 'canceled' : 'failed',
+        ...(cacheIsPaid ? { approved_at: new Date().toISOString() } : {}),
+        metadata: { ...(cached.metadata || {}), subscription_status: cachedStatus, mandate_status: cachedMandateStatus, ...(cachedChargeStatus ? { charge_status: cachedChargeStatus } : {}) },
+      }).eq('id', cached.id)
+      if (cacheIsPaid) {
+        return {
+          ok: true,
+          reused: true,
+          status: 'approved',
+          payment_id: cached.id,
+          subscription_status: cachedStatus || 'active',
+          mandate_id: cached.metadata?.mandate_id || null,
+          mandate_status: cachedMandateStatus || 'ACTIVE',
+          pix_code: cached.pix_qr_code,
+          amount: expectedAmount,
+          periodicity_days: expectedPeriodDays,
+          expires_at: cachedExpiry,
+        }
+      }
+    } else {
+      return {
+        ok: true,
+        reused: true,
+        payment_id: cached.id,
+        subscription_status: cachedStatus || 'pending_first_payment',
+        mandate_id: cached.metadata?.mandate_id || null,
+        mandate_status: cachedMandateStatus || 'CREATED',
+        pix_code: cached.pix_qr_code,
+        amount: expectedAmount,
+        periodicity_days: expectedPeriodDays,
+        expires_at: cachedExpiry,
+      }
+    }
+  }
+
   const { data: payment, error: insertError } = await supabase.from('payments').insert({
     external_id: null,
     payment_method: 'pix_automatico',
     status: 'pending',
-    amount: EXPECTED_AMOUNT,
+    amount: expectedAmount,
     currency: 'BRL',
-    metadata: { source: 'assinaturavip', plan_key: 'vip_monthly', visitor_id: visitorId, billing_method: 'pix_automatico' },
+    metadata: { source: 'assinaturavip', plan_key: storedPlanKey, visitor_id: visitorId, billing_method: 'pix_automatico' },
   }).select('id').single()
   if (insertError || !payment?.id) {
     console.error('[checkout/vip-monthly] pending payment insert failed', insertError?.code || 'unknown')
@@ -141,13 +226,14 @@ export default defineEventHandler(async (event) => {
 
     const metadata = {
       source: 'assinaturavip',
-      plan_key: 'vip_monthly',
+      plan_key: storedPlanKey,
       visitor_id: visitorId,
       billing_method: 'pix_automatico',
       subscription_token: enrollment.subscriptionToken,
       mandate_id: enrollment.mandateId,
       mandate_status: enrollment.mandateStatus || 'CREATED',
       subscription_status: String(enrollment.root?.status || 'pending_first_payment'),
+      ...(enrollment.expiresAt ? { pix_expires_at: enrollment.expiresAt } : {}),
     }
     const { error: updateError } = await supabase.from('payments').update({
       external_id: enrollment.subscriptionToken,
@@ -166,8 +252,9 @@ export default defineEventHandler(async (event) => {
       mandate_id: enrollment.mandateId,
       mandate_status: metadata.mandate_status,
       pix_code: enrollment.qrCode,
-      amount: EXPECTED_AMOUNT,
-      periodicity_days: EXPECTED_PERIOD_DAYS,
+      amount: expectedAmount,
+      periodicity_days: expectedPeriodDays,
+      expires_at: enrollment.expiresAt,
     }
   } catch (error: any) {
     if (error?.statusCode) throw error

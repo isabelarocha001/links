@@ -5,11 +5,6 @@
  */
 import { useServiceSupabase } from '../../utils/supabase'
 
-/** Rate limit in-memory (por instância serverless). Chave: IP + payment id */
-const STATUS_RL_WINDOW_MS = 4000 // 1 consulta a cada 4s por IP+id
-const STATUS_RL_MAX_HITS = 1
-const statusRateMap = new Map<string, { ts: number; hits: number }>()
-
 function clientIp(event: any): string {
   const xf = getHeader(event, 'x-forwarded-for')
   if (xf) return String(xf).split(',')[0].trim()
@@ -22,29 +17,21 @@ function clientIp(event: any): string {
   }
 }
 
-function assertStatusRateLimit(event: any, paymentId: string) {
-  const ip = clientIp(event)
-  const key = `${ip}::${paymentId}`
-  const now = Date.now()
-  // limpa entradas antigas de vez em quando
-  if (statusRateMap.size > 5000) {
-    for (const [k, v] of statusRateMap) {
-      if (now - v.ts > STATUS_RL_WINDOW_MS * 3) statusRateMap.delete(k)
-    }
+async function enforceStatusRateLimit(supabase: ReturnType<typeof useServiceSupabase>, event: any, paymentId: string) {
+  const { data, error } = await supabase.rpc('consume_checkout_status_attempt', {
+    p_payment_id: paymentId.slice(0, 160),
+    p_client_ip: clientIp(event).slice(0, 128),
+  })
+  if (error) {
+    console.error('[checkout/status] rate limit storage failed', error.code || 'unknown')
+    throw createError({ statusCode: 503, statusMessage: 'Não consegui consultar o pagamento agora. Tente novamente em instantes.' })
   }
-  const prev = statusRateMap.get(key)
-  if (!prev || now - prev.ts > STATUS_RL_WINDOW_MS) {
-    statusRateMap.set(key, { ts: now, hits: 1 })
-    return
+  const result = Array.isArray(data) ? data[0] : data
+  if (result?.allowed !== true) {
+    const seconds = Math.max(1, Number(result?.retry_after_seconds) || 60)
+    setResponseHeader(event, 'Retry-After', String(seconds))
+    throw createError({ statusCode: 429, statusMessage: `Limite de 5 consultas atingido. Tente novamente em ${seconds} segundos.` })
   }
-  if (prev.hits >= STATUS_RL_MAX_HITS) {
-    throw createError({
-      statusCode: 429,
-      statusMessage: 'Muitas consultas de status. Aguarde alguns segundos.',
-    })
-  }
-  prev.hits += 1
-  statusRateMap.set(key, prev)
 }
 
 
@@ -133,10 +120,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'id required' })
   }
 
-  // Rate limit: 1 req / 4s por IP + id (protege SyncPay e o server)
-  assertStatusRateLimit(event, id)
-
   const supabase = useServiceSupabase()
+  await enforceStatusRateLimit(supabase, event, id)
 
   let row: any = null
   {
@@ -182,7 +167,14 @@ export default defineEventHandler(async (event) => {
             const mandateStatus = String(mandate?.status || root?.mandate_status || subscription?.mandate_status || (paymentMeta as any).mandate_status || '')
             const chargeStatus = String(charge?.status || root?.charge_status || root?.payment_status || '').toLowerCase()
             const isPaid = ['approved', 'paid', 'completed', 'confirmed', 'success'].includes(chargeStatus) || ['active', 'approved', 'paid'].includes(subscriptionStatus)
-            const mapped = isPaid ? 'approved' : ['cancelled', 'canceled', 'failed', 'expired'].includes(subscriptionStatus) ? subscriptionStatus : 'pending'
+            const terminalStatus = ['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'declined'].includes(subscriptionStatus)
+              ? subscriptionStatus
+              : ['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'declined'].includes(mandateStatus.toLowerCase())
+                ? mandateStatus.toLowerCase()
+                : ['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'declined'].includes(chargeStatus)
+                  ? chargeStatus
+                : ''
+            const mapped = isPaid ? 'approved' : terminalStatus || 'pending'
             const safeMeta = {
               ...paymentMeta,
               subscription_status: subscriptionStatus || (paymentMeta as any).subscription_status || 'pending',
@@ -283,6 +275,8 @@ export default defineEventHandler(async (event) => {
                   if (vid) await markChatUnlockedForVisitor(supabase, vid, { by: 'status_poll', plan_key: (nextMeta as any).plan_key })
                 }
               } catch {}
+            } else if (['expired', 'failed', 'cancelled', 'canceled'].includes(mapped) && row.id) {
+              await supabase.from('payments').update({ status: mapped === 'cancelled' ? 'canceled' : mapped }).eq('id', row.id)
             }
 
             return {

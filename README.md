@@ -44,6 +44,10 @@ Já conectado na Vercel: **https://wanessa-links.vercel.app**
 
 Para atualizar: só faça push na branch `main`.
 
+## Tracking e notificações
+
+O endpoint `/api/track` envia avisos de visita e clique diretamente ao bot Telegram configurado no projeto de links. O envio não depende do agente de métricas. Em paralelo, os eventos continuam sendo encaminhados ao agente para análise. Uma falha no agente não impede o aviso direto ao Telegram; falhas de envio ficam registradas nos logs do projeto de links.
+
 <!-- force redeploy 2026-09-05 -->
 
 ## ✏️ Editar links

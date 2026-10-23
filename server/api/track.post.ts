@@ -5,14 +5,19 @@
 /**
  * Tracking da ÁRVORE DE LINKS (proxy server-side)
  *
- * Responde IMEDIATO ao browser; envia ao pressel em background.
- * Assim o clique no link não espera Supabase/Telegram.
+ * Avisa o bot por este app e encaminha métricas ao agente em background.
+ * A notificação usa a configuração deste app, sem depender do agente.
  */
+
+import { getTelegramConfig, sendTelegramOwnerMessage } from '../utils/telegram'
+import { useServiceSupabase } from '../utils/supabase'
 
 const PRESSEL_WEBHOOK = 'https://agent-de-metricas-telegram.vercel.app/api/pressel'
 const LINK_TREE_HOST = 'wanessabsx.vercel.app'
-const LINK_TREE_PATH = '/links/wanessa'
+const LINK_TREE_PATH = '/'
 const LINK_TREE_SOURCE = 'wanessa_links'
+const TELEGRAM_NOTIFY_EVENTS = new Set(['page_view', 'link_click', 'outbound_click', 'cta_click', 'ViewContent'])
+let telegramWebhookCheckedAt = 0
 
 const FALLBACK_SECRET =
   'trk_wanessa_ingest_9f3c2a7b1e8d4c6f0a5b7e9d2c4f6a8b'
@@ -35,7 +40,8 @@ const TREE_EVENTS = new Set([
   'scroll_depth',
   'presell_view',
   'cta_click',
-  'pageview'
+  'pageview',
+  'ViewContent'
 ])
 
 const hits = new Map<string, { n: number; t: number }>()
@@ -96,6 +102,7 @@ function slugify(label: string): string {
 
 function normalizeEvent(raw: string): string {
   let e = raw.trim().toLowerCase().slice(0, 40)
+  if (['viewcontent', 'view_content'].includes(e)) return 'ViewContent'
   if (['click', 'cta', 'btn_click'].includes(e)) e = 'cta_click'
   if (['view', 'pv', 'pageview'].includes(e)) e = 'page_view'
   return e || 'page_view'
@@ -107,6 +114,93 @@ function trackingSecret(): string {
     process.env.PRESSEL_INGEST_SECRET ||
     FALLBACK_SECRET
   ).trim()
+}
+
+function safeText(value: unknown, maxLength = 180): string {
+  return String(value ?? '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, maxLength)
+}
+
+function safeDestination(value: unknown): string {
+  try {
+    const url = new URL(String(value ?? ''))
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return ''
+    return `${url.origin}${url.pathname}`.slice(0, 300)
+  } catch {
+    return ''
+  }
+}
+
+function trackingTelegramMessage(opts: {
+  eventName: string
+  visitorId: string
+  offerSlug: string
+  label: string
+  url: string
+  utms: Record<string, unknown>
+  visitNumber: number
+  deviceFingerprint: string
+}): string {
+  const linkName = opts.offerSlug === 'privsex'
+    ? 'PrivSex'
+    : opts.offerSlug === 'telegram_vip'
+      ? 'bot VIP do Telegram'
+      : opts.offerSlug === 'previa_telegram'
+        ? 'canal de prévias do Telegram'
+        : opts.offerSlug === 'telegram_publico'
+          ? 'canal de prévias do Telegram'
+        : safeText(opts.label) || 'site'
+  if (opts.eventName === 'outbound_click') {
+    return [
+      `👆 Alguém clicou em: ${linkName}`,
+      `🔢 Visita nº ${opts.visitNumber || 1}`
+    ].join('\n')
+  }
+
+  if (opts.eventName === 'page_view') {
+    return opts.visitNumber > 0
+      ? `👋 Alguém entrou no site\n🔢 Visita nº ${opts.visitNumber}`
+      : '👋 Alguém entrou no site'
+  }
+
+  if (opts.eventName === 'ViewContent') {
+    return '👀 Alguém chegou à bio, ao FAQ e às redes sociais\n📊 Evento: ViewContent'
+  }
+
+  return `👋 Alguém fez algo no site: ${linkName}`
+}
+
+async function ensureTelegramJoinWebhook() {
+  if (Date.now() - telegramWebhookCheckedAt < 10 * 60 * 1000) return
+  const { botToken } = await getTelegramConfig()
+  if (!botToken) return
+
+  const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL || 'https://wanessabsx.vercel.app/api/telegram/webhook'
+  const apiBase = `https://api.telegram.org/bot${botToken}`
+  const infoResponse = await fetch(`${apiBase}/getWebhookInfo`)
+  const info = await infoResponse.json().catch(() => null)
+  const updates = Array.isArray(info?.result?.allowed_updates) ? info.result.allowed_updates : []
+  const requiredUpdates = ['message', 'edited_message', 'channel_post', 'edited_channel_post', 'chat_member']
+  if (info?.ok && info.result?.url === webhookUrl && requiredUpdates.every((update) => updates.includes(update))) {
+    telegramWebhookCheckedAt = Date.now()
+    return
+  }
+
+  const setResponse = await fetch(`${apiBase}/setWebhook`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url: webhookUrl,
+      allowed_updates: requiredUpdates,
+      drop_pending_updates: false
+    })
+  })
+  const setResult = await setResponse.json().catch(() => null)
+  if (!setResponse.ok || !setResult?.ok) {
+    console.error('[track] Telegram member webhook setup failed', setResult?.description || setResponse.status)
+    return
+  }
+  telegramWebhookCheckedAt = Date.now()
+  console.info('[track] Telegram member webhook ready')
 }
 
 export default defineEventHandler(async (event) => {
@@ -127,10 +221,21 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event).catch(() => ({} as any))
   const label = String(body?.label || '').slice(0, 80)
   const url = String(body?.url || '').slice(0, 500)
+  const visitNumber = Math.max(0, Math.floor(Number(body?.visit_number) || 0))
+  let notificationVisitNumber = visitNumber
+  const deviceFingerprint = String(body?.device_fingerprint || '').slice(0, 64)
   let eventName = normalizeEvent(String(body?.event_name || body?.event || 'page_view'))
 
   if (!TREE_EVENTS.has(eventName)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid event' })
+  }
+
+  if (eventName === 'page_view' || eventName === 'session_start') {
+    try {
+      await ensureTelegramJoinWebhook()
+    } catch (error: any) {
+      console.error('[track] Telegram member webhook setup failed', error?.message || error)
+    }
   }
 
   let visitorId = getCookie(event, 'vid') || ''
@@ -155,7 +260,7 @@ export default defineEventHandler(async (event) => {
     String(body?.offer_slug || body?.offer || '').slice(0, 60) ||
     (label ? slugify(label) : 'wanessa_links')
 
-  const path = LINK_TREE_PATH
+  const path = String(body?.path || '') === '/telegram' ? '/telegram' : LINK_TREE_PATH
   const utms = {
     utm_source: body?.utm_source || null,
     utm_medium: body?.utm_medium || null,
@@ -175,8 +280,47 @@ export default defineEventHandler(async (event) => {
     site: `https://${LINK_TREE_HOST}/`,
     channel: 'link_tree',
     tree_event: eventName,
+    ...(visitNumber ? { visit_number: visitNumber } : {}),
+    ...(deviceFingerprint ? { device_fingerprint: deviceFingerprint } : {}),
     ...(body?.depth != null ? { depth: Number(body.depth) || 0 } : {}),
     ...(body?.metadata && typeof body.metadata === 'object' ? body.metadata : {})
+  }
+
+  const shouldStoreClick = eventName === 'outbound_click' || (path === '/telegram' && eventName === 'cta_click')
+  if (eventName === 'page_view' || eventName === 'ViewContent' || shouldStoreClick) {
+    try {
+      const supabase = useServiceSupabase()
+      const { error } = await supabase.from('tracking_events').insert({
+        visitor_id: visitorId,
+        event_name: eventName,
+        occurred_at: new Date().toISOString(),
+        path,
+        offer_slug: offerSlug,
+        ...utms,
+        metadata: {
+          source: LINK_TREE_SOURCE,
+          channel: 'link_tree',
+          label: label || null,
+          visit_number: visitNumber || null,
+          device_fingerprint: deviceFingerprint || null
+        }
+      })
+      if (error) console.error('[track] local analytics insert failed', { event_name: eventName, path, error: error.message })
+      else if (eventName === 'page_view') {
+        const { count, error: countError } = await supabase
+          .from('tracking_events')
+          .select('visitor_id', { count: 'exact', head: true })
+          .eq('event_name', 'page_view')
+          .eq('metadata->>source', LINK_TREE_SOURCE)
+        if (countError) {
+          console.error('[track] visit sequence count failed', countError.message)
+        } else {
+          notificationVisitNumber = Number(count) || 1
+        }
+      }
+    } catch (error: any) {
+      console.error('[track] local analytics insert failed', { event_name: eventName, path, error: error?.message || error })
+    }
   }
 
   const toSend: string[] = [eventName]
@@ -209,7 +353,39 @@ export default defineEventHandler(async (event) => {
       method: 'POST',
       headers,
       body: JSON.stringify(payload)
-    }).catch(() => {})
+    }).then((response) => {
+      if (!response.ok) {
+        console.warn('[track] metrics relay failed', { event_name: name, status: response.status })
+      }
+    }).catch(() => {
+      console.warn('[track] metrics relay unavailable', { event_name: name })
+    })
+  }
+
+  if (TELEGRAM_NOTIFY_EVENTS.has(eventName)) {
+    const result = await sendTelegramOwnerMessage(trackingTelegramMessage({
+      eventName,
+      visitorId,
+      offerSlug,
+      label,
+      url,
+      utms,
+      visitNumber: notificationVisitNumber,
+      deviceFingerprint
+    }))
+    if (!result.ok) {
+      const telegramError = result.error.toLowerCase()
+      const reason = ['bot_token_missing', 'owner_chat_missing'].includes(telegramError)
+        ? telegramError
+        : telegramError.includes('unauthorized')
+          ? 'telegram_token_rejected'
+          : telegramError.includes('chat not found')
+            ? 'telegram_chat_not_found'
+            : telegramError.includes('forbidden') || telegramError.includes('blocked')
+              ? 'telegram_bot_forbidden_or_blocked'
+              : 'telegram_send_failed'
+      console.error('[track] direct Telegram notification failed', { event_name: eventName, reason })
+    }
   }
 
   return {

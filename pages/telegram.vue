@@ -117,7 +117,7 @@ function track(eventName: string, extra: Record<string, string | undefined> = {}
     // path igual à árvore de links → conta no mesmo dashboard do Telegram público
     const payload = {
       event_name: eventName,
-      path: '/links/wanessa',
+      path: '/telegram',
       visitor_id: getVisitorId(),
       ...readUtms(),
       ...extra,

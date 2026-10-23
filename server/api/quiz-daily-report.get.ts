@@ -4,6 +4,8 @@
  * Protegido por: header x-vercel-cron | ?secret= | Authorization Bearer
  */
 
+import { sendTelegramOwnerMessage } from '../utils/telegram'
+
 const PRESSEL_WEBHOOK = 'https://telegram-metricas.vercel.app/api/pressel'
 const FALLBACK_SECRET =
   'trk_wanessa_ingest_9f3c2a7b1e8d4c6f0a5b7e9d2c4f6a8b'
@@ -121,6 +123,51 @@ export default defineEventHandler(async (event) => {
   const total = rows.length
   const conv = total ? Math.round((pass / total) * 100) : 0
 
+  const { data: trackingRows, error: trackingError } = await supabase
+    .from('tracking_events')
+    .select('visitor_id, event_name, offer_slug, path')
+    .in('event_name', ['page_view', 'outbound_click', 'cta_click'])
+    .gte('occurred_at', startIso)
+    .lt('occurred_at', endIso)
+  if (trackingError) {
+    throw createError({ statusCode: 500, statusMessage: trackingError.message })
+  }
+
+  const visitsByPage = new Map<string, Set<string>>()
+  const clickersByPage = new Map<string, Set<string>>()
+  const clicksByPageAndLink = new Map<string, Set<string>>()
+  for (const row of trackingRows || []) {
+    const visitorId = String(row.visitor_id || '')
+    if (!visitorId) continue
+    const page = String(row.path || '/') === '/telegram' ? '/telegram' : '/'
+    if (row.event_name === 'page_view') {
+      if (!visitsByPage.has(page)) visitsByPage.set(page, new Set<string>())
+      visitsByPage.get(page)!.add(visitorId)
+    }
+    const isClick = row.event_name === 'outbound_click' || (page === '/telegram' && row.event_name === 'cta_click')
+    if (isClick) {
+      if (!clickersByPage.has(page)) clickersByPage.set(page, new Set<string>())
+      clickersByPage.get(page)!.add(visitorId)
+      const slug = String(row.offer_slug || 'link')
+      const key = `${page}:${visitorId}:${slug}`
+      if (!clicksByPageAndLink.has(page)) clicksByPageAndLink.set(page, new Set<string>())
+      clicksByPageAndLink.get(page)!.add(key)
+    }
+  }
+
+  const mainVisits = visitsByPage.get('/')?.size || 0
+  const telegramVisits = visitsByPage.get('/telegram')?.size || 0
+  const mainClicks = clicksByPageAndLink.get('/')?.size || 0
+  const telegramClicks = clicksByPageAndLink.get('/telegram')?.size || 0
+  const mainClickers = clickersByPage.get('/')?.size || 0
+  const telegramClickers = clickersByPage.get('/telegram')?.size || 0
+  const mainCtr = mainVisits ? Math.round((mainClickers / mainVisits) * 100) : 0
+  const telegramCtr = telegramVisits ? Math.round((telegramClickers / telegramVisits) * 100) : 0
+  const allVisits = mainVisits + telegramVisits
+  const allClicks = mainClicks + telegramClicks
+  const allClickers = mainClickers + telegramClickers
+  const allCtr = allVisits ? Math.round((allClickers / allVisits) * 100) : 0
+
   const textLines = [
     `📊 Resumo formulário — ${label}`,
     ``,
@@ -141,7 +188,25 @@ export default defineEventHandler(async (event) => {
   const reportText = textLines.join('\n')
   const labelOneLine = `📊 Quiz ${label}: ${total} leads · ✅${pass} · ⛔${reject} · ${conv}% pass`
 
+  let telegramSent = false
+  let telegramError: string | undefined
   if (!dry) {
+    const trackingSummary = [
+      `📊 Ontem, ${label}`,
+      `👀 Visitas: ${allVisits}`,
+      `👆 Cliques: ${allClicks}`,
+      `📈 CTR: ${allCtr}%`,
+      '',
+      `Página principal: ${mainVisits} visitas · ${mainClicks} cliques · CTR ${mainCtr}%`,
+      `Página do Telegram: ${telegramVisits} visitas · ${telegramClicks} cliques · CTR ${telegramCtr}%`
+    ].join('\n')
+    const telegramResult = await sendTelegramOwnerMessage(trackingSummary)
+    telegramSent = telegramResult.ok
+    if (!telegramResult.ok) {
+      telegramError = telegramResult.error
+      console.error('[daily-report] direct Telegram send failed', telegramError)
+    }
+
     await fetch(PRESSEL_WEBHOOK, {
       method: 'POST',
       headers: {
@@ -176,6 +241,16 @@ export default defineEventHandler(async (event) => {
     total,
     pass,
     reject,
+    visits: allVisits,
+    clicks: allClicks,
+    clickers: allClickers,
+    ctr_percent: allCtr,
+    pages: {
+      main: { visits: mainVisits, clicks: mainClicks, ctr_percent: mainCtr },
+      telegram: { visits: telegramVisits, clicks: telegramClicks, ctr_percent: telegramCtr }
+    },
+    telegram_sent: telegramSent,
+    telegram_error: telegramError,
     conversion_pass_pct: conv,
     breakdown: { q1, q2, q_pay: qPay, q3 },
     telegram_queued: !dry,
