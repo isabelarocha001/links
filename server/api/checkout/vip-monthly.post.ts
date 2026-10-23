@@ -144,9 +144,10 @@ export default defineEventHandler(async (event) => {
   const supabase = useServiceSupabase()
   const cached = await findPendingVipPix(supabase, { visitorId, planKey: storedPlanKey, paymentMethod: 'pix_automatico' })
   if (cached && !cached.pix_qr_code) {
-    if (cached.external_id) {
+    const cachedSubscriptionToken = String(cached.metadata?.subscription_token || cached.external_id || '')
+    if (cachedSubscriptionToken) {
       try {
-        const statusResponse = await fetch(`${base}/subscriptions/${encodeURIComponent(cached.external_id)}`, {
+        const statusResponse = await fetch(`${base}/subscriptions/${encodeURIComponent(cachedSubscriptionToken)}`, {
           headers, signal: AbortSignal.timeout(6000),
         })
         if (statusResponse.ok) {
@@ -189,9 +190,10 @@ export default defineEventHandler(async (event) => {
     let cacheIsPaid = ['active', 'approved', 'paid'].includes(cachedStatus)
     let cacheIsTerminal = ['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'declined'].includes(cachedStatus) || ['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'declined'].includes(cachedMandateStatus)
 
-    if (cached.external_id) {
+    const cachedSubscriptionToken = String(cached.metadata?.subscription_token || cached.external_id || '')
+    if (cachedSubscriptionToken) {
       try {
-        const statusResponse = await fetch(`${base}/subscriptions/${encodeURIComponent(cached.external_id)}`, {
+        const statusResponse = await fetch(`${base}/subscriptions/${encodeURIComponent(cachedSubscriptionToken)}`, {
           headers, signal: AbortSignal.timeout(6000),
         })
         const statusPayload = await statusResponse.json().catch(() => ({} as any))
@@ -310,7 +312,6 @@ export default defineEventHandler(async (event) => {
         ...(enrollment.expiresAt ? { pix_expires_at: enrollment.expiresAt } : {}),
       }
       const { error: persistError } = await supabase.from('payments').update({
-        external_id: enrollment.subscriptionToken,
         metadata,
       }).eq('id', payment.id)
       if (persistError) {
@@ -347,7 +348,6 @@ export default defineEventHandler(async (event) => {
       ...(enrollment.expiresAt ? { pix_expires_at: enrollment.expiresAt } : {}),
     }
     const { error: updateError } = await supabase.from('payments').update({
-      external_id: enrollment.subscriptionToken,
       pix_qr_code: enrollment.qrCode,
       metadata,
     }).eq('id', payment.id)

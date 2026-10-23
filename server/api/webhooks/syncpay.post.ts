@@ -128,6 +128,20 @@ function pickExternalId(payload: any): string {
   ).trim()
 }
 
+function pickSubscriptionToken(payload: any): string {
+  return String(
+    payload?.subscription_token ||
+      payload?.subscriptionToken ||
+      payload?.subscription?.token ||
+      payload?.data?.subscription_token ||
+      payload?.data?.subscriptionToken ||
+      payload?.data?.subscription?.token ||
+      payload?.mandate?.subscription_token ||
+      payload?.payment?.subscription_token ||
+      '',
+  ).trim()
+}
+
 function pickPixCode(payload: any): string | null {
   const code = String(
     payload?.pix_code ||
@@ -239,12 +253,13 @@ export default defineEventHandler(async (event) => {
   if (body?.event && !payload.event) payload.event = body.event
   if (body?.type && !payload.type) payload.type = body.type
 
-  const externalId = pickExternalId(payload)
+  const subscriptionToken = pickSubscriptionToken(payload)
+  const externalId = pickExternalId(payload) || subscriptionToken
   const status = pickStatus(payload)
   const pixCode = pickPixCode(payload)
   const amount = pickAmount(payload)
 
-  console.log('[webhook/syncpay]', { externalId, status, hasPix: !!pixCode, amount, event: payload?.event || payload?.type })
+  console.log('[webhook/syncpay]', { hasExternalId: !!externalId, hasSubscriptionToken: !!subscriptionToken, status, hasPix: !!pixCode, amount, event: payload?.event || payload?.type })
 
   if (!externalId) {
     console.error('[webhook/syncpay] missing external id', rawBody.slice(0, 500))
@@ -263,13 +278,26 @@ export default defineEventHandler(async (event) => {
   if (pixCode) patch.pix_qr_code = pixCode
   if (amount != null) patch.amount = amount
 
-  const { data: existing, error: findErr } = await supabase
+  let { data: existing, error: findErr } = await supabase
     .from('payments')
     .select('id, metadata')
     .eq('external_id', externalId)
     .maybeSingle()
 
   if (findErr) console.error('[webhook/syncpay] find', findErr.message)
+
+  // Pix Automático uses a subscription token that is stored in metadata, not
+  // payments.external_id (which is unique and may already belong to a charge).
+  if (!existing?.id && subscriptionToken) {
+    const result = await supabase
+      .from('payments')
+      .select('id, metadata')
+      .filter('metadata->>subscription_token', 'eq', subscriptionToken)
+      .limit(1)
+      .maybeSingle()
+    existing = result.data
+    if (result.error) console.error('[webhook/syncpay] subscription lookup', result.error.code || 'lookup_failed')
+  }
 
   if (existing?.id) {
     const mergedMeta = {
