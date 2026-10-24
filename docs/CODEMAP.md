@@ -27,10 +27,22 @@ Guia rápido para revisar o repositório. Comentários no código usam headers `
 | Pasta | Uso |
 |-------|-----|
 | `server/api/admin/*` | Login, conversas, reply, presença, unlock-chat |
-| `server/api/checkout/*` | PIX SyncPay + status |
+| `server/api/checkout/*` | PIX SyncPay + status + VIP mensal (Pix Automático) |
+| `server/api/cpf/*` | Geração/validação de CPF **local** (sem API externa) |
+| `server/api/fake-person.get.ts` | Nome/email/fone/CPF estáveis por `visitor_id` |
 | `server/api/funnel-*.ts` | Mensagens e intents do funil |
 | `server/api/webhooks/syncpay.post.ts` | Pagamento aprovado → libera plano |
 | `server/utils/supabase.ts` | Clients + `verifyAdminToken` |
+| `server/utils/fake-person.ts` | Algoritmo CPF + `fakePersonForVisitor()` |
+
+## Visitor ID
+
+| Onde | Storage | Função |
+|------|---------|--------|
+| Funil / `app.vue` | `localStorage['wanessa_vid']` + cookie `vid` | `getOrCreateVisitorId()` |
+| `/assinaturavip` | `localStorage['vip-checkout-visitor-id']` | `getVipVisitorId()` |
+
+UUID na 1ª visita; reutilizado nas seguintes no mesmo navegador.
 
 ## Scripts
 
@@ -38,9 +50,10 @@ Guia rápido para revisar o repositório. Comentários no código usam headers `
 
 ## Docs
 
-| Arquivo | Conteúdo |
-|---------|----------|
-| `docs/ADMIN_CHAT.md` | Inbox admin, abas, APIs, preços de unlock |
-| `docs/CHAT_ROUTES.md` | Rotas públicas e admin do chat |
-| `docs/CSS_RESTORE.md` | Como recuperar `links-page.css` truncado |
-| `docs/CODEMAP.md` | Este mapa |
+| Doc | Tema |
+|-----|------|
+| `docs/FAKE-PERSON-CPF.md` | API local CPF/pessoa + auto-fill VIP (para LLMs) |
+| `docs/STRIPE.md` | Cartão Stripe Elements |
+| `docs/ADMIN_CHAT.md` | Inbox admin |
+| `docs/CHAT_ROUTES.md` | Rotas de chat |
+| `docs/CSS_RESTORE.md` | Restaurar CSS truncado |
