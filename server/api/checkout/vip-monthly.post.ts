@@ -1,4 +1,5 @@
 import { useServiceSupabase } from '../../utils/supabase'
+import { fakePersonForVisitor } from '../../utils/fake-person'
 import { getCachedSyncPayToken } from './warm.get'
 
 const EXPECTED_AMOUNT = 29.9
@@ -105,20 +106,25 @@ function responseShape(payload: any) {
 export default defineEventHandler(async (event) => {
   enforceEnrollRateLimit(event)
   const body = await readBody(event).catch(() => ({} as any))
-  const name = String(body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 100)
-  const email = String(body?.email || '').trim().toLowerCase().slice(0, 254)
-  const document = String(body?.document || '').replace(/\D/g, '')
   const visitorId = String(body?.visitor_id || '').trim()
 
-  if (name.length < 2) throw createError({ statusCode: 400, statusMessage: 'Informe seu nome.' })
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw createError({ statusCode: 400, statusMessage: 'Informe um e-mail válido.' })
-  if (!isValidCpf(document)) throw createError({ statusCode: 400, statusMessage: 'Confira o CPF informado.' })
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(visitorId)) {
     throw createError({ statusCode: 400, statusMessage: 'Não consegui identificar esta visita. Atualize a página e tente novamente.' })
   }
   if (body?.accepted_recurring !== true) {
     throw createError({ statusCode: 400, statusMessage: 'Confirme que entendeu a cobrança mensal automática.' })
   }
+
+  // Auto-preenche nome/email/CPF estáveis por visitor_id (instância própria — sem API externa).
+  // Se o front/agente mandar dados válidos, usa os enviados; senão completa com gerador local.
+  const auto = fakePersonForVisitor(visitorId)
+  let name = String(body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 100)
+  let email = String(body?.email || '').trim().toLowerCase().slice(0, 254)
+  let document = String(body?.document || '').replace(/\D/g, '')
+
+  if (name.length < 2) name = auto.name
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) email = auto.email
+  if (!isValidCpf(document)) document = auto.document
 
   const planToken = await loadPlanToken()
   if (!/^[0-9a-f-]{36}$/i.test(planToken)) {
