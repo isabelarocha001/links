@@ -21,18 +21,38 @@ function enforceEnrollRateLimit(event: any) {
 
 type VipRecurringKey = 'monthly' | 'six_months'
 
-const PLAN_TOKEN_KEYS: Record<VipRecurringKey, string> = {
+const BASE_PLAN_TOKEN_KEYS: Record<VipRecurringKey, string> = {
   monthly: 'SYNCPAY_VIP_MONTHLY_PLAN_TOKEN',
   six_months: 'SYNCPAY_VIP_SIX_MONTH_PLAN_TOKEN',
 }
 
-async function loadPlanToken(planKey: VipRecurringKey) {
-  let token = planKey === 'monthly' ? String(process.env.SYNCPAY_VIP_MONTHLY_PLAN_TOKEN || '').trim() : ''
+const VIP_RECURRING_ADDONS = {
+  vip_bump_video_call: { amount: 49.9, suffix: 'VIDEO_CALL' },
+  vip_bump_sexting: { amount: 19.9, suffix: 'SEXTING' },
+} as const
+type VipRecurringAddon = keyof typeof VIP_RECURRING_ADDONS
+
+function recurringPlanConfigKey(planKey: VipRecurringKey, addons: VipRecurringAddon[]) {
+  const base = BASE_PLAN_TOKEN_KEYS[planKey]
+  const suffix = addons.map((id) => VIP_RECURRING_ADDONS[id].suffix).sort().join('_')
+  return suffix ? `${base}_${suffix}` : base
+}
+
+function parseRecurringAddons(value: unknown): VipRecurringAddon[] {
+  if (value === undefined) return []
+  if (!Array.isArray(value) || value.length > 2 || value.some((id) => typeof id !== 'string' || !(id in VIP_RECURRING_ADDONS))) {
+    throw createError({ statusCode: 400, statusMessage: 'Extra do plano inválido.' })
+  }
+  return [...new Set(value as VipRecurringAddon[])].sort()
+}
+
+async function loadPlanToken(planKey: VipRecurringKey, addons: VipRecurringAddon[]) {
+  const configKey = recurringPlanConfigKey(planKey, addons)
+  let token = String(process.env[configKey] || '').trim()
   if (token) return token
   try {
     const supabase = useServiceSupabase()
-    const { data } = await supabase.from('app_secrets').select('value')
-      .eq('key', PLAN_TOKEN_KEYS[planKey]).maybeSingle()
+    const { data } = await supabase.from('app_secrets').select('value').eq('key', configKey).maybeSingle()
     token = String(data?.value || '').trim()
   } catch { /* Return a generic configuration error below. */ }
   return token
@@ -96,10 +116,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Plano recorrente inválido.' })
   }
   const planKey: VipRecurringKey = body?.plan_key === 'six_months' ? 'six_months' : 'monthly'
+  const addons = parseRecurringAddons(body?.add_ons)
   const prices = await loadVipCheckoutPrices()
-  const expectedAmount = planKey === 'monthly' ? prices.monthlyBrl : prices.sixMonthBrl
+  const baseAmount = planKey === 'monthly' ? prices.monthlyBrl : prices.sixMonthBrl
+  const expectedAmount = Number((baseAmount + addons.reduce((sum, id) => sum + VIP_RECURRING_ADDONS[id].amount, 0)).toFixed(2))
   const expectedPeriodDays = planKey === 'monthly' ? prices.monthlyPeriodDays : prices.sixMonthPeriodDays
   const storedPlanKey = planKey === 'monthly' ? 'vip_monthly' : 'vip_six_months'
+  const checkoutPlanKey = addons.length ? `${storedPlanKey}_addons_${addons.map((id) => VIP_RECURRING_ADDONS[id].suffix.toLowerCase()).join('_')}` : storedPlanKey
   const name = String(body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 100)
   const email = String(body?.email || '').trim().toLowerCase().slice(0, 254)
   const document = String(body?.document || '').replace(/\D/g, '')
@@ -115,9 +138,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Confirme que entendeu as cobranças recorrentes pelo Pix Automático.' })
   }
 
-  const planToken = await loadPlanToken(planKey)
+  const planToken = await loadPlanToken(planKey, addons)
   if (!/^[0-9a-f-]{36}$/i.test(planToken)) {
-    throw createError({ statusCode: 503, statusMessage: 'Este plano Pix Automático ainda não está configurado na SyncPay.' })
+    throw createError({ statusCode: 503, statusMessage: 'Esta combinação de plano e extras ainda não foi cadastrada como plano recorrente na SyncPay.' })
   }
   const accessToken = await getCachedSyncPayToken()
   if (!accessToken) throw createError({ statusCode: 503, statusMessage: 'A SyncPay não está configurada neste ambiente.' })
@@ -142,7 +165,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const supabase = useServiceSupabase()
-  const cached = await findPendingVipPix(supabase, { visitorId, planKey: storedPlanKey, paymentMethod: 'pix_automatico' })
+  const cached = await findPendingVipPix(supabase, { visitorId, planKey: checkoutPlanKey, paymentMethod: 'pix_automatico' })
   if (cached && !cached.pix_qr_code) {
     const cachedSubscriptionToken = String(cached.metadata?.subscription_token || cached.external_id || '')
     if (cachedSubscriptionToken) {
@@ -257,7 +280,7 @@ export default defineEventHandler(async (event) => {
     status: 'pending',
     amount: expectedAmount,
     currency: 'BRL',
-    metadata: { source: 'assinaturavip', plan_key: storedPlanKey, visitor_id: visitorId, billing_method: 'pix_automatico' },
+        metadata: { source: 'assinaturavip', plan_key: checkoutPlanKey, base_plan_key: storedPlanKey, vip_addons: addons, visitor_id: visitorId, billing_method: 'pix_automatico' },
   }).select('id').single()
   if (insertError || !payment?.id) {
     console.error('[checkout/vip-monthly] pending payment insert failed', insertError?.code || 'unknown')
@@ -301,7 +324,10 @@ export default defineEventHandler(async (event) => {
     if (enrollment.subscriptionToken && enrollment.mandateId && !enrollment.qrCode) {
       const metadata = {
         source: 'assinaturavip',
-        plan_key: storedPlanKey,
+        plan_key: checkoutPlanKey,
+        base_plan_key: storedPlanKey,
+        checkout_plan_key: checkoutPlanKey,
+        vip_addons: addons,
         visitor_id: visitorId,
         billing_method: 'pix_automatico',
         subscription_token: enrollment.subscriptionToken,
@@ -338,7 +364,10 @@ export default defineEventHandler(async (event) => {
 
     const metadata = {
       source: 'assinaturavip',
-      plan_key: storedPlanKey,
+      plan_key: checkoutPlanKey,
+      base_plan_key: storedPlanKey,
+      checkout_plan_key: checkoutPlanKey,
+      vip_addons: addons,
       visitor_id: visitorId,
       billing_method: 'pix_automatico',
       subscription_token: enrollment.subscriptionToken,
@@ -364,6 +393,7 @@ export default defineEventHandler(async (event) => {
       mandate_status: metadata.mandate_status,
       pix_code: enrollment.qrCode,
       amount: expectedAmount,
+      vip_addons: addons,
       periodicity_days: expectedPeriodDays,
       expires_at: enrollment.expiresAt,
     }

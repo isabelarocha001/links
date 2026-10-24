@@ -44,6 +44,11 @@ const PLAN_FALLBACK: Record<string, { title: string; amount: number }> = {
   web_30: { title: 'Webnamoro 30 dias', amount: 499.9 },
 }
 
+const VIP_ORDER_BUMPS = {
+  vip_bump_video_call: { title: 'Videochamada quente (5 min)', amount: 49.9 },
+  vip_bump_sexting: { title: 'Sexting em tempo real', amount: 19.9 },
+} as const
+
 async function getSyncPayToken(clientId: string, clientSecret: string) {
   const res = await fetch('https://api.syncpayments.com.br/api/partner/v1/auth-token', {
     method: 'POST',
@@ -161,6 +166,14 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event).catch(() => ({} as any))
   const planKey = String(body?.plan_key || '').trim() || 'custom'
+  const rawVipAddons = body?.add_ons
+  if (rawVipAddons !== undefined && (!Array.isArray(rawVipAddons) || rawVipAddons.length > 2 || rawVipAddons.some((item: unknown) => typeof item !== 'string' || !(item in VIP_ORDER_BUMPS)) || new Set(rawVipAddons).size !== rawVipAddons.length)) {
+    throw createError({ statusCode: 400, statusMessage: 'Adicionais inválidos.' })
+  }
+  const vipAddons = (rawVipAddons || []) as (keyof typeof VIP_ORDER_BUMPS)[]
+  if (vipAddons.length && planKey !== 'vip_lifetime') {
+    throw createError({ statusCode: 400, statusMessage: 'Os adicionais só podem ser incluídos no pagamento único do plano Vitalício.' })
+  }
   if (planKey === 'vip_monthly' || planKey === 'vip_six_months') {
     throw createError({ statusCode: 400, statusMessage: 'Planos recorrentes do Canal VIP devem usar o fluxo de Pix Automático.' })
   }
@@ -173,12 +186,16 @@ export default defineEventHandler(async (event) => {
       ? Number(amount.toFixed(2))
       : plan?.amount
   if (planKey === 'vip_lifetime') {
-    finalAmount = (await loadVipCheckoutPrices()).lifetimeBrl
+    const lifetimePrice = (await loadVipCheckoutPrices()).lifetimeBrl
+    const addonsTotal = vipAddons.reduce((sum, addon) => sum + VIP_ORDER_BUMPS[addon].amount, 0)
+    finalAmount = Number((lifetimePrice + addonsTotal).toFixed(2))
   }
   if (!finalAmount || finalAmount <= 0) {
     throw createError({ statusCode: 400, statusMessage: 'Valor inválido' })
   }
-  const title = String(body?.title || plan?.title || planKey).slice(0, 80)
+  const title = planKey === 'vip_lifetime'
+    ? [plan?.title || 'Canal VIP vitalício', ...vipAddons.map(addon => VIP_ORDER_BUMPS[addon].title)].join(' + ').slice(0, 80)
+    : String(body?.title || plan?.title || planKey).slice(0, 80)
   const visitor_id = body?.visitor_id ? String(body.visitor_id).slice(0, 120) : null
   if (planKey === 'vip_lifetime' && visitor_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(visitor_id)) {
     throw createError({ statusCode: 400, statusMessage: 'Não consegui identificar esta visita. Atualize a página e tente novamente.' })
@@ -204,6 +221,7 @@ export default defineEventHandler(async (event) => {
       if (planKey === 'vip_lifetime' && visitor_id) {
         const cached = await findPendingVipPix(supabase, { visitorId: visitor_id, planKey, paymentMethod: 'pix' })
         if (cached?.pix_qr_code) {
+          const cachedVipAddons = Array.isArray(cached.metadata?.vip_addons) ? cached.metadata.vip_addons : []
           const cachedExpiry = getVipPixExpiry(cached, true)
           if (isVipPixExpired(cachedExpiry)) {
             await supabase.from('payments').update({ status: 'expired', metadata: { ...(cached.metadata || {}), pix_expired_at: new Date().toISOString() } }).eq('id', cached.id)
@@ -231,6 +249,8 @@ export default defineEventHandler(async (event) => {
                 qr_image: extractQrImage({ qr_code_image: cached.metadata?.syncpay?.qr_code_image }, cached.pix_qr_code),
                 amount: cached.amount,
                 plan_key: planKey,
+                title: cached.metadata?.title || plan?.title || 'Canal VIP vitalício',
+                vip_addons: cachedVipAddons,
                 expires_at: cachedExpiry,
               }
             } else if (['expired', 'failed', 'cancelled', 'canceled'].includes(remoteStatus)) {
@@ -246,6 +266,8 @@ export default defineEventHandler(async (event) => {
                 qr_image: extractQrImage({ qr_code_image: cached.metadata?.syncpay?.qr_code_image }, cached.pix_qr_code),
                 amount: cached.amount,
                 plan_key: planKey,
+                title: cached.metadata?.title || plan?.title || 'Canal VIP vitalício',
+                vip_addons: cachedVipAddons,
                 expires_at: cachedExpiry,
               }
             }
@@ -318,6 +340,7 @@ export default defineEventHandler(async (event) => {
               source,
               plan_key: planKey,
               title,
+              ...(planKey === 'vip_lifetime' ? { vip_addons: vipAddons } : {}),
               visitor_id,
               ...(callStyle ? { call_style: callStyle, quiz: 'video_call_v2' } : {}),
               ip,
@@ -342,6 +365,8 @@ export default defineEventHandler(async (event) => {
         qr_image: qrImage || null,
         amount: finalAmount,
         plan_key: planKey,
+        title,
+        ...(planKey === 'vip_lifetime' ? { vip_addons: vipAddons } : {}),
         expires_at: pixExpiry,
       }
     } catch (e: any) {
