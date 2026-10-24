@@ -46,13 +46,59 @@ function isValidCpf(value: string) {
 function extractEnrollment(payload: any) {
   const root = payload?.data && typeof payload.data === 'object' ? { ...payload, ...payload.data } : payload
   const payment = root?.payment || root?.first_payment || root?.charge || root?.subscription?.payment || {}
+  const mandate = root?.mandate || root?.subscription?.mandate || root?.pix_automatico || {}
+  const pixCode = (...values: any[]) => values
+    .map(value => typeof value === 'string' ? value.trim() : '')
+    .find(value => value && !/^data:image\//i.test(value)) || ''
   return {
     root,
     payment,
-    subscriptionToken: String(root?.subscription_token || root?.token || root?.subscription?.token || ''),
-    mandateId: String(payment?.mandate_id || root?.mandate_id || ''),
-    mandateStatus: String(payment?.mandate_status || root?.mandate_status || ''),
-    qrCode: String(payment?.qr_code || payment?.pix_code || payment?.copy_paste || payment?.emv || root?.qr_code || root?.pix_code || root?.pix_copy_paste || ''),
+    // SyncPay uses `token` for plan identifiers too. Only accept an explicit
+    // subscription token so a plan token cannot be mistaken for this enrollment.
+    subscriptionToken: String(root?.subscription_token || root?.subscription?.token || ''),
+    mandateId: String(payment?.mandate_id || mandate?.mandate_id || mandate?.id || root?.mandate_id || ''),
+    mandateStatus: String(payment?.mandate_status || mandate?.status || root?.mandate_status || ''),
+    qrCode: pixCode(
+      payment?.pix_code, payment?.qr_code, payment?.copy_paste, payment?.copyPaste, payment?.emv,
+      mandate?.pix_code, mandate?.qr_code, mandate?.copy_paste,
+      root?.pix_code, root?.qr_code, root?.pix_copy_paste, root?.emv
+    ),
+  }
+}
+
+function extractPendingSubscriptionPix(payload: any) {
+  const root = payload?.data && typeof payload.data === 'object' ? { ...payload, ...payload.data } : payload
+  const charges = Array.isArray(root?.charges)
+    ? root.charges
+    : Array.isArray(root?.subscription?.charges) ? root.subscription.charges : []
+  const pendingCharges = charges
+    .filter((charge: any) => String(charge?.status || '').toLowerCase() === 'pending')
+    .sort((a: any, b: any) => Number(b?.cycle_number || 0) - Number(a?.cycle_number || 0))
+  const candidates = pendingCharges.length ? pendingCharges : charges.slice(-1)
+  for (const charge of candidates) {
+    const payment = charge?.payment || {}
+    for (const value of [payment.pix_code, payment.qr_code, payment.copy_paste, payment.emv, charge.pix_code, charge.qr_code]) {
+      if (typeof value === 'string' && value.trim() && !/^data:image\//i.test(value.trim())) return value.trim()
+    }
+  }
+  return ''
+}
+
+function responseShape(payload: any) {
+  const root = payload?.data && typeof payload.data === 'object' ? { ...payload, ...payload.data } : payload
+  const payment = root?.payment || root?.first_payment || root?.charge || root?.subscription?.payment || {}
+  const mandate = root?.mandate || root?.subscription?.mandate || root?.pix_automatico || {}
+  const charges = Array.isArray(root?.charges)
+    ? root.charges
+    : Array.isArray(root?.subscription?.charges) ? root.subscription.charges : []
+  const pendingPayment = charges.find((charge: any) => String(charge?.status || '').toLowerCase() === 'pending')?.payment || {}
+  return {
+    topLevelKeys: Object.keys(payload || {}).slice(0, 30),
+    dataKeys: Object.keys(payload?.data || {}).slice(0, 30),
+    paymentKeys: Object.keys(payment).slice(0, 30),
+    mandateKeys: Object.keys(mandate).slice(0, 30),
+    chargeCount: charges.length,
+    pendingChargePaymentKeys: Object.keys(pendingPayment).slice(0, 30),
   }
 }
 
@@ -129,7 +175,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const enrollment = extractEnrollment(enrollPayload)
-    if (!enrollment.subscriptionToken || !enrollment.mandateId || !enrollment.qrCode) {
+    if (!enrollment.subscriptionToken || !enrollment.mandateId) {
       await supabase.from('payments').update({ status: 'failed', failed_at: new Date().toISOString() }).eq('id', payment.id)
       console.error('[checkout/vip-monthly] incomplete mandate response', {
         hasSubscription: !!enrollment.subscriptionToken,
@@ -139,7 +185,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 502, statusMessage: 'A SyncPay não retornou os dados do mandato Pix Automático.' })
     }
 
-    const metadata = {
+    const metadata: Record<string, string> = {
       source: 'assinaturavip',
       plan_key: 'vip_monthly',
       visitor_id: visitorId,
@@ -149,11 +195,51 @@ export default defineEventHandler(async (event) => {
       mandate_status: enrollment.mandateStatus || 'CREATED',
       subscription_status: String(enrollment.root?.status || 'pending_first_payment'),
     }
-    const { error: updateError } = await supabase.from('payments').update({
-      external_id: enrollment.subscriptionToken,
-      pix_qr_code: enrollment.qrCode,
-      metadata,
-    }).eq('id', payment.id)
+
+    // Keep the provider identifiers before attempting QR recovery. This avoids
+    // losing a created mandate if SyncPay omits the Pix code from the enroll response.
+    const { error: initialPersistError } = await supabase.from('payments').update({ metadata }).eq('id', payment.id)
+    if (initialPersistError) {
+      console.error('[checkout/vip-monthly] mandate tracking persistence failed', initialPersistError.code || 'unknown')
+      throw createError({ statusCode: 503, statusMessage: 'A SyncPay criou a autorização, mas não consegui salvar o acompanhamento. Não tente novamente até falar com o suporte.' })
+    }
+
+    let qrCode = enrollment.qrCode
+    let qrSource = qrCode ? 'enroll' : ''
+    let lookupStatus = 0
+    let lookupPayload: any = null
+    if (!qrCode) {
+      try {
+        const lookupResponse = await fetch(`${base}/subscriptions/${encodeURIComponent(enrollment.subscriptionToken)}`, {
+          headers,
+          signal: AbortSignal.timeout(8000),
+        })
+        lookupStatus = lookupResponse.status
+        if (lookupResponse.ok) {
+          lookupPayload = await lookupResponse.json().catch(() => ({} as any))
+          qrCode = extractPendingSubscriptionPix(lookupPayload)
+          if (qrCode) qrSource = 'subscription_lookup'
+        }
+      } catch (lookupError: any) {
+        console.warn('[checkout/vip-monthly] Pix recovery lookup failed', lookupError?.name || 'network_error')
+      }
+    }
+
+    if (!qrCode) {
+      metadata.qr_recovery = `missing_after_lookup_${lookupStatus || 'network_error'}`
+      await supabase.from('payments').update({ metadata }).eq('id', payment.id)
+      console.error('[checkout/vip-monthly] Pix code unavailable after recovery', {
+        hasSubscription: true,
+        hasMandate: true,
+        lookupStatus: lookupStatus || 'network_error',
+        enrollShape: responseShape(enrollPayload),
+        lookupShape: lookupPayload ? responseShape(lookupPayload) : null,
+      })
+      throw createError({ statusCode: 502, statusMessage: 'A autorização foi criada, mas o Pix ainda não veio. Ela ficou registrada; não gere outra até resolvermos.' })
+    }
+
+    metadata.qr_source = qrSource
+    const { error: updateError } = await supabase.from('payments').update({ pix_qr_code: qrCode, metadata }).eq('id', payment.id)
     if (updateError) {
       console.error('[checkout/vip-monthly] mandate persistence failed', updateError.code || 'unknown')
       throw createError({ statusCode: 503, statusMessage: 'A autorização foi iniciada, mas não consegui salvar o acompanhamento. Não tente autorizar outra vez; fale com o suporte.' })
@@ -165,7 +251,7 @@ export default defineEventHandler(async (event) => {
       subscription_status: metadata.subscription_status,
       mandate_id: enrollment.mandateId,
       mandate_status: metadata.mandate_status,
-      pix_code: enrollment.qrCode,
+      pix_code: qrCode,
       amount: EXPECTED_AMOUNT,
       periodicity_days: EXPECTED_PERIOD_DAYS,
     }

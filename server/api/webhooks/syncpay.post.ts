@@ -236,13 +236,20 @@ export default defineEventHandler(async (event) => {
   if (body?.type && !payload.type) payload.type = body.type
 
   const externalId = pickExternalId(payload)
+  const subscriptionToken = String(
+    payload?.subscription_token ||
+      payload?.subscription?.token ||
+      payload?.data?.subscription_token ||
+      payload?.data?.subscription?.token ||
+      '',
+  ).trim()
   const status = pickStatus(payload)
   const pixCode = pickPixCode(payload)
   const amount = pickAmount(payload)
 
-  console.log('[webhook/syncpay]', { externalId, status, hasPix: !!pixCode, amount, event: payload?.event || payload?.type })
+  console.log('[webhook/syncpay]', { hasExternalId: !!externalId, hasSubscriptionToken: !!subscriptionToken, status, hasPix: !!pixCode, amount, event: payload?.event || payload?.type })
 
-  if (!externalId) {
+  if (!externalId && !subscriptionToken) {
     console.error('[webhook/syncpay] missing external id', rawBody.slice(0, 500))
     return { ok: false, error: 'missing_id' }
   }
@@ -259,17 +266,32 @@ export default defineEventHandler(async (event) => {
   if (pixCode) patch.pix_qr_code = pixCode
   if (amount != null) patch.amount = amount
 
-  const { data: existing, error: findErr } = await supabase
-    .from('payments')
-    .select('id, metadata')
-    .eq('external_id', externalId)
-    .maybeSingle()
+  // Recurring subscriptions are keyed by their token in metadata. Do not put
+  // that token in payments.external_id, which is reserved for unique payment IDs.
+  let subscriptionPayment: any = null
+  if (subscriptionToken) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('id, metadata')
+      .eq('metadata->>subscription_token', subscriptionToken)
+      .maybeSingle()
+    if (error) console.error('[webhook/syncpay] subscription lookup', error.code || 'unknown')
+    subscriptionPayment = data
+  }
 
-  if (findErr) console.error('[webhook/syncpay] find', findErr.message)
+  if (!subscriptionPayment?.id && !subscriptionToken) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('id, metadata')
+      .eq('external_id', externalId)
+      .maybeSingle()
+    if (error) console.error('[webhook/syncpay] find', error.code || 'unknown')
+    subscriptionPayment = data
+  }
 
-  if (existing?.id) {
+  if (subscriptionPayment?.id) {
     const mergedMeta = {
-      ...(existing.metadata || {}),
+      ...(subscriptionPayment.metadata || {}),
       source: 'webhook',
       syncpay: payload,
       webhook_at: now,
@@ -278,7 +300,7 @@ export default defineEventHandler(async (event) => {
     const { error } = await supabase
       .from('payments')
       .update({ ...patch, metadata: mergedMeta })
-      .eq('id', existing.id)
+      .eq('id', subscriptionPayment.id)
     if (error) {
       console.error('[webhook/syncpay] update', error.message)
       return { ok: false, error: error.message }
@@ -295,7 +317,13 @@ export default defineEventHandler(async (event) => {
         console.warn('[webhook/syncpay] mark unlock', e?.message || e)
       }
     }
-    return { ok: true, updated: true, payment_id: existing.id, status }
+    return { ok: true, updated: true, payment_id: subscriptionPayment.id, status }
+  }
+
+  // An unmatched subscription event must not become a generic payment row.
+  if (subscriptionToken) {
+    console.error('[webhook/syncpay] subscription payment not found')
+    return { ok: false, error: 'subscription_not_found' }
   }
 
   const { data: inserted, error: insErr } = await supabase
