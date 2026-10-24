@@ -13,6 +13,16 @@ const PRESSEL_WEBHOOK = 'https://agent-de-metricas-telegram.vercel.app/api/press
 const LINK_TREE_HOST = 'wanessabsx.vercel.app'
 const LINK_TREE_PATH = '/links/wanessa'
 const LINK_TREE_SOURCE = 'wanessa_links'
+const VIP_CHECKOUT_PATH = '/assinaturavip'
+const VIP_CHECKOUT_SOURCE = 'vip_checkout'
+const VIP_CHECKOUT_EVENTS = new Set([
+  'vip_checkout_view',
+  'vip_plan_selected',
+  'vip_subscribe_clicked',
+  'vip_pix_generated',
+  'vip_pix_copy_clicked',
+  'vip_pix_pending_exit'
+])
 
 const FALLBACK_SECRET =
   'trk_wanessa_ingest_9f3c2a7b1e8d4c6f0a5b7e9d2c4f6a8b'
@@ -23,7 +33,8 @@ const ALLOWED_ORIGINS = new Set([
   'https://wanessa-links.vercel.app',
   'https://www.wanessa-links.vercel.app',
   'http://localhost:3000',
-  'http://127.0.0.1:3000'
+  'http://127.0.0.1:3000',
+  'http://[::1]:3000'
 ])
 
 const TREE_EVENTS = new Set([
@@ -127,9 +138,13 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event).catch(() => ({} as any))
   const label = String(body?.label || '').slice(0, 80)
   const url = String(body?.url || '').slice(0, 500)
-  let eventName = normalizeEvent(String(body?.event_name || body?.event || 'page_view'))
+  const requestedEventName = normalizeEvent(String(body?.event_name || body?.event || 'page_view'))
+  const isVipCheckoutEvent = VIP_CHECKOUT_EVENTS.has(requestedEventName)
+  const eventName = isVipCheckoutEvent
+    ? requestedEventName === 'vip_checkout_view' ? 'page_view' : 'cta_click'
+    : requestedEventName
 
-  if (!TREE_EVENTS.has(eventName)) {
+  if (!TREE_EVENTS.has(eventName) || (!TREE_EVENTS.has(requestedEventName) && !isVipCheckoutEvent)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid event' })
   }
 
@@ -151,11 +166,17 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const offerSlug =
-    String(body?.offer_slug || body?.offer || '').slice(0, 60) ||
-    (label ? slugify(label) : 'wanessa_links')
+  const offerSlug = isVipCheckoutEvent
+    ? 'vip_telegram'
+    : String(body?.offer_slug || body?.offer || '').slice(0, 60) ||
+      (label ? slugify(label) : 'wanessa_links')
 
-  const path = LINK_TREE_PATH
+  const path = isVipCheckoutEvent ? VIP_CHECKOUT_PATH : LINK_TREE_PATH
+  const source = isVipCheckoutEvent ? VIP_CHECKOUT_SOURCE : LINK_TREE_SOURCE
+  const safeVipMetadata: Record<string, string> = {}
+  if (isVipCheckoutEvent && ['monthly', 'lifetime'].includes(String(body?.metadata?.plan_key || ''))) {
+    safeVipMetadata.plan_key = String(body.metadata.plan_key)
+  }
   const utms = {
     utm_source: body?.utm_source || null,
     utm_medium: body?.utm_medium || null,
@@ -167,20 +188,23 @@ export default defineEventHandler(async (event) => {
   }
 
   const baseMeta = {
-    label: label || null,
-    url: url || null,
+    label: isVipCheckoutEvent ? requestedEventName : label || null,
+    url: isVipCheckoutEvent ? `https://${LINK_TREE_HOST}${VIP_CHECKOUT_PATH}` : url || null,
     button: offerSlug,
-    source: LINK_TREE_SOURCE,
+    source,
     host: LINK_TREE_HOST,
-    site: `https://${LINK_TREE_HOST}/`,
-    channel: 'link_tree',
-    tree_event: eventName,
+    site: `https://${LINK_TREE_HOST}${path}`,
+    channel: isVipCheckoutEvent ? 'vip_checkout' : 'link_tree',
+    tree_event: isVipCheckoutEvent ? requestedEventName : eventName,
+    ...(isVipCheckoutEvent ? { funnel_event: requestedEventName, ...safeVipMetadata } : {}),
     ...(body?.depth != null ? { depth: Number(body.depth) || 0 } : {}),
-    ...(body?.metadata && typeof body.metadata === 'object' ? body.metadata : {})
+    ...(isVipCheckoutEvent
+      ? safeVipMetadata
+      : body?.metadata && typeof body.metadata === 'object' ? body.metadata : {})
   }
 
   const toSend: string[] = [eventName]
-  if (eventName === 'page_view' || eventName === 'session_start') {
+  if (!isVipCheckoutEvent && (eventName === 'page_view' || eventName === 'session_start')) {
     if (!toSend.includes('presell_view')) toSend.push('presell_view')
   }
   if (eventName === 'link_click' || eventName === 'outbound_click') {
@@ -192,8 +216,9 @@ export default defineEventHandler(async (event) => {
     'X-Tracking-Secret': secret
   }
 
-  // Fire-and-forget: NÃO await — browser recebe 200 na hora
-  for (const name of toSend) {
+  // Await bounded proxy calls so serverless runtimes don't drop telemetry after
+  // the response. sendBeacon callers remain non-blocking in the browser.
+  const deliveries = toSend.map(async (name) => {
     const payload = {
       visitor_id: visitorId,
       event_name: name,
@@ -205,17 +230,23 @@ export default defineEventHandler(async (event) => {
         mirrored_from: name !== eventName ? eventName : undefined
       }
     }
-    fetch(PRESSEL_WEBHOOK, {
+    const response = await fetch(PRESSEL_WEBHOOK, {
       method: 'POST',
       headers,
-      body: JSON.stringify(payload)
-    }).catch(() => {})
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(3500)
+    })
+    if (!response.ok) throw new Error(`Tracking ingest returned ${response.status}`)
+  })
+  const deliveryResults = await Promise.allSettled(deliveries)
+  if (deliveryResults.some((result) => result.status === 'rejected')) {
+    console.warn('[track] One or more metrics events could not be delivered')
   }
 
   return {
     ok: true,
     visitor_id: visitorId,
-    channel: 'link_tree',
+    channel: isVipCheckoutEvent ? 'vip_checkout' : 'link_tree',
     queued: true
   }
 })

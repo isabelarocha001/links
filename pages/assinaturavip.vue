@@ -202,6 +202,7 @@ const pixTutorialSteps = [
 const pixTutorialStep = ref(0)
 const pixTutorialUnderstood = ref(false)
 const pixTutorialNeedsHelp = ref(false)
+const pendingPixExitTracked = ref(false)
 const monthlyFormReady = computed(() => payerName.value.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail.value.trim()) && payerCpf.value.replace(/\D/g, '').length === 11)
 const visiblePlans = computed(() => settings.value.plans.filter(plan => plan.enabled))
 const selected = computed(() => visiblePlans.value.find(plan => plan.id === selectedPlan.value) || visiblePlans.value[0])
@@ -226,9 +227,29 @@ function detectCurrency() {
   const euroRegions = new Set(['AT','BE','CY','DE','EE','ES','FI','FR','GR','HR','IE','IT','LT','LU','LV','MT','NL','PT','SI','SK','BG'])
   currency.value = region === 'BR' ? 'BRL' : euroRegions.has(region) ? 'EUR' : 'USD'
 }
-function selectPlan(plan: Plan) { if (canPay(plan) && !paymentStarted.value) { selectedPlan.value = plan.id; paymentError.value = '' } }
-function openCheckoutDialog() { if (selected.value && canPay(selected.value)) { paymentError.value = ''; checkoutDialogOpen.value = true } }
-function closeCheckoutDialog() { checkoutDialogOpen.value = false }
+function selectPlan(plan: Plan) {
+  if (canPay(plan) && !paymentStarted.value) {
+    selectedPlan.value = plan.id
+    paymentError.value = ''
+    trackVip('vip_plan_selected', plan.id)
+  }
+}
+function openCheckoutDialog() {
+  if (selected.value && canPay(selected.value)) {
+    paymentError.value = ''
+    checkoutDialogOpen.value = true
+    trackVip('vip_subscribe_clicked', selected.value.id)
+  }
+}
+function trackPendingPixExit() {
+  if (!pixCode.value || pixPaid.value || pendingPixExitTracked.value) return
+  pendingPixExitTracked.value = true
+  trackVip('vip_pix_pending_exit', selected.value?.id)
+}
+function closeCheckoutDialog() {
+  if (checkoutDialogOpen.value && pixCode.value && !pixPaid.value) trackPendingPixExit()
+  checkoutDialogOpen.value = false
+}
 async function openAvatar() { avatarOpen.value = true; await nextTick(); avatarCloseButton.value?.focus() }
 function closeAvatar() { avatarOpen.value = false; nextTick(() => avatarTrigger.value?.focus()) }
 function getVipVisitorId() {
@@ -236,6 +257,28 @@ function getVipVisitorId() {
   let id = localStorage.getItem(key)
   if (!id) { id = crypto.randomUUID(); localStorage.setItem(key, id) }
   return id
+}
+function trackVip(eventName: string, planKey?: string) {
+  try {
+    const metadata = ['monthly', 'lifetime'].includes(String(planKey)) ? { plan_key: planKey } : {}
+    const body = JSON.stringify({
+      event_name: eventName,
+      visitor_id: getVipVisitorId(),
+      offer_slug: 'vip_telegram',
+      metadata,
+    })
+    const beaconBody = new Blob([body], { type: 'application/json' })
+    if (navigator.sendBeacon('/api/track', beaconBody)) return
+    void fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true,
+    }).catch(() => {})
+  } catch { /* Tracking must never interrupt checkout actions. */ }
+}
+function onPageHide() {
+  if (checkoutDialogOpen.value) trackPendingPixExit()
 }
 function setPayerCpf(event: Event) {
   const input = event.target as HTMLInputElement
@@ -265,6 +308,8 @@ async function continueToPayment() {
       pixStatus.value = response.mandate_status === 'ACTIVE' ? 'Autorização recebida; aguardando confirmação da assinatura.' : 'Abra o app do seu banco e autorize o Pix Automático.'
       pixPaid.value = false
       paymentStarted.value = true
+      pendingPixExitTracked.value = false
+      trackVip('vip_pix_generated', selected.value.id)
       return
     }
 
@@ -279,11 +324,14 @@ async function continueToPayment() {
     pixStatus.value = 'Aguardando pagamento?'
     pixPaid.value = false
     paymentStarted.value = true
+    pendingPixExitTracked.value = false
+    trackVip('vip_pix_generated', selected.value.id)
   } catch (error: any) {
     paymentError.value = error?.data?.statusMessage || error?.data?.message || error?.message || 'Não foi possível gerar o Pix. Tente novamente.'
   } finally { paymentLoading.value = false }
 }
 async function copyPix() {
+  trackVip('vip_pix_copy_clicked', selected.value?.id)
   try { await navigator.clipboard.writeText(pixCode.value); copied.value = true; window.setTimeout(() => { copied.value = false }, 1800) }
   catch { paymentError.value = 'Não consegui copiar automaticamente. Selecione e copie o código Pix.' }
 }
@@ -311,7 +359,10 @@ onMounted(() => {
   } catch { /* Keep the safe defaults when local settings are invalid. */ }
   detectCurrency()
   if (selectedPrice.value === null) { const available = visiblePlans.value.find(plan => priceFor(plan) !== null); selectedPlan.value = available?.id || visiblePlans.value[0]?.id || '' }
+  trackVip('vip_checkout_view')
+  window.addEventListener('pagehide', onPageHide)
 })
+onBeforeUnmount(() => window.removeEventListener('pagehide', onPageHide))
 </script>
 <style scoped>
 .vip-checkout{--ink:#f8f5fa;--muted:#c5bdca;--line:rgba(255,255,255,.14);min-height:100vh;background:#100d13;color:var(--ink);font-family:inherit;padding:0 22px 28px}.vip-checkout__top{max-width:1120px;margin:auto;height:68px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}.vip-checkout__brand{color:#fff;text-decoration:none;font-weight:900;letter-spacing:.12em}.vip-checkout__brand span{color:#cf9cf5}.vip-checkout__secure{font-size:.82rem;color:#d7d0dc}.vip-checkout__layout{max-width:1020px;margin:42px auto 0;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(360px,.98fr);gap:58px;align-items:start}.vip-checkout__eyebrow{margin:25px 0 8px;color:#e3baff;font-size:.72rem;font-weight:800;letter-spacing:.14em}.vip-checkout__offer h1{max-width:540px;margin:0;font-size:clamp(2rem,4vw,3.25rem);line-height:1.02;letter-spacing:-.04em}.vip-checkout__intro{max-width:470px;color:var(--muted);font-size:1.04rem;line-height:1.6}.vip-checkout__benefits{list-style:none;padding:0;margin:24px 0 0;display:grid;gap:13px;color:#eee8f1}.vip-checkout__benefits li{display:flex;gap:11px;align-items:flex-start;line-height:1.4}.vip-checkout__benefits li span{color:#d8a9f6;font-weight:900}.vip-checkout__privacy{margin-top:25px;color:#e4d1ef;font-size:.88rem}.vip-checkout__plans{padding:26px;background:#19151d;border:1px solid var(--line);border-radius:18px;box-shadow:0 16px 50px rgba(0,0,0,.22)}.vip-checkout__plans .vip-checkout__eyebrow{margin:0 0 9px}.vip-checkout__plans h2{font-size:1.5rem;margin:0 0 20px;letter-spacing:-.025em}.vip-plan{width:100%;min-height:85px;text-align:left;position:relative;display:flex;align-items:center;gap:13px;padding:15px 14px;margin-top:12px;color:var(--ink);background:#211c25;border:1px solid rgba(255,255,255,.16);border-radius:12px;cursor:pointer}.vip-plan--selected{border-color:#d4a2f2;box-shadow:0 0 0 1px #d4a2f2 inset}.vip-plan__radio{width:18px;height:18px;border-radius:50%;border:1px solid #bcb3c0;flex:none}.vip-plan--selected .vip-plan__radio{border:5px solid #d6a5f1;background:#fff}.vip-plan__body{display:grid;gap:5px;flex:1}.vip-plan__name{font-weight:800;font-size:1rem}.vip-plan__detail{font-size:.8rem;color:#d0c7d4}.vip-plan__price{font-weight:850;white-space:nowrap}.vip-plan__badge{position:absolute;top:-9px;right:12px;background:#e0b9f8;color:#24132e;font-size:.61rem;font-weight:900;letter-spacing:.08em;padding:4px 7px;border-radius:4px}.vip-checkout__cta{width:100%;border:0;border-radius:9px;background:#dcb2f4;color:#211129;min-height:54px;padding:13px 18px;margin-top:18px;font-size:1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:space-between}.vip-checkout__cta:disabled{opacity:.5;cursor:not-allowed}.vip-checkout__fineprint{color:#c9c0ce;font-size:.78rem;line-height:1.5;margin:10px 0}.vip-next-step{display:grid;grid-template-columns:32px 1fr;gap:12px;background:#211a27;border:1px solid rgba(212,162,242,.55);padding:16px;border-radius:11px;margin-top:16px}.vip-next-step__icon{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#dcb2f4;color:#24132e;font-weight:900}.vip-next-step h3{font-size:1rem;margin:1px 0 6px}.vip-next-step p{margin:0;color:#ded6e2;font-size:.84rem;line-height:1.55}.vip-next-step__telegram{margin-top:12px;display:inline-flex;gap:9px;color:#fff;font-weight:800;text-decoration:none;border-bottom:1px solid #dcb2f4;padding-bottom:3px}.vip-checkout__faq{border-top:1px solid var(--line);padding:13px 0;color:#f5eff7;font-size:.88rem}.vip-checkout__faq:first-of-type{margin-top:15px}.vip-checkout__faq summary{font-weight:750;cursor:pointer}.vip-checkout__faq p{color:#d1c8d5;line-height:1.55;margin:9px 0 0}.vip-checkout__footer{max-width:1020px;margin:38px auto 0;text-align:center;color:#a99eae;font-size:.75rem}
