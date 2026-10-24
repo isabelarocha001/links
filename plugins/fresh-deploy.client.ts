@@ -5,6 +5,10 @@
  */
 export default defineNuxtPlugin(() => {
   if (!import.meta.client) return
+  // O HMR do Nuxt já atualiza o app durante o desenvolvimento. O endpoint
+  // local usa um build id temporário, então o verificador de deploy causaria
+  // um reload contínuo em vez de detectar um deploy real.
+  if (import.meta.dev) return
   const KEY = 'wanessa_build_id_v1'
   const check = async () => {
     try {

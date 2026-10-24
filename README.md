@@ -77,4 +77,5 @@ links/
 | [docs/CODEMAP.md](docs/CODEMAP.md) | Mapa do código e bloqueios/preços |
 | [docs/ADMIN_CHAT.md](docs/ADMIN_CHAT.md) | Inbox `/admin/chat` |
 | [docs/CHAT_ROUTES.md](docs/CHAT_ROUTES.md) | Rotas de chat |
+| [docs/SYNCPAY_INTEGRATION.md](docs/SYNCPAY_INTEGRATION.md) | Fluxos SyncPay no cliente, servidor e Supabase; guia de auditoria para LLMs |
 | [docs/CSS_RESTORE.md](docs/CSS_RESTORE.md) | Restaurar CSS truncado |

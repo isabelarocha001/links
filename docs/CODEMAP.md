@@ -42,5 +42,6 @@ Guia rápido para revisar o repositório. Comentários no código usam headers `
 |---------|----------|
 | `docs/ADMIN_CHAT.md` | Inbox admin, abas, APIs, preços de unlock |
 | `docs/CHAT_ROUTES.md` | Rotas públicas e admin do chat |
+| `docs/SYNCPAY_INTEGRATION.md` | Fluxos SyncPay no cliente/Nitro/Supabase, configuração, dados e alertas para auditoria por LLM |
 | `docs/CSS_RESTORE.md` | Como recuperar `links-page.css` truncado |
 | `docs/CODEMAP.md` | Este mapa |

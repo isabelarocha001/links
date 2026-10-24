@@ -26,3 +26,4 @@ Thumbs.db
 *.swo
 .vercel
 .env*
+supabase/.temp/
