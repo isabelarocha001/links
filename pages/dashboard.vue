@@ -12,9 +12,7 @@
         <article v-for="metric in metrics" :key="metric.label"><span>{{ metric.label }}</span><strong>—</strong><small>Dados reais serão ligados depois</small></article>
       </section>
       <section class="panel">
-        <div class="panel__heading"><div><p class="eyebrow">OFERTA PRINCIPAL</p><h2>Imagem e planos</h2></div><span class="tag">Prévia local</span></div>
-        <label class="field"><span>URL da imagem acima da oferta</span><input v-model.trim="settings.imageUrl" type="url" placeholder="Cole aqui a URL pública da imagem" autocomplete="off"></label>
-        <p class="hint">A imagem não é enviada para nenhum servidor. O checkout usa esta URL apenas neste navegador.</p>
+        <div class="panel__heading"><div><p class="eyebrow">OFERTA PRINCIPAL</p><h2>Planos</h2></div><span class="tag">Prévia local</span></div>
         <div class="plans-editor">
           <article v-for="(plan, index) in settings.plans" :key="plan.id" class="plan-editor">
             <label class="toggle"><input v-model="plan.enabled" type="checkbox"><span></span><b>{{ plan.name }}</b></label>
@@ -46,10 +44,9 @@ type Currency = 'BRL' | 'USD' | 'EUR'
 type Prices = Record<Currency, number | null>
 type Plan = { id: string; name: string; detail: string; prices: Prices; enabled: boolean; badge?: string; price?: number }
 type Upsell = { name: string; description: string; prices: Prices; enabled: boolean; price?: number }
-type Settings = { imageUrl: string; plans: Plan[]; upsells: Upsell[] }
+type Settings = { plans: Plan[]; upsells: Upsell[] }
 const STORAGE_KEY = 'wanessa-vip-checkout-settings-v1'
 const defaults: Settings = {
-  imageUrl: '/vip-offer.jpg',
   plans: [
     { id: 'monthly', name: 'Mensal', detail: '30 dias de acesso ao canal VIP', prices: { BRL: 29.9, USD: null, EUR: null }, enabled: true },
     { id: 'lifetime', name: 'Vitalício', detail: 'Acesso sem prazo para terminar', prices: { BRL: 109.9, USD: null, EUR: null }, enabled: true, badge: 'PAGUE UMA VEZ' },
@@ -90,6 +87,7 @@ onMounted(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored)
+      delete parsed.imageUrl
       settings.value = {
         ...structuredClone(defaults), ...parsed,
         plans: defaults.plans.map((fallback, index) => {
