@@ -239,8 +239,13 @@ export default defineEventHandler(async (event) => {
     if (!response.ok) throw new Error(`Tracking ingest returned ${response.status}`)
   })
   const deliveryResults = await Promise.allSettled(deliveries)
-  if (deliveryResults.some((result) => result.status === 'rejected')) {
-    console.warn('[track] One or more metrics events could not be delivered')
+  const deliveryErrors = deliveryResults.flatMap((result) => {
+    if (result.status !== 'rejected') return []
+    const message = result.reason instanceof Error ? result.reason.message : ''
+    return [/^Tracking ingest returned \d{3}$/.test(message) ? message : 'Network error or timeout']
+  })
+  if (deliveryErrors.length) {
+    console.warn('[track] Metrics delivery failed', { failures: deliveryErrors })
   }
 
   return {
