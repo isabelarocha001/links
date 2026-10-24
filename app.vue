@@ -80,7 +80,50 @@
             </button>
           </div>
         </header>
-        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': hidePublicChannel && !privsexLinkEnabled && !isPt }" v-if="configReady">
+        <section v-if="isPt" class="offer-quiz" aria-labelledby="offer-quiz-title">
+          <div class="offer-quiz__game">
+            <div class="offer-quiz__hud">
+              <span class="offer-quiz__level"><span aria-hidden="true">✦</span> {{ offerQuizStep === 'interest' ? 'FASE 1 DE 2' : offerQuizStep === 'platform' ? 'FASE 2 DE 2' : 'CAMINHO ESCOLHIDO' }}</span>
+              <span class="offer-quiz__counter">{{ offerQuizStep === 'interest' ? '01 / 02' : offerQuizStep === 'platform' ? '02 / 02' : '✓' }}</span>
+            </div>
+            <div class="offer-quiz__progress" role="progressbar" :aria-valuenow="offerQuizStep === 'interest' ? 1 : 2" aria-valuemin="1" aria-valuemax="2" :aria-label="offerQuizStep === 'interest' ? 'Fase 1 de 2' : 'Fase 2 de 2'">
+              <span :style="{ width: offerQuizStep === 'interest' ? '50%' : '100%' }"></span>
+            </div>
+            <div class="offer-quiz__scene" :key="offerQuizStep">
+              <template v-if="offerQuizStep === 'interest'">
+                <p class="offer-quiz__eyebrow">ESCOLHA SEU CAMINHO</p>
+                <h2 id="offer-quiz-title">O que você procura por aqui?</h2>
+                <p class="offer-quiz__intro">Escolha o que combina mais com você.</p>
+                <div class="offer-quiz__choices">
+                  <button type="button" class="offer-quiz__choice" @click="chooseOfferInterest('conteudo')"><span class="offer-quiz__choice-mark" aria-hidden="true">01</span><b>Conteúdo exclusivo</b><span>Quero ver o lado que não fica aberto para todo mundo</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
+                  <button type="button" class="offer-quiz__choice" @click="chooseOfferInterest('contato')"><span class="offer-quiz__choice-mark" aria-hidden="true">02</span><b>Conteúdo e contato</b><span>Quero conteúdo e uma forma de conversar com você</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
+                </div>
+              </template>
+              <template v-else-if="offerQuizStep === 'platform'">
+                <p class="offer-quiz__eyebrow">SEU PRÓXIMO PASSO</p>
+                <h2 id="offer-quiz-title">Onde você prefere acessar?</h2>
+                <p class="offer-quiz__intro">{{ offerQuizInterest === 'contato' ? 'Você escolheu conteúdo e contato. Agora veja onde quer acessar.' : 'Você escolheu conteúdo exclusivo. Agora veja onde quer acessar.' }}</p>
+                <div class="offer-quiz__choices">
+                  <button type="button" class="offer-quiz__choice offer-quiz__choice--offer" :class="{ 'is-selected': offerQuizSelection === 'privsex' }" @click="chooseOffer('privsex')"><span class="offer-quiz__choice-mark" aria-hidden="true">01</span><b>PrivSex · R$ 49,90</b><span>Conteúdo exclusivo + chat comigo</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
+                  <button type="button" class="offer-quiz__choice offer-quiz__choice--offer" :class="{ 'is-selected': offerQuizSelection === 'telegram' }" @click="chooseOffer('telegram')"><span class="offer-quiz__choice-mark" aria-hidden="true">02</span><b>Telegram VIP · R$ 29,90/mês</b><span>Conteúdo exclusivo + meu WhatsApp pessoal no canal</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
+                  <button type="button" class="offer-quiz__compare" :class="{ 'is-selected': offerQuizSelection === 'compare' }" @click="chooseOffer('compare')">Quero comparar as duas</button>
+                </div>
+                <p class="offer-quiz__paid-note">As duas opções são pagas. O Telegram VIP cobra R$ 29,90 por mês; cancele quando quiser.</p>
+              </template>
+              <div v-else class="offer-quiz__notice" role="status" aria-live="polite">
+                <b>{{ offerQuizSelection === 'compare' ? 'Compare as duas opções' : offerQuizSelection === 'telegram' ? 'Você escolheu o Telegram VIP' : 'Você escolheu o PrivSex' }}</b>
+                <span>As duas opções são pagas. Veja os benefícios e valores abaixo antes de continuar.</span>
+                <button type="button" class="offer-quiz__restart" @click="resetOfferQuiz">Trocar minha escolha</button>
+              </div>
+            </div>
+            <div class="offer-quiz__base" aria-hidden="true"><span></span><i></i><span></span></div>
+          </div>
+        </section>
+        <section v-if="isPt && offerQuizStep === 'result'" class="choice-guide" aria-labelledby="choice-guide-title">
+          <h2 id="choice-guide-title">Escolha seu acesso</h2>
+          <p>Confira o que cada assinatura inclui e o valor antes de continuar.</p>
+        </section>
+        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isPt }" v-if="configReady && (!isPt || offerQuizStep === 'result')">
           <div class="card-col" v-if="privsexLinkEnabled">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
               <div class="portal-spiral" aria-hidden="true">
@@ -95,10 +138,11 @@
                 <span class="card-icon"><img v-if="logoPriv" :src="logoPriv" alt="" class="logo-img" width="28" height="28" /><template v-else>🔥</template></span>
                 <span class="card-badge">{{ t('portalBadge') }}</span>
               </div>
-              <h2 class="card-title">{{ t('privTitle') }}</h2>
-              <p class="card-desc">{{ t('privDesc') }}</p>
+              <h2 class="card-title">{{ isPt ? 'PrivSex' : t('privTitle') }}</h2>
+              <p class="card-desc">{{ isPt ? 'Conteúdo exclusivo e chat comigo.' : t('privDesc') }}</p>
+              <p v-if="isPt" class="offer-card__price">R$ 49,90</p>
             </a>
-            <a class="card-enter card-enter--quest" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Explorar conteúdo' : t('privEnter') }} <span aria-hidden="true">↗</span></a>
+            <a class="card-enter card-enter--quest" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 49,90' : t('privEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
           <!-- WhatsApp ocupa a esquerda somente se o link PrivSex não existir -->
           <div class="card-col" v-else-if="false && isPt">
@@ -115,69 +159,20 @@
             </button>
             <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </div>
-          <div class="card-col" v-if="!hidePublicChannel">
-            <!-- BR: bot VIP ao lado do PrivSex; gringa SEMPRE canal público (nunca bot) -->
-            <template v-if="isPt && telegramBotEnabled">
-              <a class="lux-card lux-card--right" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
-                <div class="card-glow"></div>
-                <div class="card-top">
-                  <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
-                  <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
-                </div>
-                <h2 class="card-title">{{ t('vipTitle') }}</h2>
-                <p class="card-desc">{{ t('vipDesc') }}</p>
-              </a>
-              <a class="card-enter card-enter--quest" :href="vipBotUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Entrar no VIP' : t('pubEnter') }} <span aria-hidden="true">↗</span></a>
-            </template>
-            <template v-else>
-              <a class="lux-card lux-card--right" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
-                <div class="card-glow"></div>
-                <div class="card-top">
-                  <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
-                  <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
-                </div>
-                <h2 class="card-title">{{ t('pubTitle') }}</h2>
-                <p class="card-desc">{{ t('pubDesc') }}</p>
-              </a>
-              <a class="card-enter card-enter--quest" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)"><span aria-hidden="true">✦</span> {{ isPt ? 'Ver prévias grátis' : t('pubEnter') }} <span aria-hidden="true">↗</span></a>
-            </template>
+          <div class="card-col">
+            <a class="lux-card lux-card--right lux-card--vip" :class="{ 'offer-card--selected': offerQuizSelection === 'telegram' }" href="/assinaturavip" @pointerdown.passive="onCardClick('Checkout Canal VIP', '/assinaturavip')">
+              <div class="card-glow"></div>
+              <div class="card-top">
+                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
+                <span class="card-badge badge-tg">{{ offerQuizSelection === 'telegram' ? 'Sua escolha' : 'Assinatura mensal' }}</span>
+              </div>
+              <h2 class="card-title">Telegram VIP</h2>
+              <p class="card-desc">Conteúdo exclusivo e meu WhatsApp pessoal.</p>
+              <p v-if="isPt" class="offer-card__price">R$ 29,90 <span>/ mês · cancele quando quiser</span></p>
+            </a>
+            <a class="card-enter card-enter--quest" href="/assinaturavip" @pointerdown.passive="onCardClick('Checkout Canal VIP', '/assinaturavip')"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 29,90/mês' : 'Open VIP checkout' }} <span aria-hidden="true">↗</span></a>
           </div>
         </section>
-        <!-- Cards secundários: Canal Público (prévias) abaixo quando bot está no card principal -->
-        <div id="links-secondary-cards" class="secondary-cards" :class="{ 'secondary-cards--single': !publicChannelEnabled || !privsexLinkEnabled }" v-if="configReady && isPt">
-          <section class="vip-block card-col" v-if="publicChannelEnabled && telegramBotEnabled">
-          <a class="lux-card vip-card" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">
-            <div class="vip-shine"></div>
-            <div class="vip-content">
-              <span class="vip-icon vip-icon-stack" aria-hidden="true" title="Canal Público">
-                <span class="vip-robot">📱</span>
-                <img class="vip-tg-logo" :src="logoTg" alt="Telegram" width="18" height="18" />
-              </span>
-              <div>
-                <h3 class="vip-title">{{ t('pubTitle') }}</h3>
-                <p class="vip-desc">{{ t('pubDesc') }}</p>
-              </div>
-            </div>
-            <span class="vip-arrow">→</span>
-          </a>
-          <a class="card-enter card-enter--quest" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)"><span aria-hidden="true">✦</span> Ver prévias grátis <span aria-hidden="true">↗</span></a>
-          </section>
-
-          <section class="iq-section card-col" v-if="false && privsexLinkEnabled">
-          <button type="button" class="lux-card iq-open-btn" @click="iqStart">
-            <span class="iq-open-ico iq-wa-svg" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="#25D366" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            </span>
-            <span class="iq-open-text">
-              <strong>WhatsApp</strong>
-              <small>Conhecer-me no chat</small>
-            </span>
-            <span class="iq-open-arrow" aria-hidden="true">→</span>
-          </button>
-          <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
-          </section>
-        </div>
-
         <!-- creator-intro longo removido: bio em tópicos fica acima dos cards -->
 
         <Teleport to="body">
@@ -272,21 +267,12 @@
               </button>
               <div v-show="faqActive === index" :id="`faq-answer-${index}`" class="links-faq__answer">
                 <p>{{ item.answer }}</p>
-                <a v-if="item.preview && !hidePublicChannel" :href="telegramPublicUrlActive" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', telegramPublicUrlActive)">Ver prévias no canal público ↗</a>
               </div>
             </div>
           </div>
           <p v-if="faqSeen.length === faqItems.length" class="links-faq__complete">Todas as respostas desbloqueadas 💜 Agora escolha por onde começar.</p>
         </section>
 
-        <div v-if="tourActive && isPt" class="links-tour" role="status" aria-live="polite">
-          <button type="button" class="links-tour__close" aria-label="Fechar tutorial" @click="stopTour">×</button>
-          <span class="links-tour__step">Guia automático · {{ tourStep + 1 }}/{{ tourSteps.length }}</span>
-          <strong>{{ tourSteps[tourStep].title }}</strong>
-          <p>{{ tourSteps[tourStep].body }}</p>
-          <button type="button" class="links-tour__jump" @click="showTourSection">Ver esta parte ↓</button>
-          <div class="links-tour__progress" aria-hidden="true"><span :style="{ width: `${((tourStep + 1) / tourSteps.length) * 100}%` }"></span></div>
-        </div>
 
         <footer class="bio-block">
           <div class="ig-card">
@@ -1390,7 +1376,7 @@
  *
  * Áreas principais:
  *   1) Gate/quiz de qualificação (antes de ver os cards)
- *   2) Cards PrivSex + Telegram (VIP bot / canal público)
+ *   2) Quiz de oferta + cards PrivSex e Telegram VIP
  *   3) Funil WA (showWaFunnel): conversa, ofertas, PIX, videochamada
  *   4) Bloqueios: chat pago (R$ 9,90), programa (R$ 49,90), permanente (mimo R$ 29,90)
  *   5) AdminChatInbox injetado em /admin/chat
@@ -1409,7 +1395,6 @@ import { IG_PROFILE_SRC as igProfileSrc } from '~/utils/ig-profile'
 import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i18n'
 import { detectBrowserMoney, formatMoney, convertFromBrl } from '~/utils/currency'
 
-/** Lead veio de /CanalPublico (tráfego do canal) → esconde botão do canal público (checkout direto) */
 const route = useRoute()
 const isAdminRoute = computed(() => {
   const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
@@ -1420,8 +1405,6 @@ const isIsolatedRoute = computed(() => {
   const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
   return p === '/telegram' || p === '/juliasales' || p === '/gestão' || p === '/gestao' || p === '/assinaturavip'
 })
-/** Coluna direita sempre visível; conteúdo troca entre bot e canal público */
-const hidePublicChannel = computed(() => false)
 import '~/assets/css/links-page.css'
 
 // =============================================================================
@@ -1891,12 +1874,31 @@ function iqGoWhatsApp() {
   }, 2600)
 }
 
-const telegramPublicUrl = 'https://t.me/+yA5Y1pAWx5RlMWIx'
-const telegramPublicUrlIntl = 'https://t.me/+2bYvtb_AA0AzMTcx'
-const vipBotUrl = 'https://t.me/wanessaavipbot?start=Pressel'
+const vipBotUrl = '/assinaturavip'
 const locale = ref<Locale>('pt')
 const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (intl)
-const telegramPublicUrlActive = computed(() => isPt.value ? telegramPublicUrl : telegramPublicUrlIntl)
+type OfferQuizInterest = 'conteudo' | 'contato'
+type OfferQuizSelection = 'privsex' | 'telegram' | 'compare'
+const offerQuizStep = ref<'interest' | 'platform' | 'result'>('interest')
+const offerQuizInterest = ref<OfferQuizInterest | null>(null)
+const offerQuizSelection = ref<OfferQuizSelection | null>(null)
+function chooseOfferInterest(interest: OfferQuizInterest) {
+  offerQuizInterest.value = interest
+  offerQuizStep.value = 'platform'
+  track('offer_quiz_interest', { interest })
+}
+function chooseOffer(selection: OfferQuizSelection) {
+  offerQuizSelection.value = selection
+  offerQuizStep.value = 'result'
+  track('offer_quiz_selection', { interest: offerQuizInterest.value, selection })
+  nextTick(() => document.getElementById('links-main-cards')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+}
+function resetOfferQuiz() {
+  offerQuizSelection.value = null
+  offerQuizInterest.value = null
+  offerQuizStep.value = 'interest'
+  nextTick(() => document.querySelector('.offer-quiz')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+}
 function t(key: string) { return tr(locale.value, key) }
 /** Tradução com placeholders {price}, {name}, etc. */
 function tf(key: string, vars: Record<string, string | number> = {}) {
@@ -6390,7 +6392,7 @@ const gateReady = ref(true) // true desde o start — evita flash do chat WA ant
 const faqItems = [
   { question: 'Você faz encontros presenciais?', answer: 'Não. Eu sou criadora de conteúdo e meu contato com você acontece somente online.' },
   { question: 'O que posso encontrar por aqui?', answer: 'Conteúdo exclusivo, conversa por mensagem (sexting) e opções de videochamada. Você escolhe o formato que combina com você.' },
-  { question: 'Posso ver prévias antes de escolher?', answer: 'Sim! Meu canal público é o lugar para conhecer minhas prévias antes de decidir, sem compromisso.', preview: true },
+  { question: 'Como escolho onde assinar?', answer: 'No PrivSex você encontra conteúdo exclusivo e chat comigo. No Telegram VIP você recebe conteúdo exclusivo e meu WhatsApp pessoal. Confira os valores nas opções da página.' },
   { question: 'Você responde pessoalmente?', answer: 'Sim. Você conversa diretamente comigo pelo chat e escolhe o tipo de experiência que quer viver.' },
   { question: 'Como funciona o pagamento e a entrega?', answer: 'Você escolhe o que quer, recebe a chave Pix no chat e envia o comprovante. Depois da confirmação, eu libero o acesso ou envio o conteúdo pelo canal combinado.' },
   { question: 'Meus dados ficam seguros?', answer: 'Sim. O atendimento é privado e seus dados não são publicados.' },
@@ -6403,39 +6405,6 @@ function toggleFaq(index: number) {
   if (!faqSeen.value.includes(index)) faqSeen.value = [...faqSeen.value, index]
 }
 
-const TOUR_KEY = 'wanessa_links_tour_v1'
-const tourSteps = [
-  { title: 'Tudo foi preparado para você 💜', body: 'Aqui você escolhe como quer me conhecer e por onde prefere começar. É tudo online, sem encontros.', target: 'links-main-cards' },
-  { title: 'Conheça antes de escolher', body: 'No canal público você vê prévias. No PrivSex encontra meu conteúdo exclusivo.', target: 'links-main-cards' },
-  { title: 'Prefere conversar?', body: 'O VIP do Telegram e o WhatsApp ficam logo abaixo. No WhatsApp você vê as opções de conversa e videochamada.', target: 'links-secondary-cards' },
-  { title: 'Sem dúvidas no caminho', body: 'O FAQ no final responde sobre prévias, encontros e como funciona cada opção.', target: 'links-faq' },
-]
-const tourActive = ref(false)
-const tourStep = ref(0)
-let tourTimer: ReturnType<typeof setInterval> | null = null
-function stopTour() {
-  tourActive.value = false
-  if (tourTimer) clearInterval(tourTimer)
-  tourTimer = null
-}
-function showTourSection() {
-  document.getElementById(tourSteps[tourStep.value].target)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-}
-watch(() => gateReady.value && gate.value === 'pass' && isPt.value && route.path === '/', (ready) => {
-  if (!ready) { stopTour(); return }
-  if (tourActive.value || showWaFunnel.value || iqVisible.value) return
-  try {
-    if (localStorage.getItem(TOUR_KEY) === '1') return
-    localStorage.setItem(TOUR_KEY, '1')
-  } catch { /* O tutorial ainda funciona se o armazenamento estiver bloqueado. */ }
-  tourStep.value = 0
-  tourActive.value = true
-  tourTimer = setInterval(() => {
-    if (tourStep.value >= tourSteps.length - 1) stopTour()
-    else tourStep.value += 1
-  }, 5000)
-})
-watch(() => showWaFunnel.value || iqVisible.value, (open) => { if (open) stopTour() })
 const chatMessages = ref<ChatMsg[]>([])
 const isTyping = ref(false)
 const chatBox = ref<HTMLElement | null>(null)
@@ -6551,8 +6520,7 @@ function answerQuiz(key: string) {
 }
 const DEFAULT_LINKS: LinkItem[] = [
   { label: 'PrivSex', icon: '🔥', url: privsexUrl, enabled: true },
-  { label: 'Telegram Bot', icon: '⭐', url: vipBotUrl, enabled: true },
-  { label: 'Canal de prévias', icon: '📱', url: telegramPublicUrl, enabled: true },
+  { label: 'Telegram VIP', icon: '⭐', url: vipBotUrl, enabled: true },
   { label: 'WhatsApp', icon: '💬', url: 'https://wa.me/5547992750967', enabled: false },
 ]
 const config = reactive({ name: '', bio: '', links: [] as LinkItem[], highlight_label: DEFAULT_HIGHLIGHT, quiz_enabled: false })
@@ -6564,14 +6532,6 @@ watch(
   () => { iqTryAutoOpenFromRoute() },
   { immediate: true },
 )
-/** Toggle admin "Canal de prévias" — afeta SÓ layout BR (gringa sempre vê canal, nunca bot) */
-const publicChannelEnabled = computed(() => {
-  return config.links.some((l) => {
-    if (l.enabled === false) return false
-    const label = String(l.label || '').toLowerCase()
-    return /pr[eé]via|canal\s*p[uú]blico|telegram\s*p[uú]blico|canal\s*de\s*pr/i.test(label)
-  })
-})
 const whatsappLinkEnabled = computed(() => {
   return config.links.some((l) => {
     if (l.enabled === false) return false
@@ -6584,13 +6544,6 @@ const privsexLinkEnabled = computed(() => {
   return config.links.some((l) => {
     if (l.enabled === false) return false
     return /privsex|priv\s*sex/i.test(String(l.label || ''))
-  })
-})
-const telegramBotEnabled = computed(() => {
-  return config.links.some((l) => {
-    if (l.enabled === false) return false
-    const label = String(l.label || '').toLowerCase()
-    return /telegram\s*(bot|vip)|(bot|vip).*telegram/i.test(label)
   })
 })
 const showLogin = ref(false)
@@ -6975,17 +6928,26 @@ function applyServerConfig(data: any) {
   config.highlight_label = String(data.highlight_label || '').trim() || DEFAULT_HIGHLIGHT
   config.quiz_enabled = data.quiz_enabled === true
   if (Array.isArray(data.links) && data.links.length) {
-    config.links = data.links.filter((l: any) => l && l.label).map((l: any) => {
+    config.links = data.links.filter((l: any) => {
+      if (!l || !l.label) return false
+      return !/pr[eé]via|canal\s*p[uú]blico|telegram\s*p[uú]blico|canal\s*de\s*pr/i.test(String(l.label))
+    }).map((l: any) => {
       const label = String(l.label || '')
       let enabled = l.enabled === false ? false : true
-      // Forçado: WhatsApp off; Telegram Bot + Canal on
-      // PrivSex ativo independentemente da antiga data de pausa
+      // Links do Telegram levam ao checkout local, mesmo se a URL antiga vier do banco.
       if (/whatsapp|\bwa\b/i.test(label)) enabled = false
       if (/telegram\s*(bot|vip)|(bot|vip).*telegram/i.test(label)) enabled = true
       if (/privsex|priv\s*sex/i.test(label)) enabled = true
-      if (/pr[eé]via|canal\s*p[uú]blico|telegram\s*p[uú]blico|canal\s*de\s*pr/i.test(label)) enabled = true
-      return attachLogo({ label, icon: String(l.icon || '🔗'), url: String(l.url || '#'), desc: String(l.desc || ''), enabled })
+      const isTelegram = /telegram\s*(bot|vip)|(bot|vip).*telegram/i.test(label)
+      return attachLogo({
+        label: isTelegram ? 'Telegram VIP' : label,
+        icon: String(l.icon || '🔗'),
+        url: isTelegram ? vipBotUrl : String(l.url || '#'),
+        desc: String(l.desc || ''),
+        enabled,
+      })
     })
+    if (!config.links.length) config.links = DEFAULT_LINKS.map(attachLogo)
   } else config.links = DEFAULT_LINKS.map(attachLogo)
 }
 const { data: remoteConfig } = await useAsyncData('link-page-config', () => $fetch<any>('/api/config').catch(() => null))
@@ -7146,7 +7108,6 @@ onMounted(async () => {
 onUnmounted(() => {
   if (photoTimer) clearInterval(photoTimer)
   if (typingTimer) clearTimeout(typingTimer)
-  stopTour()
 })
 function openLogin() {
   if (isAdmin.value) {
