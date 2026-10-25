@@ -1,5 +1,7 @@
 # Regra para a futura integração de cartão com Stripe
 
+Para instruções completas do checkout VIP, leia [`STRIPE-VIP-GROK-HANDOFF.md`](./STRIPE-VIP-GROK-HANDOFF.md) antes de codar. Este arquivo permanece como regra curta de proteção do fluxo de CPF/Pix.
+
 ## Separação dos fluxos
 
 - O pagamento por cartão via Stripe deve ter fluxo e integração próprios. Não reutilize o fluxo de Pix Automático da SyncPay.

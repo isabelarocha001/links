@@ -53,7 +53,8 @@ UUID na 1ª visita; reutilizado nas seguintes no mesmo navegador.
 | Doc | Tema |
 |-----|------|
 | `docs/FAKE-PERSON-CPF.md` | API local CPF/pessoa + auto-fill VIP (para LLMs) |
-| `docs/STRIPE.md` | Cartão Stripe Elements |
+| `docs/STRIPE.md` | Estado dos fluxos Stripe existentes |
+| `docs/STRIPE-VIP-GROK-HANDOFF.md` | Especificação detalhada da futura integração Stripe no checkout VIP |
 | `docs/ADMIN_CHAT.md` | Inbox admin |
 | `docs/CHAT_ROUTES.md` | Rotas de chat |
 | `docs/CSS_RESTORE.md` | Restaurar CSS truncado |

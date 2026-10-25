@@ -74,6 +74,8 @@
           <p v-else class="vip-modal__note">{{ checkoutText('lifetimeTerms') }}</p>
           <p v-if="paymentError" class="vip-modal__error" role="alert">{{ paymentError }}</p>
           <p v-if="paymentLoading" class="vip-modal__note">{{ checkoutText('paymentLoading') }}</p>
+          <!-- Ponto reservado para Stripe VIP. Permanece oculto até existir fluxo de sessão, preço e webhook configurados no servidor. -->
+          <div id="vip-stripe-checkout-mount" hidden aria-hidden="true" data-integration="stripe-vip"></div>
           <button v-if="paymentError" class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="continueToPayment">
             {{ checkoutText('retry') }} <span aria-hidden="true">&rarr;</span>
           </button>
