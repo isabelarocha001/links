@@ -221,6 +221,7 @@ export function verifyStripeWebhookSignature(
   whsec: string,
 ): boolean {
   // Fail closed: sem secret ou sem header = inválido
+  // Stripe oficial: HMAC key = base64-decode do trecho após "whsec_"
   if (!whsec || !whsec.startsWith('whsec_') || !header) return false
   try {
     const parts = Object.fromEntries(
@@ -234,7 +235,8 @@ export function verifyStripeWebhookSignature(
     if (!t || !v1) return false
     const age = Math.abs(Date.now() / 1000 - Number(t))
     if (!Number.isFinite(age) || age > 300) return false
-    const expected = createHmac('sha256', whsec).update(`${t}.${rawBody}`, 'utf8').digest('hex')
+    const key = Buffer.from(whsec.slice('whsec_'.length), 'base64')
+    const expected = createHmac('sha256', key).update(`${t}.${rawBody}`, 'utf8').digest('hex')
     const a = Buffer.from(v1, 'utf8')
     const b = Buffer.from(expected, 'utf8')
     if (a.length !== b.length) return false
