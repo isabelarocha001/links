@@ -1,94 +1,95 @@
 <template>
   <main class="vip-checkout">
     <header class="vip-checkout__top">
-      <a class="vip-checkout__brand" href="/" aria-label="Voltar para a página">WANESSA <span>•</span></a>
-      <span class="vip-checkout__secure">Canal VIP do Telegram</span>
+      <a class="vip-checkout__brand" href="/" :aria-label="checkoutText('back')">WANESSA <span>•</span></a>
+      <span class="vip-checkout__secure">{{ checkoutText('header') }}</span>
     </header>
     <section class="vip-checkout__layout">
       <div class="vip-checkout__offer">
-        <div class="vip-checkout__creator" aria-label="Canal VIP da Wanessa">
-          <button ref="avatarTrigger" class="vip-checkout__avatar-trigger" type="button" aria-label="Ampliar foto da Wanessa" aria-haspopup="dialog" :aria-expanded="avatarOpen" @click="openAvatar">
+        <div class="vip-checkout__creator" :aria-label="checkoutText('header') + ' — Wanessa'">
+          <button ref="avatarTrigger" class="vip-checkout__avatar-trigger" type="button" :aria-label="checkoutText('avatarExpand')" aria-haspopup="dialog" :aria-expanded="avatarOpen" @click="openAvatar">
             <img class="vip-checkout__avatar" src="/wanessa-vip-avatar.jpeg" alt="" width="104" height="104" fetchpriority="high" draggable="false" @contextmenu.prevent @dragstart.prevent>
           </button>
           <div class="vip-checkout__creator-copy">
             <p class="vip-checkout__creator-name">Wanessa</p>
-            <p class="vip-checkout__creator-label">Meu Canal VIP</p>
+            <p class="vip-checkout__creator-label">{{ checkoutText('creatorLabel') }}</p>
           </div>
         </div>
-        <h1>Chega de ver só um pedacinho.</h1>
+        <h1>{{ checkoutText('headline') }}</h1>
         <section class="vip-checkout__intro" aria-labelledby="vip-offer-title">
-          <h2 id="vip-offer-title">O que você recebe no VIP</h2>
+          <h2 id="vip-offer-title">{{ checkoutText('receiveTitle') }}</h2>
           <ul class="vip-checkout__intro-list">
-            <li><strong>Conteúdo solo completo 🔥</strong><span> Nas minhas redes sociais, você vê só uma amostra. No VIP, ficam as fotos e os vídeos completos que guardo para assinantes.</span></li>
-            <li><strong>Meu WhatsApp pessoal</strong><span> Quero ser sua companhia. A gente pode se conhecer melhor, conversar sobre seu dia a dia ou deixar o papo mais quente, do seu jeito, amor 😏</span></li>
-            <li><strong>Link do Canal VIP no Telegram</strong><span> É por lá que você acessa tudo isso, amor. Recebe o link depois de assinar.</span></li>
+            <li><strong>{{ checkoutText('benefit1Title') }}</strong><span> {{ checkoutText('benefit1Body') }}</span></li>
+            <li><strong>{{ checkoutText('benefit2Title') }}</strong><span> {{ checkoutText('benefit2Body') }}</span></li>
+            <li><strong>{{ checkoutText('benefit3Title') }}</strong><span> {{ checkoutText('benefit3Body') }}</span></li>
           </ul>
         </section>
         <div class="vip-checkout__plans-cta">
           <span class="vip-checkout__rgb-arrow" aria-hidden="true">↓</span>
           <button class="vip-checkout__cta vip-checkout__plans-trigger" type="button" :disabled="paymentStarted && !pixCode" @click="handleOfferCta">
-            {{ pixCode ? 'Ver meu Pix' : 'Ver planos e assinar' }} <span aria-hidden="true">&rarr;</span>
+            {{ pixCode ? checkoutText('viewPix') : checkoutText('choosePlans') }} <span aria-hidden="true">&rarr;</span>
           </button>
         </div>
       </div>
     </section>
-    <div class="vip-checkout__trust" aria-label="Segurança do pagamento e do site">
-      <span class="vip-checkout__trust-seal" aria-label="Pix"><img class="vip-checkout__pix-logo" src="/pix-logo.png" alt="Pix" width="377" height="126"></span>
+    <div class="vip-checkout__trust" :aria-label="checkoutText('trustLabel')">
+      <span v-if="currency === 'BRL'" class="vip-checkout__trust-seal" aria-label="Pix"><img class="vip-checkout__pix-logo" src="/pix-logo.png" alt="Pix" width="377" height="126"></span>
       <span v-if="usesHttps" class="vip-checkout__trust-seal">
         <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none"><path d="M12 3 5 6v5c0 4.7 2.9 8.1 7 10 4.1-1.9 7-5.3 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>Conexão protegida por HTTPS</span>
+        <span>{{ checkoutText('https') }}</span>
       </span>
     </div>
     <div v-if="avatarOpen" class="vip-avatar-viewer" @click.self="closeAvatar" @keydown.esc.stop="closeAvatar">
-      <section class="vip-avatar-viewer__dialog" role="dialog" aria-modal="true" aria-label="Foto da Wanessa em tela cheia" tabindex="-1">
-        <button ref="avatarCloseButton" class="vip-avatar-viewer__close" type="button" aria-label="Fechar foto" @click="closeAvatar">&times;</button>
-        <img class="vip-avatar-viewer__image" src="/wanessa-vip-avatar.jpeg" alt="Foto da Wanessa" width="900" height="900" draggable="false" @contextmenu.prevent @dragstart.prevent>
+      <section class="vip-avatar-viewer__dialog" role="dialog" aria-modal="true" :aria-label="checkoutText('avatarDialog')" tabindex="-1">
+        <button ref="avatarCloseButton" class="vip-avatar-viewer__close" type="button" :aria-label="checkoutText('closePhoto')" @click="closeAvatar">&times;</button>
+        <img class="vip-avatar-viewer__image" src="/wanessa-vip-avatar.jpeg" :alt="checkoutText('avatarAlt')" width="900" height="900" draggable="false" @contextmenu.prevent @dragstart.prevent>
       </section>
     </div>
     <div v-if="plansDialogOpen" class="vip-modal-backdrop" @click.self="closePlansDialog">
       <section class="vip-modal vip-plan-modal" role="dialog" aria-modal="true" aria-labelledby="plans-title" @keydown.esc="closePlansDialog">
-        <button class="vip-modal__close" type="button" aria-label="Fechar escolha de plano" autofocus @click="closePlansDialog">&times;</button>
-        <p class="vip-modal__eyebrow">CANAL VIP DO TELEGRAM</p>
-        <h2 id="plans-title">Escolha seu plano</h2>
+        <button class="vip-modal__close" type="button" :aria-label="checkoutText('planClose')" autofocus @click="closePlansDialog">&times;</button>
+        <p class="vip-modal__eyebrow">{{ checkoutText('planEyebrow') }}</p>
+        <h2 id="plans-title">{{ checkoutText('planTitle') }}</h2>
         <button v-for="plan in visiblePlans" :key="plan.id" class="vip-plan" :class="{ 'vip-plan--selected': selectedPlan === plan.id, 'vip-plan--featured': plan.id === 'monthly' }" type="button" :aria-pressed="selectedPlan === plan.id" :disabled="!canPay(plan) || paymentStarted" @click="selectPlan(plan)">
           <span class="vip-plan__radio" aria-hidden="true"></span>
-          <span class="vip-plan__body"><span class="vip-plan__name">{{ plan.name }}</span><span class="vip-plan__detail">{{ plan.detail }}</span></span>
+          <span class="vip-plan__body"><span class="vip-plan__name">{{ planName(plan) }}</span><span class="vip-plan__detail">{{ planDetail(plan) }}</span></span>
           <span class="vip-plan__price">{{ displayPrice(plan) }}</span>
-          <span v-if="plan.badge" class="vip-plan__badge">{{ plan.badge }}</span>
+          <span v-if="plan.badge" class="vip-plan__badge">{{ planBadge(plan) }}</span>
         </button>
+        <p v-if="currency !== 'BRL'" class="vip-checkout__fineprint" role="status">{{ checkoutText('paymentNotAvailable') }}</p>
         <p v-if="paymentError" class="vip-checkout__fineprint" role="status">{{ paymentError }}</p>
         <button class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="continueFromPlans">
-          {{ pixCode ? 'Continuar com meu plano' : 'Assinar agora' }} <span aria-hidden="true">&rarr;</span>
+          {{ pixCode ? checkoutText('continuePlan') : checkoutText('subscribe') }} <span aria-hidden="true">&rarr;</span>
         </button>
       </section>
     </div>
     <div v-if="checkoutDialogOpen" class="vip-modal-backdrop" @click.self="closeCheckoutDialog">
       <section class="vip-modal" role="dialog" aria-modal="true" aria-labelledby="vip-modal-title" @keydown.esc="closeCheckoutDialog">
-        <button class="vip-modal__close" type="button" aria-label="Fechar" autofocus @click="closeCheckoutDialog">&times;</button>
+        <button class="vip-modal__close" type="button" :aria-label="checkoutText('closeDialog')" autofocus @click="closeCheckoutDialog">&times;</button>
         <template v-if="!pixCode">
-          <p class="vip-modal__eyebrow">PLANO ESCOLHIDO</p>
-          <h2 id="vip-modal-title">{{ selected?.name }}</h2>
+          <p class="vip-modal__eyebrow">{{ checkoutText('chosenPlan') }}</p>
+          <h2 id="vip-modal-title">{{ selected ? planName(selected) : '' }}</h2>
           <p class="vip-modal__price">{{ selected ? displayPrice(selected) : '' }}</p>
-          <p v-if="selected?.id === 'monthly'" class="vip-modal__note">Cobrança automática pelo Pix a cada 30 dias. Você pode cancelar no app do seu banco.</p>
-          <p v-else class="vip-modal__note">Pagamento único. O acesso não tem prazo para terminar.</p>
+          <p v-if="selected?.id === 'monthly'" class="vip-modal__note">{{ checkoutText('monthlyTerms') }}</p>
+          <p v-else class="vip-modal__note">{{ checkoutText('lifetimeTerms') }}</p>
           <p v-if="paymentError" class="vip-modal__error" role="alert">{{ paymentError }}</p>
-          <p v-if="paymentLoading" class="vip-modal__note">Gerando seu Pix…</p>
+          <p v-if="paymentLoading" class="vip-modal__note">{{ checkoutText('paymentLoading') }}</p>
           <button v-if="paymentError" class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="continueToPayment">
-            Tentar novamente <span aria-hidden="true">&rarr;</span>
+            {{ checkoutText('retry') }} <span aria-hidden="true">&rarr;</span>
           </button>
         </template>
         <template v-else>
-          <p class="vip-modal__eyebrow">PAGAMENTO</p>
-          <h2 id="vip-modal-title">Pix de {{ selected ? displayPrice(selected) : '' }}</h2>
-          <p v-if="selected?.id === 'monthly'" class="vip-modal__note">Abra o app do seu banco e autorize a cobrança automática a cada 30 dias.</p>
-          <div class="vip-pix" role="region" aria-label="Pagamento Pix">
-            <img v-if="qrImage" :src="qrImage" alt="QR Code Pix para pagamento" class="vip-pix__qr">
-            <label for="vip-pix-code">Pix copia e cola</label>
+          <p class="vip-modal__eyebrow">{{ checkoutText('payment') }}</p>
+          <h2 id="vip-modal-title">{{ checkoutText('pixFor', { price: selected ? displayPrice(selected) : '' }) }}</h2>
+          <p v-if="selected?.id === 'monthly'" class="vip-modal__note">{{ checkoutText('monthlyAuthorize') }}</p>
+          <div class="vip-pix" role="region" :aria-label="checkoutText('pixRegion')">
+            <img v-if="qrImage" :src="qrImage" :alt="checkoutText('qrAlt')" class="vip-pix__qr">
+            <label for="vip-pix-code">{{ checkoutText('pixCopyLabel') }}</label>
             <textarea id="vip-pix-code" :value="pixCode" readonly rows="3"></textarea>
-            <button type="button" @click="copyPix">{{ copied ? 'Código copiado' : 'Copiar Pix' }}</button>
+            <button type="button" @click="copyPix">{{ copied ? checkoutText('copied') : checkoutText('copyPix') }}</button>
             <section v-if="selected?.id === 'monthly'" class="vip-pix-tutorial" aria-labelledby="vip-pix-tutorial-title">
-              <h3 id="vip-pix-tutorial-title">Quer descobrir o que eu guardo só pros meus assinantes?</h3>
-              <p class="vip-pix-tutorial__intro">Este plano é mensal. Você autoriza {{ selected ? displayPrice(selected) : '' }} a cada 30 dias. Não é um Pix único.</p>
+              <h3 id="vip-pix-tutorial-title">{{ checkoutText('tutorialTitle') }}</h3>
+              <p class="vip-pix-tutorial__intro">{{ checkoutText('tutorialIntro', { price: selected ? displayPrice(selected) : '' }) }}</p>
               <div class="vip-pix-tutorial__step" :key="pixTutorialStep" aria-live="polite">
                 <div class="vip-pix-tutorial__visual" aria-hidden="true">
                   <svg v-if="pixTutorialStep === 0" viewBox="0 0 48 48" fill="none"><path d="M8 19 24 9l16 10H8Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M11 21h26M13 21v14m8-14v14m8-14v14m8-14v14M9 38h30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
@@ -96,32 +97,32 @@
                   <svg v-else viewBox="0 0 48 48" fill="none"><path d="M24 5 10 11v10c0 9 5.8 16.5 14 21 8.2-4.5 14-12 14-21V11L24 5Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="m17 24 5 5 10-11" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
                 <div class="vip-pix-tutorial__step-copy">
-                  <p class="vip-pix-tutorial__count">Passo {{ pixTutorialStep + 1 }} de 3</p>
+                  <p class="vip-pix-tutorial__count">{{ checkoutText('stepCount', { current: pixTutorialStep + 1 }) }}</p>
                   <h4>{{ pixTutorialSteps[pixTutorialStep].title }}</h4>
                   <p>{{ pixTutorialSteps[pixTutorialStep].message }}</p>
                 </div>
               </div>
               <div v-if="pixTutorialStep < 2" class="vip-pix-tutorial__controls">
-                <button v-if="pixTutorialStep > 0" type="button" class="vip-pix-tutorial__back" @click="pixTutorialStep--">Voltar</button>
-                <button type="button" class="vip-pix-tutorial__next" @click="pixTutorialStep++">Próximo passo</button>
+                <button v-if="pixTutorialStep > 0" type="button" class="vip-pix-tutorial__back" @click="pixTutorialStep--">{{ checkoutText('backStep') }}</button>
+                <button type="button" class="vip-pix-tutorial__next" @click="pixTutorialStep++">{{ checkoutText('nextStep') }}</button>
               </div>
               <div v-else class="vip-pix-tutorial__answer">
-                <p>Ficou fácil de entender?</p>
+                <p>{{ checkoutText('understoodQuestion') }}</p>
                 <div class="vip-pix-tutorial__answers">
-                  <button type="button" class="vip-pix-tutorial__next" @click="pixTutorialUnderstood = true; pixTutorialNeedsHelp = false">Sim, entendi</button>
-                  <button type="button" class="vip-pix-tutorial__back" @click="pixTutorialNeedsHelp = true; pixTutorialUnderstood = false">Não, explica de novo</button>
+                  <button type="button" class="vip-pix-tutorial__next" @click="pixTutorialUnderstood = true; pixTutorialNeedsHelp = false">{{ checkoutText('yesUnderstood') }}</button>
+                  <button type="button" class="vip-pix-tutorial__back" @click="pixTutorialNeedsHelp = true; pixTutorialUnderstood = false">{{ checkoutText('noUnderstood') }}</button>
                 </div>
-                <p v-if="pixTutorialUnderstood" class="vip-pix-tutorial__feedback" role="status">Certo. Agora autorize no app do seu banco.</p>
+                <p v-if="pixTutorialUnderstood" class="vip-pix-tutorial__feedback" role="status">{{ checkoutText('tutorialFeedback') }}</p>
                 <div v-if="pixTutorialNeedsHelp" class="vip-pix-tutorial__help" role="status">
-                  <p>É uma autorização mensal de {{ selected ? displayPrice(selected) : '' }}. Não é um Pix pago uma vez só. Você pode cancelar no app do banco.</p>
-                  <button type="button" class="vip-pix-tutorial__back" @click="pixTutorialStep = 0; pixTutorialNeedsHelp = false">Ver os passos de novo</button>
+                  <p>{{ checkoutText('tutorialHelp', { price: selected ? displayPrice(selected) : '' }) }}</p>
+                  <button type="button" class="vip-pix-tutorial__back" @click="pixTutorialStep = 0; pixTutorialNeedsHelp = false">{{ checkoutText('seeStepsAgain') }}</button>
                 </div>
-                <button v-else-if="pixTutorialUnderstood" type="button" class="vip-pix-tutorial__back" @click="pixTutorialStep = 0; pixTutorialUnderstood = false">Rever os passos</button>
+                <button v-else-if="pixTutorialUnderstood" type="button" class="vip-pix-tutorial__back" @click="pixTutorialStep = 0; pixTutorialUnderstood = false">{{ checkoutText('reviewSteps') }}</button>
               </div>
             </section>
             <p>{{ pixStatus }}</p>
-            <button v-if="!pixPaid" type="button" class="vip-pix__check" :disabled="checkingStatus" @click="checkPayment">{{ checkingStatus ? 'Consultando…' : 'Já paguei · consultar' }}</button>
-            <p v-else class="vip-pix__success">{{ selected?.id === 'monthly' ? 'Assinatura confirmada. A liberação do canal depende da configuração do bot VIP.' : 'Pagamento confirmado. A liberação do canal depende da configuração do bot VIP.' }}</p>
+            <button v-if="!pixPaid" type="button" class="vip-pix__check" :disabled="checkingStatus" @click="checkPayment">{{ checkingStatus ? checkoutText('checking') : checkoutText('checkPayment') }}</button>
+            <p v-else class="vip-pix__success">{{ checkoutText(selected?.id === 'monthly' ? 'monthlySuccess' : 'lifetimeSuccess') }}</p>
           </div>
         </template>
       </section>
@@ -130,11 +131,21 @@
 </template>
 <script setup lang="ts">
 import QRCode from 'qrcode'
+import { VIP_CHECKOUT_COPY, detectVipCheckoutLanguage, type VipCheckoutLanguage } from '~/utils/vip-checkout-i18n'
 
+const checkoutLanguage = ref<VipCheckoutLanguage>('pt')
+const checkoutCopy = computed(() => VIP_CHECKOUT_COPY[checkoutLanguage.value])
+const htmlLanguage = computed(() => ({ pt: 'pt-BR', en: 'en', es: 'es', it: 'it', nl: 'nl', fr: 'fr' })[checkoutLanguage.value])
+function checkoutText(key: string, values: Record<string, string | number> = {}) {
+  const template = checkoutCopy.value[key] || VIP_CHECKOUT_COPY.en[key] || key
+  return template.replace(/\{(\w+)\}/g, (_match, name: string) => String(values[name] ?? ''))
+}
 const shareUrl = 'https://wanessabsx.vercel.app/assinaturavip'
 const shareImage = 'https://wanessabsx.vercel.app/og-assinatura-vip.jpg'
-const shareTitle = 'Assine o Canal VIP da Wanessa no Telegram'
-const shareDescription = 'Este é o espaço para assinar o Canal VIP da Wanessa no Telegram. Confira os planos e escolha seu acesso.'
+const shareTitle = computed(() => checkoutText('seoTitle'))
+const shareDescription = computed(() => checkoutText('seoDescription'))
+const shareImageAlt = computed(() => checkoutText('seoImageAlt'))
+const socialLocale = computed(() => ({ pt: 'pt_BR', en: 'en_US', es: 'es_ES', it: 'it_IT', nl: 'nl_NL', fr: 'fr_FR' })[checkoutLanguage.value])
 
 useSeoMeta({
   title: shareTitle,
@@ -145,18 +156,18 @@ useSeoMeta({
   ogType: 'website',
   ogUrl: shareUrl,
   ogSiteName: 'Wanessa',
-  ogLocale: 'pt_BR',
+  ogLocale: socialLocale,
   ogImage: shareImage,
   ogImageSecureUrl: shareImage,
   ogImageType: 'image/jpeg',
   ogImageWidth: '1200',
   ogImageHeight: '630',
-  ogImageAlt: 'Ícone de assinatura do Canal VIP da Wanessa no Telegram',
+  ogImageAlt: shareImageAlt,
   twitterCard: 'summary_large_image',
   twitterTitle: shareTitle,
   twitterDescription: shareDescription,
   twitterImage: shareImage,
-  twitterImageAlt: 'Ícone de assinatura do Canal VIP da Wanessa no Telegram',
+  twitterImageAlt: shareImageAlt,
 })
 
 useHead({
@@ -190,15 +201,15 @@ const locale = ref('pt-BR')
 const pixCode = ref('')
 const qrImage = ref('')
 const paymentId = ref('')
-const pixStatus = ref('Aguardando pagamento?')
+const pixStatus = ref('')
 const pixPaid = ref(false)
 const checkingStatus = ref(false)
 const copied = ref(false)
-const pixTutorialSteps = [
-  { title: 'Abra o app do seu banco', message: 'Leia o QR que apareceu aqui ou cole o código Pix.' },
-  { title: 'Confira antes de aceitar', message: 'Veja se aparece o valor do plano e a cobrança mensal, a cada 30 dias.' },
-  { title: 'Autorize sua assinatura', message: 'Quando o banco confirmar, seu acesso ao VIP fica liberado. Aí te espero por lá. Se mudar de ideia, você pode cancelar pelo app do banco.' },
-]
+const pixTutorialSteps = computed(() => [
+  { title: checkoutText('step1Title'), message: checkoutText('step1Body') },
+  { title: checkoutText('step2Title'), message: checkoutText('step2Body') },
+  { title: checkoutText('step3Title'), message: checkoutText('step3Body') },
+])
 const pixTutorialStep = ref(0)
 const pixTutorialUnderstood = ref(false)
 const pixTutorialNeedsHelp = ref(false)
@@ -211,7 +222,10 @@ function priceFor(plan: Plan): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
 }
 function canPay(plan: Plan) { return currency.value === 'BRL' && priceFor(plan) !== null }
-function displayPrice(plan: Plan) { const value = priceFor(plan); return value === null ? 'Indisponível' : formatPrice(value) }
+function displayPrice(plan: Plan) { const value = priceFor(plan); return value === null ? checkoutText('unavailable') : formatPrice(value) }
+function planName(plan: Plan) { return checkoutText(plan.id === 'monthly' ? 'monthlyName' : plan.id === 'lifetime' ? 'lifetimeName' : plan.name) }
+function planDetail(plan: Plan) { return checkoutText(plan.id === 'monthly' ? 'monthlyDetail' : plan.id === 'lifetime' ? 'lifetimeDetail' : plan.detail) }
+function planBadge(plan: Plan) { return checkoutText(plan.id === 'monthly' ? 'monthlyBadge' : plan.id === 'lifetime' ? 'lifetimeBadge' : plan.badge || '') }
 function formatPrice(value: number) { return new Intl.NumberFormat(locale.value, { style: 'currency', currency: currency.value }).format(value) }
 function normalizePlan(raw: any, fallback: Plan): Plan {
   const saved = raw?.prices && typeof raw.prices === 'object' ? raw.prices : {}
@@ -309,14 +323,14 @@ async function continueToPayment() {
         visitor_id: getVipVisitorId(),
         accepted_recurring: true,
       } })
-      if (!response?.ok || !response.pix_code || !response.payment_id) throw new Error('Não foi possível iniciar a autorização do Pix. Tente novamente.')
+      if (!response?.ok || !response.pix_code || !response.payment_id) throw new Error('payment_failed')
       pixCode.value = response.pix_code
       qrImage.value = await QRCode.toDataURL(response.pix_code, { width: 220, margin: 1, errorCorrectionLevel: 'M' })
       paymentId.value = response.payment_id
       pixTutorialStep.value = 0
       pixTutorialUnderstood.value = false
       pixTutorialNeedsHelp.value = false
-      pixStatus.value = response.mandate_status === 'ACTIVE' ? 'Autorização recebida; aguardando confirmação da assinatura.' : 'Abra o app do seu banco e autorize o Pix Automático.'
+      pixStatus.value = response.mandate_status === 'ACTIVE' ? checkoutText('authorizedStatus') : checkoutText('authorizeInBank')
       pixPaid.value = false
       paymentStarted.value = true
       pendingPixExitTracked.value = false
@@ -328,36 +342,38 @@ async function continueToPayment() {
       plan_key: selected.value.id === 'monthly' ? 'vip_monthly' : 'vip_lifetime',
       source: 'assinaturavip', visitor_id: getVipVisitorId(),
     } })
-    if (!response?.ok || !response.pix_code) throw new Error('Não foi possível gerar o Pix. Tente novamente.')
+    if (!response?.ok || !response.pix_code) throw new Error('payment_failed')
     pixCode.value = response.pix_code
     qrImage.value = response.qr_image || ''
     paymentId.value = response.payment_id || response.external_id || ''
-    pixStatus.value = 'Aguardando pagamento?'
+    pixStatus.value = checkoutText('waitingStatus')
     pixPaid.value = false
     paymentStarted.value = true
     pendingPixExitTracked.value = false
     trackVip('vip_pix_generated', selected.value.id)
   } catch (error: any) {
-    paymentError.value = error?.data?.statusMessage || error?.data?.message || error?.message || 'Não foi possível gerar o Pix. Tente novamente.'
+    paymentError.value = checkoutText('paymentError')
   } finally { paymentLoading.value = false }
 }
 async function copyPix() {
   trackVip('vip_pix_copy_clicked', selected.value?.id)
   try { await navigator.clipboard.writeText(pixCode.value); copied.value = true; window.setTimeout(() => { copied.value = false }, 1800) }
-  catch { paymentError.value = 'Não consegui copiar automaticamente. Selecione e copie o código Pix.' }
+  catch { paymentError.value = checkoutText('copiedError') }
 }
 async function checkPayment() {
   if (!paymentId.value || checkingStatus.value) return
   checkingStatus.value = true
   try {
     const result = await $fetch<any>('/api/checkout/status', { query: { id: paymentId.value } })
-    if (['approved', 'paid', 'completed'].includes(String(result?.status).toLowerCase())) { pixPaid.value = true; pixStatus.value = 'Assinatura confirmada.' }
-    else if (String(result?.mandate_status || '').toLowerCase() === 'active') pixStatus.value = 'Autorização confirmada. Aguardando a primeira cobrança.'
-    else pixStatus.value = 'Abra o app do seu banco e autorize o Pix Automático. Depois, consulte novamente.'
-  } catch { pixStatus.value = 'Não consegui consultar agora. Tente novamente em instantes.' }
+    if (['approved', 'paid', 'completed'].includes(String(result?.status).toLowerCase())) { pixPaid.value = true; pixStatus.value = checkoutText('statusPaid') }
+    else if (String(result?.mandate_status || '').toLowerCase() === 'active') pixStatus.value = checkoutText('statusAuthorized')
+    else pixStatus.value = checkoutText('statusAuthorizeAgain')
+  } catch { pixStatus.value = checkoutText('statusError') }
   finally { checkingStatus.value = false }
 }
 onMounted(() => {
+  checkoutLanguage.value = detectVipCheckoutLanguage()
+  document.documentElement.lang = htmlLanguage.value
   document.documentElement.classList.add('vip-checkout-page')
   document.body.classList.add('vip-checkout-page')
   usesHttps.value = window.location.protocol === 'https:'
@@ -371,6 +387,7 @@ onMounted(() => {
     }
   } catch { /* Keep the safe defaults when local settings are invalid. */ }
   detectCurrency()
+  pixStatus.value = checkoutText('waitingStatus')
   if (selectedPrice.value === null) { const available = visiblePlans.value.find(plan => priceFor(plan) !== null); selectedPlan.value = available?.id || visiblePlans.value[0]?.id || '' }
   trackVip('vip_checkout_view')
   window.addEventListener('pagehide', onPageHide)

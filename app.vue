@@ -80,7 +80,7 @@
             </button>
           </div>
         </header>
-        <section v-if="isPt" class="offer-quiz" aria-labelledby="offer-quiz-title">
+        <section v-if="isBrazilianPortugueseBrowser" class="offer-quiz" aria-labelledby="offer-quiz-title">
           <div class="offer-quiz__game">
             <div class="offer-quiz__hud">
               <span class="offer-quiz__level"><span aria-hidden="true">✦</span> {{ offerQuizStep === 'interest' ? 'FASE 1 DE 2' : offerQuizStep === 'platform' ? 'FASE 2 DE 2' : 'CAMINHO ESCOLHIDO' }}</span>
@@ -119,11 +119,11 @@
             <div class="offer-quiz__base" aria-hidden="true"><span></span><i></i><span></span></div>
           </div>
         </section>
-        <section v-if="isPt && offerQuizStep === 'result'" class="choice-guide" aria-labelledby="choice-guide-title">
+        <section v-if="isBrazilianPortugueseBrowser && offerQuizStep === 'result'" class="choice-guide" aria-labelledby="choice-guide-title">
           <h2 id="choice-guide-title">Escolha seu acesso</h2>
           <p>Confira o que cada assinatura inclui e o valor antes de continuar.</p>
         </section>
-        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isPt }" v-if="configReady && (!isPt || offerQuizStep === 'result')">
+        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isBrazilianPortugueseBrowser, 'main-cards--intl': !isBrazilianPortugueseBrowser }" v-if="configReady && (!isBrazilianPortugueseBrowser || offerQuizStep === 'result')">
           <div class="card-col" v-if="privsexLinkEnabled">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
               <div class="portal-spiral" aria-hidden="true">
@@ -144,8 +144,20 @@
             </a>
             <a class="card-enter card-enter--quest" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 49,90' : t('privEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
+          <div class="card-col" v-if="!isBrazilianPortugueseBrowser">
+            <a class="lux-card lux-card--right" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">
+              <div class="card-glow"></div>
+              <div class="card-top">
+                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
+                <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
+              </div>
+              <h2 class="card-title">{{ t('pubTitle') }}</h2>
+              <p class="card-desc">{{ t('pubDesc') }}</p>
+            </a>
+            <a class="card-enter card-enter--quest" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">{{ t('pubEnter') }} <span aria-hidden="true">↗</span></a>
+          </div>
           <!-- WhatsApp ocupa a esquerda somente se o link PrivSex não existir -->
-          <div class="card-col" v-else-if="false && isPt">
+          <div class="card-col" v-if="false && isPt">
             <button type="button" class="lux-card lux-card--left iq-main-card" @click="iqStart">
               <div class="card-glow"></div>
               <div class="card-top">
@@ -164,13 +176,13 @@
               <div class="card-glow"></div>
               <div class="card-top">
                 <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
-                <span class="card-badge badge-tg">{{ offerQuizSelection === 'telegram' ? 'Sua escolha' : 'Assinatura mensal' }}</span>
+                <span class="card-badge badge-tg">{{ offerQuizSelection === 'telegram' ? 'Sua escolha' : isPt ? 'Assinatura mensal' : t('vipBadge') }}</span>
               </div>
-              <h2 class="card-title">Telegram VIP</h2>
-              <p class="card-desc">Conteúdo exclusivo e meu WhatsApp pessoal.</p>
+              <h2 class="card-title">{{ isPt ? 'Telegram VIP' : t('vipTitle') }}</h2>
+              <p class="card-desc">{{ isPt ? 'Conteúdo exclusivo e meu WhatsApp pessoal.' : t('vipDesc') }}</p>
               <p v-if="isPt" class="offer-card__price">R$ 29,90 <span>/ mês · cancele quando quiser</span></p>
             </a>
-            <a class="card-enter card-enter--quest" href="/assinaturavip" @pointerdown.passive="onCardClick('Checkout Canal VIP', '/assinaturavip')"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 29,90/mês' : 'Open VIP checkout' }} <span aria-hidden="true">↗</span></a>
+            <a class="card-enter card-enter--quest" href="/assinaturavip" @pointerdown.passive="onCardClick('Checkout Canal VIP', '/assinaturavip')"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 29,90/mês' : t('vipEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
         </section>
         <!-- creator-intro longo removido: bio em tópicos fica acima dos cards -->
@@ -1875,8 +1887,15 @@ function iqGoWhatsApp() {
 }
 
 const vipBotUrl = '/assinaturavip'
+const intlPublicChannelUrl = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const locale = ref<Locale>('pt')
 const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (intl)
+const isBrazilianPortugueseBrowser = ref(false)
+function browserUsesBrazilianPortuguese() {
+  if (typeof navigator === 'undefined') return true
+  const primaryLanguage = String(navigator.language || '').toLowerCase().replace(/_/g, '-')
+  return /^pt-br(?:-|$)/.test(primaryLanguage)
+}
 type OfferQuizInterest = 'conteudo' | 'contato'
 type OfferQuizSelection = 'privsex' | 'telegram' | 'compare'
 const offerQuizStep = ref<'interest' | 'platform' | 'result'>('interest')
@@ -6964,6 +6983,7 @@ onMounted(async () => {
   // Landing isolada: não inicializa o funil da Wanessa nem registra
   // page_view como /links/wanessa.
   if (isIsolatedRoute.value) return
+  isBrazilianPortugueseBrowser.value = browserUsesBrazilianPortuguese()
   // Em /admin/chat: sincroniza sessão admin com o painel de config
   if (isAdminRoute.value) {
     try {
