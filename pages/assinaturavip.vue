@@ -16,32 +16,24 @@
           </div>
         </div>
         <h1>Chega de ver só um pedacinho.</h1>
-        <p class="vip-checkout__intro">No VIP, você recebe o link do canal no Telegram 💌🔒<br><br>Também te explico como falar comigo no WhatsApp 📲💗<br><br>Quero ser sua companhia. A gente pode se conhecer melhor, conversar sobre o seu dia ou deixar nosso papo mais quente, do jeitinho que você gosta 😘🔥.</p>
-        <ul class="vip-checkout__benefits">
-          <li><span aria-hidden="true">✓</span> Conteúdo exclusivo que não publico em outro lugar</li>
-          <li><span aria-hidden="true">✓</span> Canal VIP exclusivo no Telegram</li>
-          <li><span aria-hidden="true">✓</span> WhatsApp para a gente conversar mais de perto 💌</li>
-        </ul>
-      </div>
-        <div class="vip-checkout__plans-arrow" role="img" aria-label="Veja os planos ao lado">
-          <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="vip-arrow-rgb" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff2d95"/><stop offset="35%" stop-color="#9b4dff"/><stop offset="68%" stop-color="#16d9ff"/><stop offset="100%" stop-color="#48f0a2"/></linearGradient></defs><path d="M8 32h45M35 14l18 18-18 18" fill="none" stroke="url(#vip-arrow-rgb)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <section class="vip-checkout__intro" aria-labelledby="vip-offer-title">
+          <h2 id="vip-offer-title">O que você recebe no VIP</h2>
+          <ul class="vip-checkout__intro-list">
+            <li><strong>Conteúdo solo completo 🔥</strong><span> Nas minhas redes sociais, você vê só uma amostra. No VIP, ficam as fotos e os vídeos completos que guardo para assinantes.</span></li>
+            <li><strong>Meu WhatsApp pessoal</strong><span> Quero ser sua companhia. A gente pode se conhecer melhor, conversar sobre seu dia a dia ou deixar o papo mais quente, do seu jeito, amor 😏</span></li>
+            <li><strong>Link do Canal VIP no Telegram</strong><span> É por lá que você acessa tudo isso, amor. Recebe o link depois de assinar.</span></li>
+          </ul>
+        </section>
+        <div class="vip-checkout__plans-cta">
+          <span class="vip-checkout__rgb-arrow" aria-hidden="true">↓</span>
+          <button class="vip-checkout__cta vip-checkout__plans-trigger" type="button" :disabled="paymentStarted && !pixCode" @click="handleOfferCta">
+            {{ pixCode ? 'Ver meu Pix' : 'Ver planos e assinar' }} <span aria-hidden="true">&rarr;</span>
+          </button>
         </div>
-      <section class="vip-checkout__plans" aria-labelledby="plans-title">
-        <h2 id="plans-title">Escolha seu plano</h2>
-        <button v-for="plan in visiblePlans" :key="plan.id" class="vip-plan" :class="{ 'vip-plan--selected': selectedPlan === plan.id, 'vip-plan--featured': plan.id === 'monthly' }" type="button" :aria-pressed="selectedPlan === plan.id" :disabled="!canPay(plan) || paymentStarted" @click="selectPlan(plan)">
-          <span class="vip-plan__radio" aria-hidden="true"></span>
-          <span class="vip-plan__body"><span class="vip-plan__name">{{ plan.name }}</span><span class="vip-plan__detail">{{ plan.detail }}</span></span>
-          <span class="vip-plan__price">{{ displayPrice(plan) }}</span>
-          <span v-if="plan.badge" class="vip-plan__badge">{{ plan.badge }}</span>
-        </button>
-        <button class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="startCheckout">
-          {{ paymentLoading ? 'Gerando Pix…' : (pixCode ? 'Ver Pix gerado' : 'Assinar agora') }} <span aria-hidden="true">&rarr;</span>
-        </button>
-        <p v-if="paymentError" class="vip-checkout__fineprint" role="status">{{ paymentError }}</p>
-      </section>
+      </div>
     </section>
     <div class="vip-checkout__trust" aria-label="Segurança do pagamento e do site">
-      <span class="vip-checkout__trust-seal"><svg class="vip-checkout__pix-symbol" viewBox="0 0 48 48" role="img" aria-label="Pix"><path d="M24 3 33 12 24 21 15 12 24 3ZM36 15 45 24 36 33 27 24 36 15ZM24 27 33 36 24 45 15 36 24 27ZM12 15 21 24 12 33 3 24 12 15Z" fill="currentColor"/></svg><span class="vip-checkout__pix-mark" aria-hidden="true">PIX</span><span>Confirme o pagamento no app do seu banco</span></span>
+      <span class="vip-checkout__trust-seal" aria-label="Pix"><img class="vip-checkout__pix-logo" src="/pix-logo.png" alt="Pix" width="377" height="126"></span>
       <span v-if="usesHttps" class="vip-checkout__trust-seal">
         <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none"><path d="M12 3 5 6v5c0 4.7 2.9 8.1 7 10 4.1-1.9 7-5.3 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span>Conexão protegida por HTTPS</span>
@@ -51,6 +43,23 @@
       <section class="vip-avatar-viewer__dialog" role="dialog" aria-modal="true" aria-label="Foto da Wanessa em tela cheia" tabindex="-1">
         <button ref="avatarCloseButton" class="vip-avatar-viewer__close" type="button" aria-label="Fechar foto" @click="closeAvatar">&times;</button>
         <img class="vip-avatar-viewer__image" src="/wanessa-vip-avatar.jpeg" alt="Foto da Wanessa" width="900" height="900" draggable="false" @contextmenu.prevent @dragstart.prevent>
+      </section>
+    </div>
+    <div v-if="plansDialogOpen" class="vip-modal-backdrop" @click.self="closePlansDialog">
+      <section class="vip-modal vip-plan-modal" role="dialog" aria-modal="true" aria-labelledby="plans-title" @keydown.esc="closePlansDialog">
+        <button class="vip-modal__close" type="button" aria-label="Fechar escolha de plano" autofocus @click="closePlansDialog">&times;</button>
+        <p class="vip-modal__eyebrow">CANAL VIP DO TELEGRAM</p>
+        <h2 id="plans-title">Escolha seu plano</h2>
+        <button v-for="plan in visiblePlans" :key="plan.id" class="vip-plan" :class="{ 'vip-plan--selected': selectedPlan === plan.id, 'vip-plan--featured': plan.id === 'monthly' }" type="button" :aria-pressed="selectedPlan === plan.id" :disabled="!canPay(plan) || paymentStarted" @click="selectPlan(plan)">
+          <span class="vip-plan__radio" aria-hidden="true"></span>
+          <span class="vip-plan__body"><span class="vip-plan__name">{{ plan.name }}</span><span class="vip-plan__detail">{{ plan.detail }}</span></span>
+          <span class="vip-plan__price">{{ displayPrice(plan) }}</span>
+          <span v-if="plan.badge" class="vip-plan__badge">{{ plan.badge }}</span>
+        </button>
+        <p v-if="paymentError" class="vip-checkout__fineprint" role="status">{{ paymentError }}</p>
+        <button class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="continueFromPlans">
+          {{ pixCode ? 'Continuar com meu plano' : 'Assinar agora' }} <span aria-hidden="true">&rarr;</span>
+        </button>
       </section>
     </div>
     <div v-if="checkoutDialogOpen" class="vip-modal-backdrop" @click.self="closeCheckoutDialog">
@@ -167,6 +176,7 @@ const defaultSettings: CheckoutSettings = {
 }
 const settings = ref<CheckoutSettings>(defaultSettings)
 const selectedPlan = ref('monthly')
+const plansDialogOpen = ref(false)
 const checkoutDialogOpen = ref(false)
 const avatarOpen = ref(false)
 const avatarTrigger = ref<HTMLButtonElement | null>(null)
@@ -222,6 +232,16 @@ function selectPlan(plan: Plan) {
     paymentError.value = ''
     trackVip('vip_plan_selected', plan.id)
   }
+}
+function handleOfferCta() {
+  if (pixCode.value) openCheckoutDialog()
+  else if (!paymentStarted.value) plansDialogOpen.value = true
+}
+function closePlansDialog() { plansDialogOpen.value = false }
+function continueFromPlans() {
+  if (!selected.value || !canPay(selected.value)) return
+  plansDialogOpen.value = false
+  void startCheckout()
 }
 function openCheckoutDialog() {
   if (selected.value && canPay(selected.value)) {
@@ -338,6 +358,8 @@ async function checkPayment() {
   finally { checkingStatus.value = false }
 }
 onMounted(() => {
+  document.documentElement.classList.add('vip-checkout-page')
+  document.body.classList.add('vip-checkout-page')
   usesHttps.value = window.location.protocol === 'https:'
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
@@ -353,7 +375,11 @@ onMounted(() => {
   trackVip('vip_checkout_view')
   window.addEventListener('pagehide', onPageHide)
 })
-onBeforeUnmount(() => window.removeEventListener('pagehide', onPageHide))
+onBeforeUnmount(() => {
+  window.removeEventListener('pagehide', onPageHide)
+  document.documentElement.classList.remove('vip-checkout-page')
+  document.body.classList.remove('vip-checkout-page')
+})
 </script>
 <style scoped>
 .vip-checkout{--ink:#f8f5fa;--muted:#c5bdca;--line:rgba(255,255,255,.14);min-height:100vh;background:#100d13;color:var(--ink);font-family:inherit;padding:0 22px 28px}.vip-checkout__top{max-width:1120px;margin:auto;height:68px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}.vip-checkout__brand{color:#fff;text-decoration:none;font-weight:900;letter-spacing:.12em}.vip-checkout__brand span{color:#cf9cf5}.vip-checkout__secure{font-size:.82rem;color:#d7d0dc}.vip-checkout__layout{max-width:1020px;margin:42px auto 0;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(360px,.98fr);gap:58px;align-items:start}.vip-checkout__eyebrow{margin:25px 0 8px;color:#e3baff;font-size:.72rem;font-weight:800;letter-spacing:.14em}.vip-checkout__offer h1{max-width:540px;margin:0;font-size:clamp(2rem,4vw,3.25rem);line-height:1.02;letter-spacing:-.04em}.vip-checkout__intro{max-width:470px;color:var(--muted);font-size:1.04rem;line-height:1.6}.vip-checkout__benefits{list-style:none;padding:0;margin:24px 0 0;display:grid;gap:13px;color:#eee8f1}.vip-checkout__benefits li{display:flex;gap:11px;align-items:flex-start;line-height:1.4}.vip-checkout__benefits li span{color:#d8a9f6;font-weight:900}.vip-checkout__privacy{margin-top:25px;color:#e4d1ef;font-size:.88rem}.vip-checkout__plans{padding:26px;background:#19151d;border:1px solid var(--line);border-radius:18px;box-shadow:0 16px 50px rgba(0,0,0,.22)}.vip-checkout__plans .vip-checkout__eyebrow{margin:0 0 9px}.vip-checkout__plans h2{font-size:1.5rem;margin:0 0 20px;letter-spacing:-.025em}.vip-plan{width:100%;min-height:85px;text-align:left;position:relative;display:flex;align-items:center;gap:13px;padding:15px 14px;margin-top:12px;color:var(--ink);background:#211c25;border:1px solid rgba(255,255,255,.16);border-radius:12px;cursor:pointer}.vip-plan--selected{border-color:#d4a2f2;box-shadow:0 0 0 1px #d4a2f2 inset}.vip-plan__radio{width:18px;height:18px;border-radius:50%;border:1px solid #bcb3c0;flex:none}.vip-plan--selected .vip-plan__radio{border:5px solid #d6a5f1;background:#fff}.vip-plan__body{display:grid;gap:5px;flex:1}.vip-plan__name{font-weight:800;font-size:1rem}.vip-plan__detail{font-size:.8rem;color:#d0c7d4}.vip-plan__price{font-weight:850;white-space:nowrap}.vip-plan__badge{position:absolute;top:-9px;right:12px;background:#e0b9f8;color:#24132e;font-size:.61rem;font-weight:900;letter-spacing:.08em;padding:4px 7px;border-radius:4px}.vip-checkout__cta{width:100%;border:0;border-radius:9px;background:#dcb2f4;color:#211129;min-height:54px;padding:13px 18px;margin-top:18px;font-size:1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:space-between}.vip-checkout__cta:disabled{opacity:.5;cursor:not-allowed}.vip-checkout__fineprint{color:#c9c0ce;font-size:.78rem;line-height:1.5;margin:10px 0}.vip-next-step{display:grid;grid-template-columns:32px 1fr;gap:12px;background:#211a27;border:1px solid rgba(212,162,242,.55);padding:16px;border-radius:11px;margin-top:16px}.vip-next-step__icon{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#dcb2f4;color:#24132e;font-weight:900}.vip-next-step h3{font-size:1rem;margin:1px 0 6px}.vip-next-step p{margin:0;color:#ded6e2;font-size:.84rem;line-height:1.55}.vip-next-step__telegram{margin-top:12px;display:inline-flex;gap:9px;color:#fff;font-weight:800;text-decoration:none;border-bottom:1px solid #dcb2f4;padding-bottom:3px}.vip-checkout__faq{border-top:1px solid var(--line);padding:13px 0;color:#f5eff7;font-size:.88rem}.vip-checkout__faq:first-of-type{margin-top:15px}.vip-checkout__faq summary{font-weight:750;cursor:pointer}.vip-checkout__faq p{color:#d1c8d5;line-height:1.55;margin:9px 0 0}.vip-checkout__footer{max-width:1020px;margin:38px auto 0;text-align:center;color:#a99eae;font-size:.75rem}
@@ -400,6 +426,11 @@ onBeforeUnmount(() => window.removeEventListener('pagehide', onPageHide))
 
 
 
+</style>
+<style scoped>
+.vip-checkout__layout{max-width:520px;grid-template-columns:minmax(0,1fr);margin-top:42px}
+.vip-checkout__trust{width:min(100%,520px);max-width:520px;justify-content:center;margin:24px auto 0;padding:16px 0 max(24px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.14)}
+:global(html.vip-checkout-page),:global(body.vip-checkout-page){background:#100d13}
 </style>
 <style scoped>
 .vip-checkout__offer{font-family:'Poppins',Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
@@ -452,10 +483,28 @@ onBeforeUnmount(() => window.removeEventListener('pagehide', onPageHide))
 @media(max-width:520px){.vip-modal-backdrop{padding:10px;align-items:end}.vip-modal{width:100%;max-height:calc(100dvh - 20px);padding:21px 16px max(18px,env(safe-area-inset-bottom));border-radius:16px 16px 12px 12px}.vip-modal .vip-payer-form{padding:12px}.vip-modal .vip-pix{padding:12px}.vip-modal .vip-pix__qr{width:min(190px,58vw);height:min(190px,58vw)}.vip-pix-tutorial{gap:10px;padding:12px}.vip-pix-tutorial h3{font-size:1rem}.vip-pix-tutorial__intro{font-size:.85rem}.vip-pix-tutorial__step{grid-template-columns:56px minmax(0,1fr);gap:12px;padding:12px}.vip-pix-tutorial__visual{width:52px;height:52px;border-radius:13px}.vip-pix-tutorial__visual svg{width:32px;height:32px}.vip-pix-tutorial__step-copy h4{font-size:.97rem}.vip-pix-tutorial__step-copy>p:last-child{font-size:.86rem}.vip-pix-tutorial__controls>*{flex:1}.vip-pix-tutorial__answers>*{flex-basis:100%}}
 @media(prefers-reduced-motion:reduce){.vip-pix-tutorial__step{animation:none}}
 @media(max-width:760px){.vip-checkout__trust{justify-content:center}.vip-checkout__trust-seal{flex:1 1 155px;justify-content:center}}
-.vip-checkout__layout{grid-template-columns:minmax(0,1fr) 42px minmax(0,.98fr);gap:18px}
-.vip-checkout__plans-arrow{display:grid;place-items:center;align-self:center;min-width:0;min-height:58px;animation:vip-arrow-pulse 1.15s ease-in-out infinite alternate}
-.vip-checkout__plans-arrow svg{display:block;width:52px;height:52px;overflow:visible;filter:drop-shadow(0 0 7px rgba(111,103,255,.7))}
-.vip-checkout__pix-symbol{width:27px;height:27px;flex:none;color:#8decc1}
-@keyframes vip-arrow-pulse{from{opacity:.72;filter:drop-shadow(0 0 2px rgba(255,45,149,.5))}to{opacity:1;filter:drop-shadow(0 0 11px rgba(22,217,255,.8))}}
-@media(max-width:760px){.vip-checkout__layout{grid-template-columns:minmax(0,1fr);gap:16px}.vip-checkout__plans-arrow{min-height:34px}.vip-checkout__plans-arrow svg{width:42px;height:42px;transform:rotate(90deg)}}
-@media(prefers-reduced-motion:reduce){.vip-checkout__plans-arrow{animation:none}}</style>
+.vip-checkout__layout{max-width:760px;grid-template-columns:minmax(0,1fr);gap:18px}
+.vip-checkout__plans-trigger{max-width:520px}
+.vip-plan-modal h2{margin-bottom:20px}
+.vip-plan-modal .vip-plan{margin-top:14px}
+.vip-checkout__pix-logo{display:block;width:86px;height:auto;flex:none}
+@media(max-width:760px){.vip-checkout__layout{grid-template-columns:minmax(0,1fr);gap:16px}.vip-checkout__plans-trigger{max-width:none}}
+.vip-checkout__intro{max-width:520px;margin:22px 0 0;padding:19px 20px;background:#1c1720;border:1px solid rgba(220,178,244,.52);border-left:4px solid #e3baff;border-radius:12px;color:#fff}
+.vip-checkout__intro h2{margin:0 0 13px;color:#fff;font-size:1.05rem;font-weight:900;line-height:1.3}
+.vip-checkout__intro-list{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.vip-checkout__intro-list li{display:grid;gap:3px;color:#fff;font-size:.98rem;line-height:1.45}
+.vip-checkout__intro-list strong{color:#fff;font-weight:850}
+.vip-checkout__intro-list span{color:#f0eaf2}
+.vip-checkout__intro-personal{margin:15px 0 0;padding-top:13px;border-top:1px solid rgba(255,255,255,.16);color:#fff;font-size:.94rem;font-weight:600;line-height:1.55}
+.vip-checkout__plans-cta{display:grid;justify-items:center;gap:3px;max-width:520px;margin-top:18px}
+.vip-checkout__plans-cta .vip-checkout__cta{margin-top:0}
+.vip-checkout__rgb-arrow{font-size:30px;font-weight:950;line-height:.9;color:transparent;background:linear-gradient(90deg,#ff3158,#ffdb39,#37f3a4,#26c9ff,#bc52ff,#ff3158);background-size:250% 100%;background-clip:text;-webkit-background-clip:text;filter:drop-shadow(0 0 7px rgba(38,201,255,.7)) drop-shadow(0 0 11px rgba(188,82,255,.45));animation:vip-rgb-arrow 2.4s linear infinite,vip-rgb-point 1.1s ease-in-out infinite}
+.vip-checkout__plans-trigger{min-height:58px;border:1px solid rgba(255,255,255,.55);background:linear-gradient(105deg,#f0c8ff 0%,#dba5f5 48%,#c8f3ff 100%);box-shadow:0 0 0 2px rgba(215,167,242,.18),0 0 22px rgba(188,82,255,.38),0 7px 24px rgba(38,201,255,.18);animation:vip-cta-glow 2.8s ease-in-out infinite}
+.vip-checkout__plans-trigger:hover{filter:brightness(1.08)}
+.vip-checkout__plans-trigger:active{transform:translateY(1px);filter:brightness(.98)}
+@keyframes vip-rgb-arrow{to{background-position:250% 0}}
+@keyframes vip-rgb-point{50%{transform:translateY(4px)}}
+@keyframes vip-cta-glow{50%{box-shadow:0 0 0 3px rgba(215,167,242,.26),0 0 30px rgba(188,82,255,.56),0 8px 28px rgba(38,201,255,.28)}}
+@media(prefers-reduced-motion:reduce){.vip-checkout__rgb-arrow,.vip-checkout__plans-trigger{animation:none}}
+@media(max-width:760px){.vip-checkout__intro{max-width:none;margin-top:18px;padding:16px 15px}.vip-checkout__intro h2{font-size:1rem}.vip-checkout__intro-list li{font-size:.95rem}.vip-checkout__intro-personal{font-size:.92rem}}
+</style>
