@@ -32,6 +32,9 @@ Guia rápido para revisar o repositório. Comentários no código usam headers `
 | `server/api/fake-person.get.ts` | Nome/email/fone/CPF estáveis por `visitor_id` |
 | `server/api/funnel-*.ts` | Mensagens e intents do funil |
 | `server/api/webhooks/syncpay.post.ts` | Pagamento aprovado → libera plano |
+| `server/api/checkout/stripe-vip-*.ts` | Sessão/status cartão VIP (isolado do chat) |
+| `server/api/webhooks/stripe-vip.post.ts` | Webhook Stripe VIP (fail-closed) |
+| `docs/STRIPE-VIP-SETUP.md` | Setup secrets/prices webhook VIP |
 | `server/utils/supabase.ts` | Clients + `verifyAdminToken` |
 | `server/utils/fake-person.ts` | Algoritmo CPF + `fakePersonForVisitor()` |
 

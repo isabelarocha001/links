@@ -66,19 +66,52 @@
     <div v-if="checkoutDialogOpen" class="vip-modal-backdrop" @click.self="closeCheckoutDialog">
       <section class="vip-modal" role="dialog" aria-modal="true" aria-labelledby="vip-modal-title" @keydown.esc="closeCheckoutDialog">
         <button class="vip-modal__close" type="button" :aria-label="checkoutText('closeDialog')" autofocus @click="closeCheckoutDialog">&times;</button>
-        <template v-if="!pixCode">
+        <template v-if="!pixCode && !stripePaid">
           <p class="vip-modal__eyebrow">{{ checkoutText('chosenPlan') }}</p>
           <h2 id="vip-modal-title">{{ selected ? planName(selected) : '' }}</h2>
           <p class="vip-modal__price">{{ selected ? displayPrice(selected) : '' }}</p>
-          <p v-if="selected?.id === 'monthly'" class="vip-modal__note">{{ checkoutText('monthlyTerms') }}</p>
-          <p v-else class="vip-modal__note">{{ checkoutText('lifetimeTerms') }}</p>
+          <p v-if="selected?.id === 'monthly' && paymentMethod !== 'card'" class="vip-modal__note">{{ checkoutText('monthlyTerms') }}</p>
+          <p v-else-if="selected?.id === 'lifetime' && paymentMethod !== 'card'" class="vip-modal__note">{{ checkoutText('lifetimeTerms') }}</p>
+          <p v-else-if="paymentMethod === 'card'" class="vip-modal__note">{{ cardTermsText }}</p>
+
+          <div v-if="!paymentMethod && !paymentLoading" class="vip-pay-methods" role="group" :aria-label="checkoutText('chooseMethod')">
+            <p class="vip-modal__note">{{ checkoutText('chooseMethod') }}</p>
+            <button class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected)" @click="choosePix">
+              {{ checkoutText('payWithPix') }} <span aria-hidden="true">&rarr;</span>
+            </button>
+            <button
+              v-if="cardAvailableForSelected"
+              class="vip-checkout__cta vip-checkout__cta--secondary"
+              type="button"
+              :disabled="!selected || !canPay(selected)"
+              @click="chooseCard"
+            >
+              {{ checkoutText('payWithCard') }} <span aria-hidden="true">&rarr;</span>
+            </button>
+          </div>
+
           <p v-if="paymentError" class="vip-modal__error" role="alert">{{ paymentError }}</p>
-          <p v-if="paymentLoading" class="vip-modal__note">{{ checkoutText('paymentLoading') }}</p>
-          <!-- Ponto reservado para Stripe VIP. Permanece oculto até existir fluxo de sessão, preço e webhook configurados no servidor. -->
-          <div id="vip-stripe-checkout-mount" hidden aria-hidden="true" data-integration="stripe-vip"></div>
-          <button v-if="paymentError" class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="continueToPayment">
+          <p v-if="paymentLoading && paymentMethod === 'pix'" class="vip-modal__note">{{ checkoutText('paymentLoading') }}</p>
+          <p v-if="paymentLoading && paymentMethod === 'card' && !stripeMounted" class="vip-modal__note">{{ checkoutText('cardLoading') }}</p>
+
+          <div
+            id="vip-stripe-checkout-mount"
+            :hidden="paymentMethod !== 'card'"
+            :aria-hidden="paymentMethod !== 'card' ? 'true' : 'false'"
+            data-integration="stripe-vip"
+            class="vip-stripe-mount"
+          ></div>
+
+          <button v-if="paymentError && paymentMethod === 'pix'" class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="continueToPayment">
             {{ checkoutText('retry') }} <span aria-hidden="true">&rarr;</span>
           </button>
+          <button v-if="paymentError && paymentMethod === 'card'" class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="startStripeVipCheckout">
+            {{ checkoutText('retry') }} <span aria-hidden="true">&rarr;</span>
+          </button>
+        </template>
+        <template v-else-if="stripePaid">
+          <p class="vip-modal__eyebrow">{{ checkoutText('payment') }}</p>
+          <p class="vip-pix__success">{{ checkoutText('cardSuccess') }}</p>
         </template>
         <template v-else>
           <p class="vip-modal__eyebrow">{{ checkoutText('payment') }}</p>
@@ -198,6 +231,13 @@ const usesHttps = ref(false)
 const paymentLoading = ref(false)
 const paymentStarted = ref(false)
 const paymentError = ref('')
+const paymentMethod = ref<'pix' | 'card' | null>(null)
+const cardAvailability = ref<{ plan: string; currency: string }[]>([])
+const stripeMounted = ref(false)
+const stripePaid = ref(false)
+const stripeCapability = ref('')
+const stripeRecurrence = ref('')
+let stripeCheckoutInstance: { destroy?: () => void } | null = null
 const currency = ref<Currency>('BRL')
 const locale = ref('pt-BR')
 const pixCode = ref('')
@@ -266,15 +306,149 @@ function openCheckoutDialog() {
     trackVip('vip_subscribe_clicked', selected.value.id)
   }
 }
-/** Abre o modal e gera o Pix na hora — sem pedir nome/e-mail/CPF (servidor auto-preenche). */
+const cardAvailableForSelected = computed(() => {
+  if (!selected.value || currency.value !== 'BRL') return false
+  const plan = selected.value.id
+  return cardAvailability.value.some((m) => m.plan === plan && m.currency === currency.value)
+})
+const cardTermsText = computed(() => {
+  if (selected.value?.id === 'lifetime') return checkoutText('cardTermsLifetime')
+  if (stripeRecurrence.value === 'every_30_days') return checkoutText('cardTermsMonth30')
+  return checkoutText('cardTermsMonth')
+})
+
+async function refreshCardAvailability() {
+  try {
+    const res = await $fetch<{ ok?: boolean; card_enabled?: boolean; methods?: { plan: string; currency: string }[] }>('/api/checkout/stripe-vip-availability')
+    cardAvailability.value = res?.card_enabled && Array.isArray(res.methods) ? res.methods : []
+  } catch {
+    cardAvailability.value = []
+  }
+}
+
+function destroyStripeCheckout() {
+  try { stripeCheckoutInstance?.destroy?.() } catch { /* ignore */ }
+  stripeCheckoutInstance = null
+  stripeMounted.value = false
+  const el = document.getElementById('vip-stripe-checkout-mount')
+  if (el) el.innerHTML = ''
+}
+
+function choosePix() {
+  paymentMethod.value = 'pix'
+  paymentError.value = ''
+  void continueToPayment()
+}
+function chooseCard() {
+  if (!cardAvailableForSelected.value) return
+  paymentMethod.value = 'card'
+  paymentError.value = ''
+  void startStripeVipCheckout()
+}
+
+/** Abre o modal: se só Pix, gera na hora; se cartão disponível, pede o método. */
 async function startCheckout() {
   if (!selected.value || !canPay(selected.value) || paymentLoading.value) return
-  if (pixCode.value) {
+  if (pixCode.value || stripePaid.value) {
     checkoutDialogOpen.value = true
     return
   }
+  paymentMethod.value = null
+  destroyStripeCheckout()
   openCheckoutDialog()
-  await continueToPayment()
+  await refreshCardAvailability()
+  // Sem cartão configurado → fluxo Pix atual (auto)
+  if (!cardAvailableForSelected.value) {
+    paymentMethod.value = 'pix'
+    await continueToPayment()
+  }
+}
+
+async function loadStripeJs(): Promise<any> {
+  if (typeof window === 'undefined') return null
+  const w = window as any
+  if (w.Stripe) return w.Stripe
+  await new Promise<void>((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = 'https://js.stripe.com/v3/'
+    s.async = true
+    s.onload = () => resolve()
+    s.onerror = () => reject(new Error('stripe_js'))
+    document.head.appendChild(s)
+  })
+  return (window as any).Stripe
+}
+
+async function startStripeVipCheckout() {
+  if (!selected.value || !canPay(selected.value) || paymentLoading.value) return
+  if (!cardAvailableForSelected.value) {
+    paymentError.value = checkoutText('cardNotConfigured')
+    return
+  }
+  paymentLoading.value = true
+  paymentError.value = ''
+  destroyStripeCheckout()
+  try {
+    const response = await $fetch<any>('/api/checkout/stripe-vip-session', {
+      method: 'POST',
+      body: {
+        plan: selected.value.id,
+        currency: currency.value,
+        visitor_id: getVipVisitorId(),
+        return_origin: window.location.origin,
+      },
+    })
+    if (!response?.ok || !response.client_secret || !response.publishable_key || !response.payment_id) {
+      throw new Error('card_session_failed')
+    }
+    paymentId.value = response.payment_id
+    stripeCapability.value = response.capability_token || ''
+    stripeRecurrence.value = response.recurrence || ''
+    paymentStarted.value = true
+    trackVip('vip_card_session_created', selected.value.id)
+
+    const StripeCtor = await loadStripeJs()
+    if (!StripeCtor) throw new Error('stripe_js')
+    const stripe = StripeCtor(response.publishable_key)
+    const checkout = await stripe.initEmbeddedCheckout({ clientSecret: response.client_secret })
+    const mount = document.getElementById('vip-stripe-checkout-mount')
+    if (!mount) throw new Error('mount_missing')
+    checkout.mount('#vip-stripe-checkout-mount')
+    stripeCheckoutInstance = checkout
+    stripeMounted.value = true
+    trackVip('vip_card_checkout_mounted', selected.value.id)
+    void pollStripeStatus()
+  } catch (error: any) {
+    paymentError.value = error?.data?.statusMessage || error?.data?.message || checkoutText('cardError')
+    trackVip('vip_card_session_error', selected.value?.id)
+  } finally {
+    paymentLoading.value = false
+  }
+}
+
+async function pollStripeStatus() {
+  if (!paymentId.value || !stripeCapability.value) return
+  for (let i = 0; i < 40; i++) {
+    await new Promise((r) => setTimeout(r, 3000))
+    if (!checkoutDialogOpen.value || paymentMethod.value !== 'card') return
+    try {
+      const st = await $fetch<any>('/api/checkout/stripe-vip-status', {
+        query: { payment_id: paymentId.value, capability: stripeCapability.value },
+      })
+      if (st?.paid) {
+        stripePaid.value = true
+        destroyStripeCheckout()
+        trackVip('vip_card_paid', selected.value?.id)
+        return
+      }
+      if (st?.status === 'failed') {
+        paymentError.value = checkoutText('cardError')
+        return
+      }
+    } catch {
+      /* retry */
+    }
+  }
 }
 function trackPendingPixExit() {
   if (!pixCode.value || pixPaid.value || pendingPixExitTracked.value) return
@@ -283,6 +457,8 @@ function trackPendingPixExit() {
 }
 function closeCheckoutDialog() {
   if (checkoutDialogOpen.value && pixCode.value && !pixPaid.value) trackPendingPixExit()
+  destroyStripeCheckout()
+  if (paymentMethod.value === 'card' && !stripePaid.value) trackVip('vip_card_pending_exit', selected.value?.id)
   checkoutDialogOpen.value = false
 }
 async function openAvatar() { avatarOpen.value = true; await nextTick(); avatarCloseButton.value?.focus() }
@@ -317,6 +493,7 @@ function onPageHide() {
 }
 async function continueToPayment() {
   if (!selected.value || !canPay(selected.value) || paymentLoading.value) return
+  paymentMethod.value = 'pix'
   paymentLoading.value = true
   paymentError.value = ''
   try {
