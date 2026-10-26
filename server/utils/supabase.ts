@@ -8,7 +8,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 /** useServiceSupabase */
 export function useServiceSupabase() {
   const config = useRuntimeConfig()
-  const key = config.supabaseServiceKey || config.public.supabaseAnonKey
+  const key = config.supabaseServiceKey
+  if (!key) throw new Error('SUPABASE_SERVICE_KEY is not configured for server-side access.')
   return createClient(config.public.supabaseUrl, key, {
     auth: { persistSession: false, autoRefreshToken: false }
   })
@@ -33,6 +34,7 @@ export function getClientIp(event: any): string {
 
 /** signAdminToken */
 export function signAdminToken(secret: string): string {
+  if (!secret || secret.length < 32) throw new Error('ADMIN_SESSION_SECRET is not configured securely.')
   const exp = Date.now() + 1000 * 60 * 60 * 24 * 30 // 30 dias — encerra só no logout
   const payload = `admin:${exp}`
   const sig = createHmac('sha256', secret).update(payload).digest('hex')
@@ -41,7 +43,7 @@ export function signAdminToken(secret: string): string {
 
 /** verifyAdminToken */
 export function verifyAdminToken(token: string | undefined, secret: string): boolean {
-  if (!token) return false
+  if (!token || !secret || secret.length < 32) return false
   try {
     const raw = Buffer.from(token, 'base64url').toString('utf8')
     const [payload, sig] = raw.split('.')
