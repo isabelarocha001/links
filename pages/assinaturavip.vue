@@ -94,17 +94,27 @@
           <p v-if="paymentLoading && paymentMethod === 'card' && !stripeMounted" class="vip-modal__note">{{ checkoutText('cardLoading') }}</p>
 
           <div
-            id="vip-stripe-checkout-mount"
-            :hidden="paymentMethod !== 'card'"
-            :aria-hidden="paymentMethod !== 'card' ? 'true' : 'false'"
+            v-show="paymentMethod === 'card'"
             data-integration="stripe-vip"
             class="vip-stripe-mount"
-          ></div>
+          >
+            <div id="vip-stripe-payment-element" class="vip-stripe-element"></div>
+            <button
+              v-if="stripeMounted && !stripePaid"
+              class="vip-checkout__cta"
+              type="button"
+              :disabled="paymentLoading || stripeConfirming"
+              @click="confirmStripePayment"
+            >
+              {{ stripeConfirming ? checkoutText('cardLoading') : checkoutText('payWithCard') }}
+              <span aria-hidden="true">&rarr;</span>
+            </button>
+          </div>
 
           <button v-if="paymentError && paymentMethod === 'pix'" class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="continueToPayment">
             {{ checkoutText('retry') }} <span aria-hidden="true">&rarr;</span>
           </button>
-          <button v-if="paymentError && paymentMethod === 'card'" class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="startStripeVipCheckout">
+          <button v-if="paymentError && paymentMethod === 'card' && !stripeMounted" class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="startStripeVipCheckout">
             {{ checkoutText('retry') }} <span aria-hidden="true">&rarr;</span>
           </button>
         </template>
@@ -348,11 +358,12 @@ function choosePix() {
   paymentError.value = ''
   void continueToPayment()
 }
-function chooseCard() {
+async function chooseCard() {
   if (!cardAvailableForSelected.value) return
   paymentMethod.value = 'card'
   paymentError.value = ''
-  void startStripeVipCheckout()
+  await nextTick()
+  await startStripeVipCheckout()
 }
 
 /** Abre o modal: se só Pix, gera na hora; se cartão disponível, pede o método. */
@@ -459,6 +470,7 @@ async function startStripeVipCheckout() {
     const paymentElement = elements.create('payment', {
       layout: 'tabs',
     })
+    await nextTick()
     await nextTick()
     const mount = document.getElementById('vip-stripe-payment-element')
     if (!mount) throw new Error('mount_missing')

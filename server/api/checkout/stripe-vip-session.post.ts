@@ -100,7 +100,24 @@ export default defineEventHandler(async (event) => {
 
   const supabase = useServiceSupabase()
 
-  // Limite: no máximo 3 sessões pendentes por visitante+plano+moeda
+  // Limite de pendentes: abandona tentativas antigas (>15 min) e no máx. 5 ativas
+  const pendingCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+  await supabase
+    .from('payments')
+    .update({
+      status: 'failed',
+      failed_at: new Date().toISOString(),
+      metadata: { abandoned: true, reason: 'stale_pending' },
+    })
+    .eq('status', 'pending')
+    .eq('payment_method', 'stripe_vip')
+    .contains('metadata', {
+      visitor_id: visitorId,
+      plan_key: catalog.plan_key,
+      currency,
+    })
+    .lt('created_at', pendingCutoff)
+
   const { count: pendingCount } = await supabase
     .from('payments')
     .select('id', { count: 'exact', head: true })
@@ -112,25 +129,29 @@ export default defineEventHandler(async (event) => {
       currency,
     })
 
-  if ((pendingCount || 0) >= 3) {
-    // Tenta reutilizar a mais recente com session ainda aberta
-    const { data: recent } = await supabase
+  if ((pendingCount || 0) >= 5) {
+    // Libera as mais antigas para não travar o visitante
+    const { data: oldRows } = await supabase
       .from('payments')
-      .select('id, external_id, metadata, amount')
+      .select('id')
       .eq('status', 'pending')
       .eq('payment_method', 'stripe_vip')
       .contains('metadata', { visitor_id: visitorId, plan_key: catalog.plan_key, currency })
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+      .order('created_at', { ascending: true })
+      .limit(Math.max(0, (pendingCount || 0) - 2))
 
-    if (recent?.external_id && recent.metadata?.stripe_client_secret_hint !== 'cleared') {
-      // Não devolvemos client_secret antigo (pode ter expirado). Cria nova sessão abaixo
-      // mas respeita o limite — falha se já tem 3
-      throw createError({
-        statusCode: 429,
-        statusMessage: 'Too many pending card attempts. Finish or wait before trying again.',
-      })
+    if (oldRows?.length) {
+      await supabase
+        .from('payments')
+        .update({
+          status: 'failed',
+          failed_at: new Date().toISOString(),
+          metadata: { abandoned: true, reason: 'pending_cap' },
+        })
+        .in(
+          'id',
+          oldRows.map((r: any) => r.id),
+        )
     }
   }
 
