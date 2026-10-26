@@ -26,7 +26,7 @@
         </section>
         <div class="vip-checkout__plans-cta">
           <span class="vip-checkout__rgb-arrow" aria-hidden="true">↓</span>
-          <button class="vip-checkout__cta vip-checkout__plans-trigger" type="button" :disabled="paymentStarted && !pixCode" @click="handleOfferCta">
+          <button class="vip-checkout__cta vip-checkout__plans-trigger" type="button" :disabled="paymentLoading || pixPaid || stripePaid" @click="handleOfferCta">
             {{ pixCode ? checkoutText('viewPix') : checkoutText('choosePlans') }} <span aria-hidden="true">&rarr;</span>
           </button>
         </div>
@@ -50,7 +50,7 @@
         <button class="vip-modal__close" type="button" :aria-label="checkoutText('planClose')" autofocus @click="closePlansDialog">&times;</button>
         <p class="vip-modal__eyebrow">{{ checkoutText('planEyebrow') }}</p>
         <h2 id="plans-title">{{ checkoutText('planTitle') }}</h2>
-        <button v-for="plan in visiblePlans" :key="plan.id" class="vip-plan" :class="{ 'vip-plan--selected': selectedPlan === plan.id, 'vip-plan--featured': plan.id === 'monthly' }" type="button" :aria-pressed="selectedPlan === plan.id" :disabled="!canPay(plan) || paymentStarted" @click="selectPlan(plan)">
+        <button v-for="plan in visiblePlans" :key="plan.id" class="vip-plan" :class="{ 'vip-plan--selected': selectedPlan === plan.id, 'vip-plan--featured': plan.id === 'monthly' }" type="button" :aria-pressed="selectedPlan === plan.id" :disabled="!canPay(plan) || pixPaid || stripePaid" @click="selectPlan(plan)">
           <span class="vip-plan__radio" aria-hidden="true"></span>
           <span class="vip-plan__body"><span class="vip-plan__name">{{ planName(plan) }}</span><span class="vip-plan__detail">{{ planDetail(plan) }}</span></span>
           <span class="vip-plan__price">{{ displayPrice(plan) }}</span>
@@ -299,19 +299,32 @@ function detectCurrency() {
   currency.value = region === 'BR' ? 'BRL' : euroRegions.has(region) ? 'EUR' : 'USD'
 }
 function selectPlan(plan: Plan) {
-  if (canPay(plan) && !paymentStarted.value) {
-    selectedPlan.value = plan.id
-    paymentError.value = ''
-    trackVip('vip_plan_selected', plan.id)
+  if (!canPay(plan) || pixPaid.value || stripePaid.value) return
+  // Trocar de plano reinicia checkout incompleto (Pix/cartão pendente)
+  if (selectedPlan.value !== plan.id && paymentStarted.value) {
+    resetIncompleteCheckout()
   }
+  selectedPlan.value = plan.id
+  paymentError.value = ''
+  trackVip('vip_plan_selected', plan.id)
 }
 function handleOfferCta() {
-  if (pixCode.value) openCheckoutDialog()
-  else if (!paymentStarted.value) plansDialogOpen.value = true
+  void loadStripeJs().catch(() => {})
+  if (pixPaid.value || stripePaid.value) {
+    openCheckoutDialog()
+    return
+  }
+  // Sempre permite reabrir planos (mesmo após tentativa de cartão/Pix)
+  if (pixCode.value) {
+    openCheckoutDialog()
+    return
+  }
+  plansDialogOpen.value = true
 }
 function closePlansDialog() { plansDialogOpen.value = false }
 function continueFromPlans() {
   if (!selected.value || !canPay(selected.value)) return
+  void loadStripeJs().catch(() => {})
   plansDialogOpen.value = false
   void startCheckout()
 }
@@ -393,19 +406,33 @@ async function startCheckout() {
   }
 }
 
+let stripeJsPromise: Promise<any> | null = null
 async function loadStripeJs(): Promise<any> {
   if (typeof window === 'undefined') return null
   const w = window as any
   if (w.Stripe) return w.Stripe
-  await new Promise<void>((resolve, reject) => {
-    const s = document.createElement('script')
-    s.src = 'https://js.stripe.com/v3/'
-    s.async = true
-    s.onload = () => resolve()
-    s.onerror = () => reject(new Error('stripe_js'))
-    document.head.appendChild(s)
-  })
-  return (window as any).Stripe
+  if (!stripeJsPromise) {
+    stripeJsPromise = new Promise<any>((resolve, reject) => {
+      const existing = document.querySelector('script[data-stripe-js]') as HTMLScriptElement | null
+      if (existing) {
+        if (w.Stripe) return resolve(w.Stripe)
+        existing.addEventListener('load', () => resolve(w.Stripe))
+        existing.addEventListener('error', () => reject(new Error('stripe_js')))
+        return
+      }
+      const s = document.createElement('script')
+      s.src = 'https://js.stripe.com/v3/'
+      s.async = true
+      s.dataset.stripeJs = '1'
+      s.onload = () => resolve((window as any).Stripe)
+      s.onerror = () => {
+        stripeJsPromise = null
+        reject(new Error('stripe_js'))
+      }
+      document.head.appendChild(s)
+    })
+  }
+  return stripeJsPromise
 }
 
 async function startStripeVipCheckout() {
@@ -550,10 +577,35 @@ function trackPendingPixExit() {
   pendingPixExitTracked.value = true
   trackVip('vip_pix_pending_exit', selected.value?.id)
 }
+function resetIncompleteCheckout() {
+  destroyStripeCheckout()
+  paymentStarted.value = false
+  paymentLoading.value = false
+  paymentError.value = ''
+  paymentMethod.value = null
+  stripePaid.value = false
+  stripeCapability.value = ''
+  stripeRecurrence.value = ''
+  stripeConfirming.value = false
+  stripeReturnUrl = ''
+  pixCode.value = ''
+  qrImage.value = ''
+  paymentId.value = ''
+  pixPaid.value = false
+  pixStatus.value = checkoutText('waitingStatus')
+  pendingPixExitTracked.value = false
+  copied.value = false
+}
+
 function closeCheckoutDialog() {
   if (checkoutDialogOpen.value && pixCode.value && !pixPaid.value) trackPendingPixExit()
-  destroyStripeCheckout()
   if (paymentMethod.value === 'card' && !stripePaid.value) trackVip('vip_card_pending_exit', selected.value?.id)
+  // Se ainda não pagou, libera escolha de plano e novo checkout
+  if (!pixPaid.value && !stripePaid.value) {
+    resetIncompleteCheckout()
+  } else {
+    destroyStripeCheckout()
+  }
   checkoutDialogOpen.value = false
 }
 async function openAvatar() { avatarOpen.value = true; await nextTick(); avatarCloseButton.value?.focus() }
@@ -651,6 +703,15 @@ onMounted(() => {
   document.documentElement.classList.add('vip-checkout-page')
   document.body.classList.add('vip-checkout-page')
   usesHttps.value = window.location.protocol === 'https:'
+  // Pré-aquece Stripe.js (script + parse) antes do clique em cartão
+  try {
+    const link = document.createElement('link')
+    link.rel = 'preload'
+    link.as = 'script'
+    link.href = 'https://js.stripe.com/v3/'
+    document.head.appendChild(link)
+  } catch { /* ignore */ }
+  void loadStripeJs().catch(() => {})
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
