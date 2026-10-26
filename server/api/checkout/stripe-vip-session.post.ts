@@ -175,17 +175,43 @@ export default defineEventHandler(async (event) => {
   let externalId = ''
   let stripeSubscriptionId: string | null = null
   let stripePaymentIntentId: string | null = null
+  let stripeCustomerId: string | null = null
 
   const idempotencyKey = `vip-el-${payment.id}-${plan}-${currency}`
 
   if (mode === 'subscription') {
-    // Subscription incompleta → client_secret do PaymentIntent da 1ª invoice (Payment Element)
+    // 1) Customer anônimo (API exige customer na subscription)
+    const custParams = new URLSearchParams()
+    for (const [k, v] of Object.entries(metaCommon)) {
+      custParams.append(`metadata[${k}]`, v)
+    }
+    custParams.append('metadata[role]', 'vip_checkout')
+    const { ok: custOk, data: customer } = await stripeForm(
+      secrets.secret,
+      'customers',
+      custParams,
+      `vip-cust-${payment.id}`,
+    )
+    const customerId = String(customer?.id || '')
+    stripeCustomerId = customerId
+    if (!custOk || !customerId) {
+      await supabase
+        .from('payments')
+        .update({ status: 'failed', failed_at: new Date().toISOString() })
+        .eq('id', payment.id)
+      console.error('[stripe-vip-session] customer create failed', customer?.error?.code || 'err')
+      throw createError({ statusCode: 502, statusMessage: 'Stripe could not start card payment.' })
+    }
+
+    // 2) Subscription incompleta → client_secret (confirmation_secret na API atual)
     const params = new URLSearchParams()
+    params.append('customer', customerId)
     params.append('items[0][price]', priceId)
     params.append('items[0][quantity]', '1')
     params.append('payment_behavior', 'default_incomplete')
     params.append('payment_settings[save_default_payment_method]', 'on_subscription')
     params.append('payment_settings[payment_method_types][0]', 'card')
+    params.append('expand[]', 'latest_invoice.confirmation_secret')
     params.append('expand[]', 'latest_invoice.payment_intent')
     for (const [k, v] of Object.entries(metaCommon)) {
       params.append(`metadata[${k}]`, v)
@@ -196,10 +222,18 @@ export default defineEventHandler(async (event) => {
       params,
       idempotencyKey,
     )
-    const pi = sub?.latest_invoice?.payment_intent
+    const inv = typeof sub?.latest_invoice === 'object' && sub?.latest_invoice ? sub.latest_invoice : null
+    const conf = inv?.confirmation_secret
+    const pi = inv?.payment_intent
     const piObj = typeof pi === 'object' && pi ? pi : null
-    clientSecret = String(piObj?.client_secret || '')
-    stripePaymentIntentId = String(piObj?.id || '')
+    clientSecret = String(
+      (conf && conf.client_secret) ||
+        piObj?.client_secret ||
+        '',
+    )
+    // Extrai pi_ do client_secret quando payment_intent não vem expandido
+    const secretPiMatch = clientSecret.match(/^(pi_[^_]+)/)
+    stripePaymentIntentId = String(piObj?.id || secretPiMatch?.[1] || '')
     stripeSubscriptionId = String(sub?.id || '')
     externalId = stripePaymentIntentId || stripeSubscriptionId
     if (!ok || !clientSecret || !externalId) {
@@ -207,7 +241,12 @@ export default defineEventHandler(async (event) => {
         .from('payments')
         .update({ status: 'failed', failed_at: new Date().toISOString() })
         .eq('id', payment.id)
-      console.error('[stripe-vip-session] subscription create failed', status, sub?.error?.code || 'err')
+      console.error(
+        '[stripe-vip-session] subscription create failed',
+        status,
+        sub?.error?.message || sub?.error?.code || 'err',
+        inv ? 'has_invoice' : 'no_invoice',
+      )
       throw createError({ statusCode: 502, statusMessage: 'Stripe could not start card payment.' })
     }
   } else {
@@ -257,6 +296,7 @@ export default defineEventHandler(async (event) => {
         recurrence: validated.recurrence.label_key,
         stripe_payment_intent_id: stripePaymentIntentId,
         stripe_subscription_id: stripeSubscriptionId,
+        stripe_customer_id: stripeCustomerId,
         // Nunca persistir client_secret
       },
     })
