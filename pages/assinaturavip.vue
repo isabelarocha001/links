@@ -73,13 +73,12 @@
           <p v-else-if="selected?.id === 'lifetime' && paymentMethod !== 'card'" class="vip-modal__note">{{ checkoutText('lifetimeTerms') }}</p>
           <p v-else-if="paymentMethod === 'card'" class="vip-modal__note">{{ cardTermsText }}</p>
 
-          <div v-if="!paymentMethod && !paymentLoading" class="vip-pay-methods" role="group" :aria-label="checkoutText('chooseMethod')">
+          <div v-if="!paymentMethod && !paymentLoading && showPixOption && cardAvailableForSelected" class="vip-pay-methods" role="group" :aria-label="checkoutText('chooseMethod')">
             <p class="vip-modal__note">{{ checkoutText('chooseMethod') }}</p>
             <button class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected)" @click="choosePix">
               {{ checkoutText('payWithPix') }} <span aria-hidden="true">&rarr;</span>
             </button>
             <button
-              v-if="cardAvailableForSelected"
               class="vip-checkout__cta vip-checkout__cta--secondary"
               type="button"
               :disabled="!selected || !canPay(selected)"
@@ -340,6 +339,21 @@ const cardAvailableForSelected = computed(() => {
   const plan = selected.value.id
   return cardAvailability.value.some((m) => m.plan === plan && m.currency === currency.value)
 })
+/** Pix só para público BR em português (ou BRL sem cartão como fallback). */
+const isPortugueseLocale = computed(() => {
+  const tags = [
+    String(locale.value || ''),
+    String(checkoutLanguage.value || ''),
+    ...(typeof navigator !== 'undefined' ? (navigator.languages || [navigator.language]) : []),
+  ]
+  return tags.some((t) => String(t).toLowerCase().startsWith('pt'))
+})
+const showPixOption = computed(() => {
+  if (currency.value !== 'BRL') return false
+  if (isPortugueseLocale.value) return true
+  // Idioma não-pt: não oferece Pix se cartão estiver disponível
+  return !cardAvailableForSelected.value
+})
 const cardTermsText = computed(() => {
   if (selected.value?.id === 'lifetime') return checkoutText('cardTermsLifetime')
   if (stripeRecurrence.value === 'every_30_days') return checkoutText('cardTermsMonth30')
@@ -390,20 +404,26 @@ async function startCheckout() {
   destroyStripeCheckout()
   openCheckoutDialog()
   await refreshCardAvailability()
-  if (currency.value !== 'BRL') {
-    if (!cardAvailableForSelected.value) {
-      paymentError.value = checkoutText('cardNotConfigured')
-      return
-    }
+
+  const canCard = cardAvailableForSelected.value
+  const canPix = showPixOption.value
+
+  // Só cartão (USD/EUR ou BRL em idioma não-pt com cartão)
+  if (canCard && !canPix) {
     paymentMethod.value = 'card'
     await startStripeVipCheckout()
     return
   }
-  // Sem cartão configurado → fluxo Pix atual (auto)
-  if (!cardAvailableForSelected.value) {
+  // Só Pix
+  if (canPix && !canCard) {
     paymentMethod.value = 'pix'
     await continueToPayment()
+    return
   }
+  // BRL + pt: deixa escolher no modal (Pix e cartão)
+  if (canPix && canCard) return
+
+  paymentError.value = checkoutText('cardNotConfigured')
 }
 
 let stripeJsPromise: Promise<any> | null = null
