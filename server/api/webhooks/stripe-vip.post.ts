@@ -19,6 +19,8 @@ const RELEVANT = new Set([
   'checkout.session.async_payment_succeeded',
   'checkout.session.async_payment_failed',
   'checkout.session.expired',
+  'payment_intent.succeeded',
+  'payment_intent.payment_failed',
   'invoice.paid',
   'invoice.payment_failed',
   'customer.subscription.updated',
@@ -98,6 +100,10 @@ export default defineEventHandler(async (event) => {
       type === 'checkout.session.expired'
     ) {
       await handleSessionFailed(supabase, obj, type)
+    } else if (type === 'payment_intent.succeeded') {
+      await handlePaymentIntentSucceeded(supabase, secrets.secret, obj)
+    } else if (type === 'payment_intent.payment_failed') {
+      await handlePaymentIntentFailed(supabase, obj)
     } else if (type === 'invoice.paid') {
       await handleInvoicePaid(supabase, secrets.secret, obj)
     } else if (type === 'invoice.payment_failed') {
@@ -172,6 +178,57 @@ async function handleSessionFailed(supabase: any, session: any, type: string) {
       status: 'failed',
       failed_at: new Date().toISOString(),
       metadata: { stripe_fail_event: type },
+    })
+    .eq('id', paymentId)
+    .eq('payment_method', 'stripe_vip')
+    .eq('status', 'pending')
+}
+
+async function handlePaymentIntentSucceeded(supabase: any, secret: string, pi: any) {
+  const paymentId = String(pi?.metadata?.payment_id || '')
+  const source = String(pi?.metadata?.source || '')
+  if (!paymentId || source !== 'assinaturavip') return
+  if (secret) {
+    const { ok, data } = await stripeGet(secret, `payment_intents/${encodeURIComponent(String(pi.id || ''))}`)
+    if (!ok || data?.status !== 'succeeded') {
+      console.error('[stripe-vip-webhook] PI not succeeded on retrieve', pi?.id)
+      return
+    }
+  } else {
+    return
+  }
+  const { data: row } = await supabase
+    .from('payments')
+    .select('id, status, metadata')
+    .eq('id', paymentId)
+    .eq('payment_method', 'stripe_vip')
+    .maybeSingle()
+  if (!row || row.status === 'approved') return
+  await supabase
+    .from('payments')
+    .update({
+      status: 'approved',
+      external_id: String(pi.id || row.id),
+      metadata: {
+        ...(row.metadata || {}),
+        stripe_payment_intent_id: pi.id || null,
+        stripe_payment_status: 'succeeded',
+        confirmed_via: 'webhook_payment_intent',
+      },
+    })
+    .eq('id', paymentId)
+    .eq('status', 'pending')
+}
+
+async function handlePaymentIntentFailed(supabase: any, pi: any) {
+  const paymentId = String(pi?.metadata?.payment_id || '')
+  if (!paymentId || String(pi?.metadata?.source || '') !== 'assinaturavip') return
+  await supabase
+    .from('payments')
+    .update({
+      status: 'failed',
+      failed_at: new Date().toISOString(),
+      metadata: { stripe_fail_event: 'payment_intent.payment_failed' },
     })
     .eq('id', paymentId)
     .eq('payment_method', 'stripe_vip')

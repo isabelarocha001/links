@@ -162,40 +162,81 @@ export default defineEventHandler(async (event) => {
   }
 
   const mode = plan === 'monthly' ? 'subscription' : 'payment'
-  const params = new URLSearchParams()
-  params.append('mode', mode)
-  params.append('ui_mode', 'embedded')
-  params.append('return_url', `${origin}/assinaturavip?stripe_vip=1&payment_id=${payment.id}`)
-  params.append('line_items[0][price]', priceId)
-  params.append('line_items[0][quantity]', '1')
-  params.append('metadata[payment_id]', payment.id)
-  params.append('metadata[plan_key]', catalog.plan_key)
-  params.append('metadata[plan]', plan)
-  params.append('metadata[source]', 'assinaturavip')
-  params.append('metadata[visitor_id]', visitorId)
-  params.append('metadata[currency]', currency)
-  if (mode === 'subscription') {
-    params.append('subscription_data[metadata][payment_id]', payment.id)
-    params.append('subscription_data[metadata][plan_key]', catalog.plan_key)
-    params.append('subscription_data[metadata][source]', 'assinaturavip')
-    params.append('subscription_data[metadata][visitor_id]', visitorId)
+  const metaCommon: Record<string, string> = {
+    payment_id: payment.id,
+    plan_key: catalog.plan_key,
+    plan,
+    source: 'assinaturavip',
+    visitor_id: visitorId,
+    currency,
   }
 
-  const idempotencyKey = `vip-${payment.id}-${plan}-${currency}`
-  const { ok, status, data: session } = await stripeForm(
-    secrets.secret,
-    'checkout/sessions',
-    params,
-    idempotencyKey,
-  )
+  let clientSecret = ''
+  let externalId = ''
+  let stripeSubscriptionId: string | null = null
+  let stripePaymentIntentId: string | null = null
 
-  if (!ok || !session?.client_secret || !session?.id) {
-    await supabase
-      .from('payments')
-      .update({ status: 'failed', failed_at: new Date().toISOString() })
-      .eq('id', payment.id)
-    console.error('[stripe-vip-session] session create failed', status, session?.error?.code || 'err')
-    throw createError({ statusCode: 502, statusMessage: 'Stripe could not create the session.' })
+  const idempotencyKey = `vip-el-${payment.id}-${plan}-${currency}`
+
+  if (mode === 'subscription') {
+    // Subscription incompleta → client_secret do PaymentIntent da 1ª invoice (Payment Element)
+    const params = new URLSearchParams()
+    params.append('items[0][price]', priceId)
+    params.append('items[0][quantity]', '1')
+    params.append('payment_behavior', 'default_incomplete')
+    params.append('payment_settings[save_default_payment_method]', 'on_subscription')
+    params.append('payment_settings[payment_method_types][0]', 'card')
+    params.append('expand[]', 'latest_invoice.payment_intent')
+    for (const [k, v] of Object.entries(metaCommon)) {
+      params.append(`metadata[${k}]`, v)
+    }
+    const { ok, status, data: sub } = await stripeForm(
+      secrets.secret,
+      'subscriptions',
+      params,
+      idempotencyKey,
+    )
+    const pi = sub?.latest_invoice?.payment_intent
+    const piObj = typeof pi === 'object' && pi ? pi : null
+    clientSecret = String(piObj?.client_secret || '')
+    stripePaymentIntentId = String(piObj?.id || '')
+    stripeSubscriptionId = String(sub?.id || '')
+    externalId = stripePaymentIntentId || stripeSubscriptionId
+    if (!ok || !clientSecret || !externalId) {
+      await supabase
+        .from('payments')
+        .update({ status: 'failed', failed_at: new Date().toISOString() })
+        .eq('id', payment.id)
+      console.error('[stripe-vip-session] subscription create failed', status, sub?.error?.code || 'err')
+      throw createError({ statusCode: 502, statusMessage: 'Stripe could not start card payment.' })
+    }
+  } else {
+    // Vitalício: PaymentIntent one-shot (Payment Element)
+    const params = new URLSearchParams()
+    params.append('amount', String(expectedCents))
+    params.append('currency', currency.toLowerCase())
+    params.append('payment_method_types[0]', 'card')
+    params.append('description', String(catalog.title || 'VIP'))
+    for (const [k, v] of Object.entries(metaCommon)) {
+      params.append(`metadata[${k}]`, v)
+    }
+    const { ok, status, data: pi } = await stripeForm(
+      secrets.secret,
+      'payment_intents',
+      params,
+      idempotencyKey,
+    )
+    clientSecret = String(pi?.client_secret || '')
+    stripePaymentIntentId = String(pi?.id || '')
+    externalId = stripePaymentIntentId
+    if (!ok || !clientSecret || !externalId) {
+      await supabase
+        .from('payments')
+        .update({ status: 'failed', failed_at: new Date().toISOString() })
+        .eq('id', payment.id)
+      console.error('[stripe-vip-session] payment_intent create failed', status, pi?.error?.code || 'err')
+      throw createError({ statusCode: 502, statusMessage: 'Stripe could not start card payment.' })
+    }
   }
 
   const capability = mintCapabilityToken(secrets.capabilitySecret, payment.id, visitorId)
@@ -203,7 +244,7 @@ export default defineEventHandler(async (event) => {
   const { error: updateError } = await supabase
     .from('payments')
     .update({
-      external_id: session.id,
+      external_id: externalId,
       metadata: {
         source: 'assinaturavip',
         plan_key: catalog.plan_key,
@@ -212,19 +253,20 @@ export default defineEventHandler(async (event) => {
         currency,
         provider: 'stripe',
         mode,
+        ui: 'payment_element',
         recurrence: validated.recurrence.label_key,
-        stripe_session_id: session.id,
+        stripe_payment_intent_id: stripePaymentIntentId,
+        stripe_subscription_id: stripeSubscriptionId,
         // Nunca persistir client_secret
       },
     })
     .eq('id', payment.id)
 
   if (updateError) {
-    console.error('[stripe-vip-session] persist session id failed', updateError.code || 'unknown')
-    // Não devolve client_secret se não rastreou
+    console.error('[stripe-vip-session] persist intent id failed', updateError.code || 'unknown')
     throw createError({
       statusCode: 503,
-      statusMessage: 'Session created but could not be tracked. Do not pay yet; try again.',
+      statusMessage: 'Payment created but could not be tracked. Do not pay yet; try again.',
     })
   }
 
@@ -232,8 +274,9 @@ export default defineEventHandler(async (event) => {
   return {
     ok: true,
     payment_id: payment.id,
-    session_id: session.id,
-    client_secret: session.client_secret,
+    payment_intent_id: stripePaymentIntentId,
+    subscription_id: stripeSubscriptionId,
+    client_secret: clientSecret,
     publishable_key: secrets.publishable,
     capability_token: capability,
     amount: expectedCents / 100,
@@ -242,8 +285,10 @@ export default defineEventHandler(async (event) => {
     plan,
     plan_key: catalog.plan_key,
     mode,
+    ui: 'payment_element',
     recurrence: validated.recurrence.label_key,
     title: catalog.title,
+    return_url: `${origin}/assinaturavip?stripe_vip=1&payment_id=${payment.id}`,
   }
 })
 

@@ -236,7 +236,11 @@ const stripeMounted = ref(false)
 const stripePaid = ref(false)
 const stripeCapability = ref('')
 const stripeRecurrence = ref('')
-let stripeCheckoutInstance: { destroy?: () => void } | null = null
+const stripeConfirming = ref(false)
+let stripeInstance: any = null
+let stripeElements: any = null
+let stripePaymentElement: any = null
+let stripeReturnUrl = ''
 const currency = ref<Currency>('BRL')
 const locale = ref('pt-BR')
 const pixCode = ref('')
@@ -329,10 +333,13 @@ async function refreshCardAvailability() {
 }
 
 function destroyStripeCheckout() {
-  try { stripeCheckoutInstance?.destroy?.() } catch { /* ignore */ }
-  stripeCheckoutInstance = null
+  try { stripePaymentElement?.unmount?.() } catch { /* ignore */ }
+  stripePaymentElement = null
+  stripeElements = null
+  stripeInstance = null
   stripeMounted.value = false
-  const el = document.getElementById('vip-stripe-checkout-mount')
+  stripeConfirming.value = false
+  const el = document.getElementById('vip-stripe-payment-element')
   if (el) el.innerHTML = ''
 }
 
@@ -415,17 +422,50 @@ async function startStripeVipCheckout() {
     paymentId.value = response.payment_id
     stripeCapability.value = response.capability_token || ''
     stripeRecurrence.value = response.recurrence || ''
+    stripeReturnUrl = response.return_url || `${window.location.origin}/assinaturavip?stripe_vip=1&payment_id=${response.payment_id}`
     paymentStarted.value = true
     trackVip('vip_card_session_created', selected.value.id)
 
     const StripeCtor = await loadStripeJs()
     if (!StripeCtor) throw new Error('stripe_js')
     const stripe = StripeCtor(response.publishable_key)
-    const checkout = await stripe.initEmbeddedCheckout({ clientSecret: response.client_secret })
-    const mount = document.getElementById('vip-stripe-checkout-mount')
+    // Payment Element inline — visual alinhado ao modal VIP (tema night)
+    const elements = stripe.elements({
+      clientSecret: response.client_secret,
+      appearance: {
+        theme: 'night',
+        variables: {
+          colorPrimary: '#f472b6',
+          colorBackground: '#141016',
+          colorText: '#f8f4f6',
+          colorDanger: '#fb7185',
+          fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
+          borderRadius: '12px',
+          spacingUnit: '4px',
+        },
+        rules: {
+          '.Input': {
+            backgroundColor: '#1c161c',
+            border: '1px solid rgba(255,255,255,0.12)',
+          },
+          '.Input:focus': {
+            border: '1px solid #f472b6',
+            boxShadow: '0 0 0 1px #f472b6',
+          },
+          '.Label': { color: 'rgba(248,244,246,0.75)' },
+        },
+      },
+    })
+    const paymentElement = elements.create('payment', {
+      layout: 'tabs',
+    })
+    await nextTick()
+    const mount = document.getElementById('vip-stripe-payment-element')
     if (!mount) throw new Error('mount_missing')
-    checkout.mount('#vip-stripe-checkout-mount')
-    stripeCheckoutInstance = checkout
+    paymentElement.mount('#vip-stripe-payment-element')
+    stripeInstance = stripe
+    stripeElements = elements
+    stripePaymentElement = paymentElement
     stripeMounted.value = true
     trackVip('vip_card_checkout_mounted', selected.value.id)
     void pollStripeStatus()
@@ -434,6 +474,38 @@ async function startStripeVipCheckout() {
     trackVip('vip_card_session_error', selected.value?.id)
   } finally {
     paymentLoading.value = false
+  }
+}
+
+async function confirmStripePayment() {
+  if (!stripeInstance || !stripeElements || stripeConfirming.value || stripePaid.value) return
+  stripeConfirming.value = true
+  paymentError.value = ''
+  try {
+    const { error, paymentIntent } = await stripeInstance.confirmPayment({
+      elements: stripeElements,
+      confirmParams: {
+        return_url: stripeReturnUrl || `${window.location.origin}/assinaturavip`,
+      },
+      redirect: 'if_required',
+    })
+    if (error) {
+      paymentError.value = error.message || checkoutText('cardError')
+      trackVip('vip_card_confirm_error', selected.value?.id)
+      return
+    }
+    if (paymentIntent?.status === 'succeeded') {
+      stripePaid.value = true
+      destroyStripeCheckout()
+      trackVip('vip_card_paid', selected.value?.id)
+      return
+    }
+    // 3DS ou processamento: poll continua
+    void pollStripeStatus()
+  } catch (e: any) {
+    paymentError.value = e?.message || checkoutText('cardError')
+  } finally {
+    stripeConfirming.value = false
   }
 }
 

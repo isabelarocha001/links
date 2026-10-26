@@ -74,17 +74,45 @@ export default defineEventHandler(async (event) => {
   let paid = false
 
   if (secrets.secret && payment.external_id) {
-    const { ok, data: session } = await stripeGet(
-      secrets.secret,
-      `checkout/sessions/${encodeURIComponent(String(payment.external_id))}`,
-    )
-    if (ok && session?.id) {
-      providerStatus = String(session.status || '')
-      paymentStatus = String(session.payment_status || '')
-      // Só declara pago com confirmação do provedor (payment_status=paid)
-      paid = paymentStatus === 'paid'
+    const ext = String(payment.external_id)
+    let ok = false
+    let data: any = null
 
-      // Sincroniza DB se Stripe diz pago e ainda pending
+    if (ext.startsWith('pi_')) {
+      ;({ ok, data } = await stripeGet(secrets.secret, `payment_intents/${encodeURIComponent(ext)}`))
+      if (ok && data?.id) {
+        providerStatus = String(data.status || '')
+        paymentStatus = providerStatus
+        paid = providerStatus === 'succeeded'
+      }
+    } else if (ext.startsWith('sub_')) {
+      ;({ ok, data } = await stripeGet(
+        secrets.secret,
+        `subscriptions/${encodeURIComponent(ext)}?expand[]=${encodeURIComponent('latest_invoice.payment_intent')}`,
+      ))
+      if (ok && data?.id) {
+        providerStatus = String(data.status || '')
+        const pi = data?.latest_invoice?.payment_intent
+        const piStatus = typeof pi === 'object' && pi ? String(pi.status || '') : ''
+        paymentStatus = piStatus || providerStatus
+        paid = piStatus === 'succeeded' || ['active', 'trialing'].includes(providerStatus)
+      }
+    } else if (ext.startsWith('cs_')) {
+      // Legacy Checkout Session
+      ;({ ok, data } = await stripeGet(
+        secrets.secret,
+        `checkout/sessions/${encodeURIComponent(ext)}`,
+      ))
+      if (ok && data?.id) {
+        providerStatus = String(data.status || '')
+        paymentStatus = String(data.payment_status || '')
+        paid = paymentStatus === 'paid'
+      }
+    } else {
+      ok = false
+    }
+
+    if (ok && data?.id) {
       if (paid && payment.status !== 'approved') {
         await supabase
           .from('payments')
@@ -93,7 +121,7 @@ export default defineEventHandler(async (event) => {
             metadata: {
               ...(payment.metadata || {}),
               stripe_payment_status: paymentStatus,
-              stripe_session_status: providerStatus,
+              stripe_provider_status: providerStatus,
               confirmed_via: 'status_poll',
             },
           })
@@ -101,7 +129,6 @@ export default defineEventHandler(async (event) => {
           .eq('status', 'pending')
       }
     } else {
-      // Provedor indisponível: não promove a approved
       setHeader(event, 'Retry-After', '15')
       return {
         ok: true,
@@ -114,7 +141,7 @@ export default defineEventHandler(async (event) => {
       }
     }
   } else {
-    // Sem secret ou session: nunca trata status local approved como pago definitivo
+    // Sem secret ou external_id: nunca trata status local approved como pago definitivo
     paid = false
   }
 
