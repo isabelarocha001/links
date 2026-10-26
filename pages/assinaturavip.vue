@@ -56,7 +56,6 @@
           <span class="vip-plan__price">{{ displayPrice(plan) }}</span>
           <span v-if="plan.badge" class="vip-plan__badge">{{ planBadge(plan) }}</span>
         </button>
-        <p v-if="currency !== 'BRL'" class="vip-checkout__fineprint" role="status">{{ checkoutText('paymentNotAvailable') }}</p>
         <p v-if="paymentError" class="vip-checkout__fineprint" role="status">{{ paymentError }}</p>
         <button class="vip-checkout__cta" type="button" :disabled="!selected || !canPay(selected) || paymentLoading" @click="continueFromPlans">
           {{ pixCode ? checkoutText('continuePlan') : checkoutText('subscribe') }} <span aria-hidden="true">&rarr;</span>
