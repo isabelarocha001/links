@@ -250,6 +250,20 @@ let stripeInstance: any = null
 let stripeElements: any = null
 let stripePaymentElement: any = null
 let stripeReturnUrl = ''
+type StripePrefetch = {
+  plan: string
+  currency: string
+  client_secret: string
+  publishable_key: string
+  payment_id: string
+  capability_token: string
+  recurrence: string
+  return_url: string
+  fetchedAt: number
+}
+let stripePrefetchCache: StripePrefetch | null = null
+let stripePrefetchInFlight: Promise<StripePrefetch | null> | null = null
+const STRIPE_PREFETCH_TTL_MS = 8 * 60 * 1000
 const currency = ref<Currency>('BRL')
 const locale = ref('pt-BR')
 const pixCode = ref('')
@@ -303,12 +317,18 @@ function selectPlan(plan: Plan) {
   if (selectedPlan.value !== plan.id && paymentStarted.value) {
     resetIncompleteCheckout()
   }
+  if (selectedPlan.value !== plan.id) {
+    stripePrefetchCache = null
+  }
   selectedPlan.value = plan.id
   paymentError.value = ''
   trackVip('vip_plan_selected', plan.id)
+  void loadStripeJs().catch(() => {})
+  void prefetchStripeSession().catch(() => {})
 }
 function handleOfferCta() {
   void loadStripeJs().catch(() => {})
+  void prefetchStripeSession().catch(() => {})
   if (pixPaid.value || stripePaid.value) {
     openCheckoutDialog()
     return
@@ -324,6 +344,7 @@ function closePlansDialog() { plansDialogOpen.value = false }
 function continueFromPlans() {
   if (!selected.value || !canPay(selected.value)) return
   void loadStripeJs().catch(() => {})
+  void prefetchStripeSession().catch(() => {})
   plansDialogOpen.value = false
   void startCheckout()
 }
@@ -455,82 +476,133 @@ async function loadStripeJs(): Promise<any> {
   return stripeJsPromise
 }
 
+async function prefetchStripeSession(force = false): Promise<StripePrefetch | null> {
+  if (!selected.value || !canPay(selected.value)) return null
+  if (!cardAvailableForSelected.value) return null
+  const plan = selected.value.id
+  const cur = currency.value
+  const now = Date.now()
+  if (
+    !force
+    && stripePrefetchCache
+    && stripePrefetchCache.plan === plan
+    && stripePrefetchCache.currency === cur
+    && now - stripePrefetchCache.fetchedAt < STRIPE_PREFETCH_TTL_MS
+  ) {
+    return stripePrefetchCache
+  }
+  if (stripePrefetchInFlight) return stripePrefetchInFlight
+  stripePrefetchInFlight = (async () => {
+    try {
+      await loadStripeJs()
+      const response = await $fetch<any>('/api/checkout/stripe-vip-session', {
+        method: 'POST',
+        body: {
+          plan,
+          currency: cur,
+          visitor_id: getVipVisitorId(),
+          return_origin: window.location.origin,
+        },
+      })
+      if (!response?.ok || !response.client_secret || !response.publishable_key || !response.payment_id) {
+        return null
+      }
+      stripePrefetchCache = {
+        plan,
+        currency: cur,
+        client_secret: response.client_secret,
+        publishable_key: response.publishable_key,
+        payment_id: response.payment_id,
+        capability_token: response.capability_token || '',
+        recurrence: response.recurrence || '',
+        return_url: response.return_url || `${window.location.origin}/assinaturavip?stripe_vip=1&payment_id=${response.payment_id}`,
+        fetchedAt: Date.now(),
+      }
+      return stripePrefetchCache
+    } catch {
+      return null
+    } finally {
+      stripePrefetchInFlight = null
+    }
+  })()
+  return stripePrefetchInFlight
+}
+
+async function mountStripePaymentElement(pre: StripePrefetch) {
+  const StripeCtor = await loadStripeJs()
+  if (!StripeCtor) throw new Error('stripe_js')
+  const stripe = StripeCtor(pre.publishable_key)
+  const elements = stripe.elements({
+    clientSecret: pre.client_secret,
+    appearance: {
+      theme: 'night',
+      variables: {
+        colorPrimary: '#f472b6',
+        colorBackground: '#141016',
+        colorText: '#f8f4f6',
+        colorDanger: '#fb7185',
+        fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
+        borderRadius: '12px',
+        spacingUnit: '4px',
+      },
+      rules: {
+        '.Input': {
+          backgroundColor: '#1c161c',
+          border: '1px solid rgba(255,255,255,0.12)',
+        },
+        '.Input:focus': {
+          border: '1px solid #f472b6',
+          boxShadow: '0 0 0 1px #f472b6',
+        },
+        '.Label': { color: 'rgba(248,244,246,0.75)' },
+      },
+    },
+  })
+  const paymentElement = elements.create('payment', { layout: 'tabs' })
+  await nextTick()
+  await nextTick()
+  const mount = document.getElementById('vip-stripe-payment-element')
+  if (!mount) throw new Error('mount_missing')
+  paymentElement.mount('#vip-stripe-payment-element')
+  stripeInstance = stripe
+  stripeElements = elements
+  stripePaymentElement = paymentElement
+  stripeMounted.value = true
+  paymentId.value = pre.payment_id
+  stripeCapability.value = pre.capability_token
+  stripeRecurrence.value = pre.recurrence
+  stripeReturnUrl = pre.return_url
+  paymentStarted.value = true
+  trackVip('vip_card_checkout_mounted', selected.value?.id)
+  void pollStripeStatus()
+}
+
 async function startStripeVipCheckout() {
   if (!selected.value || !canPay(selected.value) || paymentLoading.value) return
   if (!cardAvailableForSelected.value) {
     paymentError.value = checkoutText('cardNotConfigured')
     return
   }
-  paymentLoading.value = true
+  paymentMethod.value = 'card'
   paymentError.value = ''
-  destroyStripeCheckout()
+  const ready =
+    !!stripePrefetchCache
+    && stripePrefetchCache.plan === selected.value.id
+    && stripePrefetchCache.currency === currency.value
+    && Date.now() - stripePrefetchCache.fetchedAt < STRIPE_PREFETCH_TTL_MS
+  if (!ready) paymentLoading.value = true
   try {
-    const response = await $fetch<any>('/api/checkout/stripe-vip-session', {
-      method: 'POST',
-      body: {
-        plan: selected.value.id,
-        currency: currency.value,
-        visitor_id: getVipVisitorId(),
-        return_origin: window.location.origin,
-      },
-    })
-    if (!response?.ok || !response.client_secret || !response.publishable_key || !response.payment_id) {
-      throw new Error('card_session_failed')
-    }
-    paymentId.value = response.payment_id
-    stripeCapability.value = response.capability_token || ''
-    stripeRecurrence.value = response.recurrence || ''
-    stripeReturnUrl = response.return_url || `${window.location.origin}/assinaturavip?stripe_vip=1&payment_id=${response.payment_id}`
-    paymentStarted.value = true
+    destroyStripeCheckout()
+    const pre = ready ? stripePrefetchCache! : await prefetchStripeSession()
+    if (!pre) throw new Error('card_session_failed')
     trackVip('vip_card_session_created', selected.value.id)
-
-    const StripeCtor = await loadStripeJs()
-    if (!StripeCtor) throw new Error('stripe_js')
-    const stripe = StripeCtor(response.publishable_key)
-    // Payment Element inline — visual alinhado ao modal VIP (tema night)
-    const elements = stripe.elements({
-      clientSecret: response.client_secret,
-      appearance: {
-        theme: 'night',
-        variables: {
-          colorPrimary: '#f472b6',
-          colorBackground: '#141016',
-          colorText: '#f8f4f6',
-          colorDanger: '#fb7185',
-          fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
-          borderRadius: '12px',
-          spacingUnit: '4px',
-        },
-        rules: {
-          '.Input': {
-            backgroundColor: '#1c161c',
-            border: '1px solid rgba(255,255,255,0.12)',
-          },
-          '.Input:focus': {
-            border: '1px solid #f472b6',
-            boxShadow: '0 0 0 1px #f472b6',
-          },
-          '.Label': { color: 'rgba(248,244,246,0.75)' },
-        },
-      },
-    })
-    const paymentElement = elements.create('payment', {
-      layout: 'tabs',
-    })
     await nextTick()
-    await nextTick()
-    const mount = document.getElementById('vip-stripe-payment-element')
-    if (!mount) throw new Error('mount_missing')
-    paymentElement.mount('#vip-stripe-payment-element')
-    stripeInstance = stripe
-    stripeElements = elements
-    stripePaymentElement = paymentElement
-    stripeMounted.value = true
-    trackVip('vip_card_checkout_mounted', selected.value.id)
-    void pollStripeStatus()
+    await mountStripePaymentElement(pre)
+    stripePrefetchCache = null
   } catch (error: any) {
     paymentError.value = error?.data?.statusMessage || error?.data?.message || checkoutText('cardError')
     trackVip('vip_card_session_error', selected.value?.id)
+    void prefetchStripeSession(true)
   } finally {
     paymentLoading.value = false
   }
@@ -559,7 +631,6 @@ async function confirmStripePayment() {
       trackVip('vip_card_paid', selected.value?.id)
       return
     }
-    // 3DS ou processamento: poll continua
     void pollStripeStatus()
   } catch (e: any) {
     paymentError.value = e?.message || checkoutText('cardError')
@@ -599,6 +670,7 @@ function trackPendingPixExit() {
 }
 function resetIncompleteCheckout() {
   destroyStripeCheckout()
+  // Mantém prefetch se for do mesmo plano; invalida se trocar depois
   paymentStarted.value = false
   paymentLoading.value = false
   paymentError.value = ''
@@ -723,7 +795,7 @@ onMounted(() => {
   document.documentElement.classList.add('vip-checkout-page')
   document.body.classList.add('vip-checkout-page')
   usesHttps.value = window.location.protocol === 'https:'
-  // Pré-aquece Stripe.js (script + parse) antes do clique em cartão
+  // Pré-aquece Stripe.js + sessão de cartão enquanto o usuário ainda está na página
   try {
     const link = document.createElement('link')
     link.rel = 'preload'
@@ -731,7 +803,15 @@ onMounted(() => {
     link.href = 'https://js.stripe.com/v3/'
     document.head.appendChild(link)
   } catch { /* ignore */ }
-  void loadStripeJs().catch(() => {})
+  void (async () => {
+    try {
+      await loadStripeJs()
+      await refreshCardAvailability()
+      if (cardAvailableForSelected.value) {
+        await prefetchStripeSession()
+      }
+    } catch { /* warm best-effort */ }
+  })()
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
