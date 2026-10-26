@@ -10,10 +10,10 @@ Os planos têm naturezas diferentes:
 
 | Chave interna | Produto | Tipo Stripe | Preço conhecido hoje |
 |---|---|---|---|
-| `monthly` / `vip_monthly` | Canal VIP mensal | Assinatura recorrente, ciclo de 30 dias | BRL 29,90; USD e EUR ainda não definidos |
-| `lifetime` / `vip_lifetime` | Acesso vitalício | Pagamento único | BRL 109,90; USD e EUR ainda não definidos |
+| `monthly` / `vip_monthly` | Canal VIP mensal | Assinatura recorrente, ciclo de 30 dias | BRL/USD/EUR 29,90 em cada moeda |
+| `lifetime` / `vip_lifetime` | Acesso vitalício | Pagamento único | BRL/USD/EUR 109,90 em cada moeda |
 
-Não invente preços para USD/EUR nem converta BRL por câmbio. Deixe cada combinação indisponível até que o responsável informe e cadastre seu preço próprio. O estado atual da página já faz isso: os valores estrangeiros são `null` e `canPay()` só habilita BRL. A dashboard atual é uma demonstração local via `localStorage`, não é um catálogo de produção nem fonte confiável de preço.
+Os valores numéricos de BRL, USD e EUR são iguais por decisão do responsável; não converter BRL por câmbio. Cada moeda continua indisponível até que exista um Price Stripe ativo, validado e cadastrado no segredo correspondente. A dashboard atual é uma demonstração local via `localStorage`, não é um catálogo de produção nem fonte confiável de preço.
 
 ## Arquitetura atual que deve ser preservada
 

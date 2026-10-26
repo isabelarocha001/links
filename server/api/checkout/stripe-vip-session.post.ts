@@ -7,7 +7,6 @@
  * Resposta: client_secret, publishable_key, payment_id, capability_token, amount, recurrence…
  */
 import {
-  VIP_STRIPE_CATALOG,
   assertRateLimit,
   clientIp,
   fetchAndValidatePrice,
@@ -17,9 +16,11 @@ import {
   resolveVipPlan,
   sanitizeOrigin,
   stripeForm,
+  type VipStripeCurrency,
   type VipStripePlanKey,
 } from '../../utils/stripe-vip'
 import { useServiceSupabase } from '../../utils/supabase'
+import { VIP_STRIPE_CATALOG, VIP_STRIPE_CURRENCIES } from '../../utils/stripe-vip-catalog.mjs'
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -31,13 +32,17 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event).catch(() => ({} as any))
   const plan = resolveVipPlan(body?.plan || body?.plan_key)
-  const currency = String(body?.currency || 'BRL').toUpperCase().slice(0, 3)
+  const currencyInput = String(body?.currency || 'BRL').toUpperCase().slice(0, 3)
   const visitorId = String(body?.visitor_id || '').trim()
   const origin = sanitizeOrigin(body?.return_origin || getHeader(event, 'origin'))
 
   if (!plan) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid plan.' })
   }
+  if (!VIP_STRIPE_CURRENCIES.includes(currencyInput as VipStripeCurrency)) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid currency.' })
+  }
+  const currency = currencyInput as VipStripeCurrency
   if (!UUID_RE.test(visitorId)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid visitor.' })
   }
@@ -69,8 +74,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const catalog = VIP_STRIPE_CATALOG[plan]
-  const expectedCents = catalog.amount_cents[currency as 'BRL']
-  const priceId = secrets.priceIds[plan][currency as 'BRL']
+  const expectedCents = catalog.amount_cents[currency]
+  const priceId = secrets.priceIds[plan][currency]
   if (!expectedCents || !priceId) {
     throw createError({
       statusCode: 409,

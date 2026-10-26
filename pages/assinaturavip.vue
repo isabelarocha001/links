@@ -216,8 +216,8 @@ type CheckoutSettings = { plans: Plan[] }
 const STORAGE_KEY = 'wanessa-vip-checkout-settings-v1'
 const defaultSettings: CheckoutSettings = {
   plans: [
-    { id: 'monthly', name: 'Mensal', detail: 'Cobrança automática a cada 30 dias', prices: { BRL: 29.9, USD: null, EUR: null }, enabled: true, badge: 'OFERTA' },
-    { id: 'lifetime', name: 'Vitalício', detail: 'Pagamento único, sem prazo para terminar', prices: { BRL: 109.9, USD: null, EUR: null }, enabled: true, badge: 'PAGUE UMA VEZ' },
+    { id: 'monthly', name: 'Mensal', detail: 'Cobrança automática a cada 30 dias', prices: { BRL: 29.9, USD: 29.9, EUR: 29.9 }, enabled: true, badge: 'OFERTA' },
+    { id: 'lifetime', name: 'Vitalício', detail: 'Pagamento único, sem prazo para terminar', prices: { BRL: 109.9, USD: 109.9, EUR: 109.9 }, enabled: true, badge: 'PAGUE UMA VEZ' },
   ],
 }
 const settings = ref<CheckoutSettings>(defaultSettings)
@@ -263,16 +263,19 @@ function priceFor(plan: Plan): number | null {
   const value = plan.prices?.[currency.value]
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
 }
-function canPay(plan: Plan) { return currency.value === 'BRL' && priceFor(plan) !== null }
+function canPay(plan: Plan) {
+  if (priceFor(plan) === null) return false
+  if (currency.value === 'BRL') return true
+  return cardAvailability.value.some((method) => method.plan === plan.id && method.currency === currency.value)
+}
 function displayPrice(plan: Plan) { const value = priceFor(plan); return value === null ? checkoutText('unavailable') : formatPrice(value) }
 function planName(plan: Plan) { return checkoutText(plan.id === 'monthly' ? 'monthlyName' : plan.id === 'lifetime' ? 'lifetimeName' : plan.name) }
 function planDetail(plan: Plan) { return checkoutText(plan.id === 'monthly' ? 'monthlyDetail' : plan.id === 'lifetime' ? 'lifetimeDetail' : plan.detail) }
 function planBadge(plan: Plan) { return checkoutText(plan.id === 'monthly' ? 'monthlyBadge' : plan.id === 'lifetime' ? 'lifetimeBadge' : plan.badge || '') }
 function formatPrice(value: number) { return new Intl.NumberFormat(locale.value, { style: 'currency', currency: currency.value }).format(value) }
 function normalizePlan(raw: any, fallback: Plan): Plan {
-  const saved = raw?.prices && typeof raw.prices === 'object' ? raw.prices : {}
-  const clean = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
-  return { ...fallback, ...raw, prices: { BRL: clean(saved.BRL) ?? clean(raw?.price) ?? fallback.prices.BRL, USD: clean(saved.USD), EUR: clean(saved.EUR) } }
+  // Preços do checkout são fixos e validados no servidor; localStorage não pode alterá-los.
+  return { ...fallback, ...raw, prices: { ...fallback.prices } }
 }
 function detectCurrency() {
   const languages = navigator.languages?.length ? navigator.languages : [navigator.language]
@@ -307,7 +310,7 @@ function openCheckoutDialog() {
   }
 }
 const cardAvailableForSelected = computed(() => {
-  if (!selected.value || currency.value !== 'BRL') return false
+  if (!selected.value) return false
   const plan = selected.value.id
   return cardAvailability.value.some((m) => m.plan === plan && m.currency === currency.value)
 })
@@ -357,6 +360,15 @@ async function startCheckout() {
   destroyStripeCheckout()
   openCheckoutDialog()
   await refreshCardAvailability()
+  if (currency.value !== 'BRL') {
+    if (!cardAvailableForSelected.value) {
+      paymentError.value = checkoutText('cardNotConfigured')
+      return
+    }
+    paymentMethod.value = 'card'
+    await startStripeVipCheckout()
+    return
+  }
   // Sem cartão configurado → fluxo Pix atual (auto)
   if (!cardAvailableForSelected.value) {
     paymentMethod.value = 'pix'
@@ -566,6 +578,7 @@ onMounted(() => {
     }
   } catch { /* Keep the safe defaults when local settings are invalid. */ }
   detectCurrency()
+  void refreshCardAvailability()
   pixStatus.value = checkoutText('waitingStatus')
   if (selectedPrice.value === null) { const available = visiblePlans.value.find(plan => priceFor(plan) !== null); selectedPlan.value = available?.id || visiblePlans.value[0]?.id || '' }
   trackVip('vip_checkout_view')

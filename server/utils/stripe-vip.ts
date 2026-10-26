@@ -4,41 +4,26 @@
  */
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { useServiceSupabase } from './supabase'
+import {
+  VIP_STRIPE_CATALOG,
+  VIP_STRIPE_CURRENCIES,
+  VIP_STRIPE_PRICE_SECRET_KEYS,
+  type VipStripeCurrency,
+} from './stripe-vip-catalog.mjs'
 
 export type VipStripePlanKey = 'monthly' | 'lifetime'
-
-/** Valores conhecidos em centavos — servidor é a autoridade; não vem do browser. */
-export const VIP_STRIPE_CATALOG: Record<
-  VipStripePlanKey,
-  { plan_key: string; amount_cents: { BRL: number }; title: string }
-> = {
-  monthly: {
-    plan_key: 'vip_monthly',
-    amount_cents: { BRL: 2990 },
-    title: 'Canal VIP Mensal',
-  },
-  lifetime: {
-    plan_key: 'vip_lifetime',
-    amount_cents: { BRL: 10990 },
-    title: 'Canal VIP Vitalício',
-  },
-}
-
-const PRICE_SECRET_KEYS: Record<VipStripePlanKey, Record<string, string>> = {
-  monthly: { BRL: 'STRIPE_VIP_PRICE_MONTHLY_BRL' },
-  lifetime: { BRL: 'STRIPE_VIP_PRICE_LIFETIME_BRL' },
-}
+export type { VipStripeCurrency } from './stripe-vip-catalog.mjs'
 
 export async function loadVipStripeSecrets() {
   const supabase = useServiceSupabase()
+  const priceSecretKeys = Object.values(VIP_STRIPE_PRICE_SECRET_KEYS).flatMap((prices) => Object.values(prices))
   const keys = [
     'STRIPE_SECRET_KEY',
     'NUXT_STRIPE_SECRET_KEY',
     'STRIPE_PUBLISHABLE_KEY',
     'STRIPE_VIP_WEBHOOK_SECRET',
     'STRIPE_VIP_CAPABILITY_SECRET',
-    'STRIPE_VIP_PRICE_MONTHLY_BRL',
-    'STRIPE_VIP_PRICE_LIFETIME_BRL',
+    ...priceSecretKeys,
   ]
   const { data } = await supabase.from('app_secrets').select('key, value').in('key', keys)
   const map: Record<string, string> = {}
@@ -64,29 +49,34 @@ export async function loadVipStripeSecrets() {
     publishable,
     webhookSecret,
     capabilitySecret,
-    priceIds: {
-      monthly: { BRL: map.STRIPE_VIP_PRICE_MONTHLY_BRL?.startsWith('price_') ? map.STRIPE_VIP_PRICE_MONTHLY_BRL : '' },
-      lifetime: {
-        BRL: map.STRIPE_VIP_PRICE_LIFETIME_BRL?.startsWith('price_') ? map.STRIPE_VIP_PRICE_LIFETIME_BRL : '',
-      },
-    },
+    priceIds: Object.fromEntries(
+      (['monthly', 'lifetime'] as VipStripePlanKey[]).map((plan) => [
+        plan,
+        Object.fromEntries(
+          VIP_STRIPE_CURRENCIES.map((currency) => {
+            const value = map[VIP_STRIPE_PRICE_SECRET_KEYS[plan][currency]] || ''
+            return [currency, value.startsWith('price_') ? value : '']
+          }),
+        ),
+      ]),
+    ) as Record<VipStripePlanKey, Record<VipStripeCurrency, string>>,
   }
 }
 
 /** Quais planos/moedas têm cartão configurado (sem expor price_id). */
 export async function listVipStripeAvailability() {
   const s = await loadVipStripeSecrets()
-  const available: Array<{ plan: VipStripePlanKey; currency: string; amount_cents: number }> = []
+  const available: Array<{ plan: VipStripePlanKey; currency: VipStripeCurrency; amount_cents: number }> = []
   if (!s.secret || !s.publishable) return { configured: false, available }
 
   for (const plan of ['monthly', 'lifetime'] as VipStripePlanKey[]) {
-    for (const currency of Object.keys(VIP_STRIPE_CATALOG[plan].amount_cents)) {
-      const priceId = s.priceIds[plan][currency as 'BRL']
+    for (const currency of VIP_STRIPE_CURRENCIES) {
+      const priceId = s.priceIds[plan][currency]
       if (priceId) {
         available.push({
           plan,
           currency,
-          amount_cents: VIP_STRIPE_CATALOG[plan].amount_cents[currency as 'BRL'],
+          amount_cents: VIP_STRIPE_CATALOG[plan].amount_cents[currency],
         })
       }
     }

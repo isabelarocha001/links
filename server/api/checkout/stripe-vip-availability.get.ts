@@ -2,7 +2,8 @@
  * GET /api/checkout/stripe-vip-availability
  * Diz quais planos/moedas têm cartão configurado — sem price_id nem secrets.
  */
-import { listVipStripeAvailability, VIP_STRIPE_CATALOG } from '../../utils/stripe-vip'
+import { listVipStripeAvailability } from '../../utils/stripe-vip'
+import { VIP_STRIPE_CATALOG } from '../../utils/stripe-vip-catalog.mjs'
 
 export default defineEventHandler(async (event) => {
   const { configured, available } = await listVipStripeAvailability()
