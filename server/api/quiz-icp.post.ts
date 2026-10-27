@@ -28,6 +28,19 @@ const ALLOWED = new Set([
 ])
 
 const INTENT_LABEL: Record<string, string> = {
+  personality: 'personalidade',
+  hobbies: 'rotina e hobbies',
+  photos: 'fotos e vídeos',
+  yes_exclusive: 'quer conteúdo exclusivo',
+  curious_exclusive: 'tem curiosidade sobre conteúdo exclusivo',
+  no_exclusive: 'não quer conteúdo por assinatura',
+  budget_2990: 'até R$29,90',
+  budget_4990: 'R$30 a R$49,90',
+  budget_9990: 'R$50 a R$99,90',
+  budget_100plus: 'R$100 ou mais',
+  no_budget: 'não pretende investir agora',
+  buy_yes: 'quer conhecer as plataformas',
+  buy_no: 'prefere ver depois',
   private: 'fotos/vídeos',
   custom: 'personalizado',
   sexting: 'sexting',

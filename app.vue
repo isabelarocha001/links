@@ -1,7 +1,10 @@
 <template>
-  <NuxtPage />
-  <AdminChatInbox v-if="isAdminRoute" />
-  <div v-else-if="!isIsolatedRoute" class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
+  <main v-if="isRegionUnavailable" class="region-unavailable" lang="en" role="main">
+    <p>This page isn’t available in your region.</p>
+  </main>
+  <NuxtPage v-else />
+  <AdminChatInbox v-if="!isRegionUnavailable && isAdminRoute" />
+  <div v-else-if="!isRegionUnavailable && !isIsolatedRoute" class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding, 'page--intl-cards-centered': !isBrazilianPortugueseBrowser && configReady }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="bg-grain" aria-hidden="true"></div>
     <!-- cadeado removido do front: acesso admin só por rota direta (/admin/chat) -->
@@ -57,7 +60,7 @@
 
 
       <template v-if="gateReady && gate === 'pass'">
-        <header class="hero">
+        <header v-if="isBrazilianPortugueseBrowser" class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
               <img v-for="(src, i) in gallery" :key="src + i" :src="src" :class="['hero-photo', { 'is-active': i === photoIndex }]" alt="" decoding="async" draggable="false" />
@@ -80,10 +83,10 @@
             </button>
           </div>
         </header>
-        <section v-if="isBrazilianPortugueseBrowser" class="offer-quiz" aria-labelledby="offer-quiz-title">
+        <section v-if="false && isBrazilianPortugueseBrowser" class="offer-quiz" aria-labelledby="offer-quiz-title">
           <div class="offer-quiz__game">
             <div class="offer-quiz__hud">
-              <span class="offer-quiz__level"><span aria-hidden="true">✦</span> {{ offerQuizStep === 'interest' ? 'FASE 1 DE 2' : offerQuizStep === 'platform' ? 'FASE 2 DE 2' : 'CAMINHO ESCOLHIDO' }}</span>
+              <span class="offer-quiz__level"><span aria-hidden="true">✦</span> {{ offerQuizStep === 'interest' ? t('offerQuizPhase1') : offerQuizStep === 'platform' ? t('offerQuizPhase2') : t('offerQuizResultLabel') }}</span>
               <span class="offer-quiz__counter">{{ offerQuizStep === 'interest' ? '01 / 02' : offerQuizStep === 'platform' ? '02 / 02' : '✓' }}</span>
             </div>
             <div class="offer-quiz__progress" role="progressbar" :aria-valuenow="offerQuizStep === 'interest' ? 1 : 2" aria-valuemin="1" aria-valuemax="2" :aria-label="offerQuizStep === 'interest' ? 'Fase 1 de 2' : 'Fase 2 de 2'">
@@ -91,39 +94,40 @@
             </div>
             <div class="offer-quiz__scene" :key="offerQuizStep">
               <template v-if="offerQuizStep === 'interest'">
-                <p class="offer-quiz__eyebrow">ESCOLHA SEU CAMINHO</p>
-                <h2 id="offer-quiz-title">O que você procura por aqui?</h2>
-                <p class="offer-quiz__intro">Escolha o que combina mais com você.</p>
+                <p class="offer-quiz__eyebrow">{{ t('offerQuizChoosePath') }}</p>
+                <h2 id="offer-quiz-title">{{ t('offerQuizInterestQuestion') }}</h2>
+                <p class="offer-quiz__intro">{{ t('offerQuizInterestIntro') }}</p>
                 <div class="offer-quiz__choices">
-                  <button type="button" class="offer-quiz__choice" @click="chooseOfferInterest('conteudo')"><span class="offer-quiz__choice-mark" aria-hidden="true">01</span><b>Conteúdo exclusivo</b><span>Quero ver o lado que não fica aberto para todo mundo</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
-                  <button type="button" class="offer-quiz__choice" @click="chooseOfferInterest('contato')"><span class="offer-quiz__choice-mark" aria-hidden="true">02</span><b>Conteúdo e contato</b><span>Quero conteúdo e uma forma de conversar com você</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
+                  <button type="button" class="offer-quiz__choice" @click="chooseOfferInterest('conteudo')"><span class="offer-quiz__choice-mark" aria-hidden="true">01</span><b>{{ t('offerQuizContentTitle') }}</b><span>{{ t('offerQuizContentDescription') }}</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
+                  <button type="button" class="offer-quiz__choice" @click="chooseOfferInterest('contato')"><span class="offer-quiz__choice-mark" aria-hidden="true">02</span><b>{{ t('offerQuizContactTitle') }}</b><span>{{ t('offerQuizContactDescription') }}</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
                 </div>
               </template>
               <template v-else-if="offerQuizStep === 'platform'">
-                <p class="offer-quiz__eyebrow">SEU PRÓXIMO PASSO</p>
-                <h2 id="offer-quiz-title">Onde você prefere acessar?</h2>
-                <p class="offer-quiz__intro">{{ offerQuizInterest === 'contato' ? 'Você escolheu conteúdo e contato. Agora veja onde quer acessar.' : 'Você escolheu conteúdo exclusivo. Agora veja onde quer acessar.' }}</p>
+                <p class="offer-quiz__eyebrow">{{ t('offerQuizNextStep') }}</p>
+                <h2 id="offer-quiz-title">{{ t('offerQuizPlatformQuestion') }}</h2>
+                <p class="offer-quiz__intro">{{ t('offerQuizPlatformIntro') }}</p>
                 <div class="offer-quiz__choices">
-                  <button type="button" class="offer-quiz__choice offer-quiz__choice--offer" :class="{ 'is-selected': offerQuizSelection === 'privsex' }" @click="chooseOffer('privsex')"><span class="offer-quiz__choice-mark" aria-hidden="true">01</span><b>PrivSex · R$ 49,90</b><span>Conteúdo exclusivo + chat comigo</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
-                  <button type="button" class="offer-quiz__choice offer-quiz__choice--offer" :class="{ 'is-selected': offerQuizSelection === 'telegram' }" @click="chooseOffer('telegram')"><span class="offer-quiz__choice-mark" aria-hidden="true">02</span><b>Telegram VIP · R$ 29,90/mês</b><span>Conteúdo exclusivo + meu WhatsApp pessoal no canal</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
-                  <button type="button" class="offer-quiz__compare" :class="{ 'is-selected': offerQuizSelection === 'compare' }" @click="chooseOffer('compare')">Quero comparar as duas</button>
+                  <button type="button" class="offer-quiz__choice offer-quiz__choice--offer" :class="{ 'is-selected': offerQuizSelection === 'privsex' }" @click="chooseOffer('privsex')"><span class="offer-quiz__choice-mark" aria-hidden="true">01</span><b>{{ t('privTitle') }}</b><span>{{ t('privDesc') }}</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
+                  <button type="button" class="offer-quiz__choice offer-quiz__choice--offer" :class="{ 'is-selected': offerQuizSelection === 'telegram' }" @click="chooseOffer('telegram')"><span class="offer-quiz__choice-mark" aria-hidden="true">02</span><b>{{ t('vipTitle') }}</b><span>{{ t('vipDesc') }}</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
+                  <button type="button" class="offer-quiz__compare" :class="{ 'is-selected': offerQuizSelection === 'compare' }" @click="chooseOffer('compare')">{{ t('offerQuizCompare') }}</button>
                 </div>
-                <p class="offer-quiz__paid-note">As duas opções são pagas. O Telegram VIP cobra R$ 29,90 por mês; cancele quando quiser.</p>
+                <p class="offer-quiz__paid-note">{{ t('offerQuizPaidNote') }}</p>
               </template>
               <div v-else class="offer-quiz__notice" role="status" aria-live="polite">
-                <b>{{ offerQuizSelection === 'compare' ? 'Compare as duas opções' : offerQuizSelection === 'telegram' ? 'Você escolheu o Telegram VIP' : 'Você escolheu o PrivSex' }}</b>
-                <span>As duas opções são pagas. Veja os benefícios e valores abaixo antes de continuar.</span>
-                <button type="button" class="offer-quiz__restart" @click="resetOfferQuiz">Trocar minha escolha</button>
+                <b>{{ offerQuizSelection === 'compare' ? t('offerQuizResultCompare') : offerQuizSelection === 'telegram' ? t('offerQuizResultTelegram') : t('offerQuizResultPrivsex') }}</b>
+                <span>{{ t('offerQuizResultHint') }}</span>
+                <button type="button" class="offer-quiz__restart" @click="resetOfferQuiz">{{ t('offerQuizChange') }}</button>
               </div>
             </div>
             <div class="offer-quiz__base" aria-hidden="true"><span></span><i></i><span></span></div>
           </div>
         </section>
-        <section v-if="isBrazilianPortugueseBrowser && offerQuizStep === 'result'" class="choice-guide" aria-labelledby="choice-guide-title">
-          <h2 id="choice-guide-title">Escolha seu acesso</h2>
-          <p>Confira o que cada assinatura inclui e o valor antes de continuar.</p>
+        <section v-if="false && isBrazilianPortugueseBrowser && offerQuizStep === 'result'" class="choice-guide" aria-labelledby="choice-guide-title">
+          <h2 id="choice-guide-title">{{ t('offerQuizGuideTitle') }}</h2>
+          <p>{{ t('offerQuizGuideDescription') }}</p>
         </section>
-        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isBrazilianPortugueseBrowser, 'main-cards--intl': !isBrazilianPortugueseBrowser }" v-if="configReady && (!isBrazilianPortugueseBrowser || offerQuizStep === 'result')">
+        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isBrazilianPortugueseBrowser, 'main-cards--intl': !isBrazilianPortugueseBrowser }" v-if="configReady && (!isBrazilianPortugueseBrowser || (ptbrQuizQualified && !iqChatMode))">
+          <p v-if="!isBrazilianPortugueseBrowser" class="intl-chat-prompt">{{ t('intlChatPrompt') }}</p>
           <div class="card-col" v-if="privsexLinkEnabled">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
               <div class="portal-spiral" aria-hidden="true">
@@ -261,32 +265,7 @@
             </a>
           </div>
         </section>
-        <section v-if="isPt" id="links-faq" class="links-faq" aria-labelledby="links-faq-title">
-          <div class="links-faq__head">
-            <span class="links-faq__eyebrow">FAQ</span>
-            <h2 id="links-faq-title">Perguntas frequentes</h2>
-            <p>Tire suas dúvidas antes de escolher.</p>
-          </div>
-          <div class="links-faq__progress" role="progressbar" :aria-valuenow="faqSeen.length" :aria-valuemin="0" :aria-valuemax="faqItems.length" :aria-label="`${faqSeen.length} de ${faqItems.length} respostas vistas`">
-            <span v-for="(_, index) in faqItems" :key="index" :class="{ 'is-complete': faqSeen.includes(index) }"></span>
-          </div>
-          <div class="links-faq__questions">
-            <div v-for="(item, index) in faqItems" :key="item.question" class="links-faq__item" :class="{ 'is-open': faqActive === index, 'is-seen': faqSeen.includes(index) }">
-              <button type="button" :aria-expanded="faqActive === index" :aria-controls="`faq-answer-${index}`" @click="toggleFaq(index)">
-                <span class="links-faq__number">{{ faqSeen.includes(index) ? '✓' : String(index + 1).padStart(2, '0') }}</span>
-                <span>{{ item.question }}</span>
-                <span class="links-faq__plus" aria-hidden="true">{{ faqActive === index ? '−' : '+' }}</span>
-              </button>
-              <div v-show="faqActive === index" :id="`faq-answer-${index}`" class="links-faq__answer">
-                <p>{{ item.answer }}</p>
-              </div>
-            </div>
-          </div>
-          <p v-if="faqSeen.length === faqItems.length" class="links-faq__complete">Todas as respostas desbloqueadas 💜 Agora escolha por onde começar.</p>
-        </section>
-
-
-        <footer class="bio-block">
+        <footer v-if="isBrazilianPortugueseBrowser" class="bio-block">
           <div class="ig-card">
             <img class="ig-avatar" :src="igProfileSrc" alt="" width="72" height="72" draggable="false" />
             <div class="ig-info">
@@ -1408,6 +1387,10 @@ import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i1
 import { detectBrowserMoney, formatMoney, convertFromBrl } from '~/utils/currency'
 
 const route = useRoute()
+const isRegionUnavailable = useState('isRegionUnavailable', () => {
+  if (!import.meta.server) return false
+  return Boolean(useRequestEvent()?.context.regionUnavailable)
+})
 const isAdminRoute = computed(() => {
   const p = String(route.path || '').toLowerCase().replace(/\/+$/, '')
   return p === '/admin/chat' || p.endsWith('/admin/chat')
@@ -1432,7 +1415,7 @@ const privsexUrl = 'https://privsex.com/wanessa'
 
 // =============================================================================
 // QUIZ ICP — qualificação antes do WhatsApp (sem pontuação visível)
-// Fluxo: Interesse → Ticket R$99,90 → Momento (agora/hoje) → Intenção de compra (anúncio já filtra 18+)
+// Fluxo: Interesse → valor disponível hoje (R$49,90) → Momento → Intenção de compra
 // Só lead QUALIFIED cai no WhatsApp comercial (transacional). Número/link só após qualified + clique
 // =============================================================================
 const PIX_KEY_EMAIL = 'wanessaahappn@gmail.com'
@@ -1445,13 +1428,13 @@ type IqChatOpt = { key: string; label: string; variant: string }
 const iqChatOptions = computed((): IqChatOpt[] => {
   if (!iqChatMode.value || isTyping.value) return []
   if (iqPhase.value === 'welcome') {
-    return [{ key: 'welcome_ok', label: 'Beleza, continuar', variant: 'wa-quick--yes' }]
+    return [{ key: 'welcome_ok', label: 'Pode sim 😊', variant: 'wa-quick--yes' }]
   }
   if (iqPhase.value === 'reject' || iqPhase.value === 'soft') {
     return [{ key: 'close', label: 'Voltar', variant: 'wa-quick--no' }]
   }
   if (iqPhase.value === 'result') {
-    return [{ key: 'go_wa', label: 'Ir para o WhatsApp', variant: 'wa-quick--yes' }]
+    return [{ key: 'view_offers', label: 'Ver as opções', variant: 'wa-quick--yes' }]
   }
   if (iqPhase.value !== 'quiz') return []
   return iqCurrentOptions.value.map((o) => ({
@@ -1493,9 +1476,10 @@ function iqCloseChat() {
 async function iqChatAnswer(opt: IqChatOpt) {
   if (isTyping.value) return
   if (opt.key === 'close') { iqCloseChat(); return }
-  if (opt.key === 'go_wa') {
-    iqGoWhatsApp()
-    iqChatMode.value = false
+  if (opt.key === 'view_offers') {
+    iqTrack('quiz_offers_viewed', { answers: { ...iqAnswers } })
+    iqCloseChat()
+    nextTick(() => document.getElementById('links-main-cards')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
     return
   }
   if (opt.key === 'welcome_ok') {
@@ -1516,14 +1500,21 @@ async function iqAnswerInChat(opt: { id: string; label: string }) {
     iqAnswers.interest = opt.id
     iqStep.value = 1
     iqMaxStepReached.value = 1
+    const replyByInterest: Record<string, string> = {
+      personality: 'Eu também acho que o jeito da pessoa faz toda diferença. Sou intensa com as coisas que gosto 😊',
+      hobbies: 'Então já te conto um pouquinho: amo praia, piscina, comida do mar e meus gatos 🐱',
+      photos: 'As fotos mostram uma parte minha. Tem outras que eu guardo só para assinantes 😊',
+    }
+    await iqTypeHer(replyByInterest[opt.id] || 'Que legal 😊 Gosto de conhecer o que cada pessoa curte.', 550)
     await iqAskCurrentQuestion()
     return
   }
   if (iqStep.value === 1) {
+    iqAnswers.exclusive = opt.id
     iqAnswers.ticket = opt.id
-    if (opt.id === 'no_ticket') {
-      const msg = 'Entendi. Nesse caso, o atendimento não é para você no momento.\nQuando estiver dentro desse valor, pode voltar.'
-      iqDisqualify('disqualified_low_ticket', msg)
+    if (opt.id === 'no_exclusive') {
+      const msg = 'Tudo bem 😊\nTalvez conteúdo por assinatura não seja o que você procura agora.\nPode me conhecer por aqui, sem compromisso.'
+      iqDisqualify('disqualified_browsing', msg, true)
       await iqTypeHer(msg, 900)
       return
     }
@@ -1533,16 +1524,12 @@ async function iqAnswerInChat(opt: { id: string; label: string }) {
     return
   }
   if (iqStep.value === 2) {
+    iqAnswers.budget = opt.id
+    iqAnswers.pay = opt.id
     iqAnswers.moment = opt.id
-    if (opt.id === 'later') {
-      const msg = 'Beleza.\nQuando for a hora de comprar, volta aqui.'
-      iqDisqualify('disqualified_later', msg, true)
-      await iqTypeHer(msg, 900)
-      return
-    }
-    if (opt.id === 'browsing') {
-      const msg = 'Beleza.\nQuando quiser avançar para a compra, pode voltar.'
-      iqDisqualify('disqualified_browsing', msg, true)
+    if (opt.id === 'no_budget') {
+      const msg = 'Claro, eu entendo 😊\nNão precisa investir agora.\nQuando quiser conhecer minhas opções, vou estar por aqui.'
+      iqDisqualify('disqualified_low_ticket', msg)
       await iqTypeHer(msg, 900)
       return
     }
@@ -1552,26 +1539,33 @@ async function iqAnswerInChat(opt: { id: string; label: string }) {
     return
   }
   if (iqStep.value === 3) {
+    iqAnswers.intent = opt.id
     iqAnswers.purchase = opt.id
     if (opt.id === 'buy_no') {
-      const msg = 'Sem problema.\nQuando quiser finalizar a compra, volta e te encaminho.'
+      const msg = 'Tudo bem 😊\nNão precisa decidir agora.\nQuando quiser ver as opções, pode voltar.'
       iqDisqualify('disqualified_no_purchase_intent', msg, true)
       await iqTypeHer(msg, 900)
       return
     }
     iqPhase.value = 'result'
+    iqPersistQualified()
     iqTrack('qualified', { answers: { ...iqAnswers } })
     await iqTypeHer(
-      'Combinado 🧡\nVou te encaminhar para o atendimento.\nLá você escolhe a opção e recebe as instruções para finalizar.',
+      'Ah, gostei de saber o que você procura 😊\nPara acompanhar meu conteúdo reservado e ficar mais perto de mim, tenho duas opções:\nPrivSex: conteúdo exclusivo + chat comigo · R$ 49,90.\nTelegram VIP: conteúdo exclusivo + meu WhatsApp pessoal · R$ 29,90 ao mês.\nEsse conteúdo fica fora do meu perfil aberto. Se quiser conhecer hoje, olha as opções logo abaixo, com calma.',
       900,
     )
   }
 }
 const iqPhase = ref<IqPhase>('quiz')
-const iqStep = ref(0) // 0 interesse, 1 ticket, 2 momento, 3 intenção de compra
+const iqStep = ref(0) // 0 preferências, 1 interesse no exclusivo, 2 faixa de investimento, 3 ver ofertas
 const iqRejectMsg = ref('')
 const iqAnswers = reactive({
   interest: '' as string,
+  exclusive: '' as string,
+  budget: '' as string,
+  pay: '' as string,
+  intent: '' as string,
+  // Mantidos para compatibilidade com os eventos já registrados.
   ticket: '' as string,
   moment: '' as string,
   purchase: '' as string,
@@ -1582,45 +1576,47 @@ const iqProgressLabel = computed(() => `ETAPA ${iqStep.value + 1} DE 4`)
 const iqHeaderTitle = computed(() => {
   if (iqPhase.value === 'result') return 'Qualificado'
   if (iqPhase.value === 'reject' || iqPhase.value === 'soft') return 'Aviso'
-  return ['Interesse', 'Ticket', 'Momento', 'Intenção'][iqStep.value] || ''
+  return ['Sobre você', 'Conteúdo exclusivo', 'Investimento', 'Opções'][iqStep.value] || ''
 })
 const iqQuestionText = computed(() => {
   return [
-    'O que você quer? 👀',
-    'O atendimento começa em R$ 99,90.\nEsse valor está dentro do que você pretende investir?',
-    'Quando você pretende comprar? ⏰',
-    'Perfeito. Vou te encaminhar para o atendimento comercial.\nLá você escolhe a opção, recebe os detalhes e pode finalizar a compra.\nPode seguir?',
+    'Pra eu saber o que desperta sua curiosidade em mim: você gosta mais de conhecer meu jeito, meus gostos ou ver minhas fotos? 😊',
+    'Como criadora, tem fotos e vídeos que eu guardo só para assinantes. Você teria vontade de pagar para ver esse meu lado mais exclusivo?',
+    'E se eu preparasse algo mais personalizado, pensando no que você gosta, quanto se sentiria à vontade para investir comigo hoje?',
+    'Quer que eu te mostre onde assinar e o que cada opção inclui?',
   ][iqStep.value] || ''
 })
 const iqCurrentOptions = computed((): IqOpt[] => {
-  // ETAPA 1 — INTERESSE
+  // ETAPA 1 — personalidade e preferências
   if (iqStep.value === 0) {
     return [
-      { id: 'photo_video_pack', label: '📸 Pack de fotos e vídeos' },
-      { id: 'sexting', label: '💬 Sexting' },
-      { id: 'videochamada', label: '📹 Videochamada' },
+      { id: 'personality', label: 'Quero conhecer seu jeito' },
+      { id: 'hobbies', label: 'Quero saber do que você gosta' },
+      { id: 'photos', label: 'Quero ver suas fotos e vídeos' },
     ]
   }
-  // ETAPA 2 — TICKET
+  // ETAPA 2 — interesse por conteúdo reservado
   if (iqStep.value === 1) {
     return [
-      { id: 'yes_ticket', label: '✅ Sim' },
-      { id: 'no_ticket', label: '❌ Não' },
+      { id: 'yes_exclusive', label: 'Sim, pagaria para ver' },
+      { id: 'curious_exclusive', label: 'Fiquei curioso' },
+      { id: 'no_exclusive', label: 'Não é o que procuro' },
     ]
   }
-  // ETAPA 3 — MOMENTO
+  // ETAPA 3 — investimento que faria sentido
   if (iqStep.value === 2) {
     return [
-      { id: 'now', label: '🔥 Quero comprar agora' },
-      { id: 'today', label: '🧡 Quero comprar hoje' },
-      { id: 'later', label: '🕐 Ainda não vou comprar' },
-      { id: 'browsing', label: '👀 Só estou conhecendo' },
+      { id: 'budget_2990', label: 'Até R$ 29,90' },
+      { id: 'budget_4990', label: 'De R$ 30 a R$ 49,90' },
+      { id: 'budget_9990', label: 'De R$ 50 a R$ 99,90' },
+      { id: 'budget_100plus', label: 'R$ 100 ou mais' },
+      { id: 'no_budget', label: 'Agora não quero investir' },
     ]
   }
-  // ETAPA 4 — CONFIRMAÇÃO OPERACIONAL (encaminhar)
+  // ETAPA 4 — mostrar as plataformas
   return [
-    { id: 'buy_yes', label: '✅ Sim, seguir para comprar' },
-    { id: 'buy_no', label: '❌ Não agora' },
+    { id: 'buy_yes', label: 'Quero ver as opções 😊' },
+    { id: 'buy_no', label: 'Depois eu vejo' },
   ]
 })
 
@@ -1656,14 +1652,33 @@ function iqResetState() {
   iqStep.value = 0
   iqRejectMsg.value = ''
   iqAnswers.interest = ''
+  iqAnswers.exclusive = ''
+  iqAnswers.budget = ''
+  iqAnswers.pay = ''
+  iqAnswers.intent = ''
   iqAnswers.ticket = ''
   iqAnswers.moment = ''
   iqAnswers.purchase = ''
   iqMaxStepReached.value = 0
 }
 
-const IQ_LS_KEY = 'iq_icp_disqualified_v1'
-const IQ_BLOCKED_MSG = 'Você não é o tipo de cliente que eu atendo.\nObrigada.'
+const IQ_LS_KEY = 'iq_icp_disqualified_v2'
+const IQ_QUALIFIED_LS_KEY = 'iq_icp_qualified_v2'
+const IQ_BLOCKED_MSG = 'Oi de novo 😊\nTudo bem se agora não for o momento.\nQuando quiser conhecer as opções, vou estar por aqui.'
+const ptbrQuizQualified = ref(false)
+
+function iqReadQualified(): boolean {
+  try { return typeof localStorage !== 'undefined' && localStorage.getItem(IQ_QUALIFIED_LS_KEY) === '1' } catch { return false }
+}
+
+function iqPersistQualified() {
+  ptbrQuizQualified.value = true
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(IQ_QUALIFIED_LS_KEY, '1')
+    localStorage.removeItem(IQ_LS_KEY)
+  } catch {}
+}
 
 function iqReadDisqualified(): { event?: string; answers?: Record<string, string>; at?: number } | null {
   try {
@@ -1716,10 +1731,12 @@ function iqStart() {
   isTyping.value = false
   iqTrack('quiz_started')
   nextTick(() => {
-    iqTypeHer(
-      'Aqui é atendimento para compra de conteúdo, videochamada e chat.\nSão 4 perguntas rápidas para confirmar se você está no perfil de atendimento.\nOs acessos começam em R$ 99,90.',
-      800,
-    )
+    void (async () => {
+      await iqTypeHer('Oi, tudo bem? 😊\nSou a Wanessa. Que bom ter você por aqui!', 650)
+      await iqTypeHer('Fora das câmeras, meus gatos são meus companheiros de tudo 🐱', 650)
+      await iqTypeHer('Também amo praia, piscina e comida do mar 🌊', 650)
+      await iqTypeHer('Quero saber um pouquinho de você também.\nPosso te fazer 4 perguntinhas rápidas?', 700)
+    })()
   })
 }
 
@@ -1811,8 +1828,9 @@ function iqAnswer(opt: IqOpt) {
       )
       return
     }
-    // buy_yes → QUALIFIED → WhatsApp
+    // buy_yes → qualificado e libera os cards da oferta
     iqPhase.value = 'result'
+    iqPersistQualified()
     iqTrack('qualified', { answers: { ...iqAnswers } })
   }
 }
@@ -1890,12 +1908,19 @@ const vipBotUrl = '/assinaturavip'
 const intlPublicChannelUrl = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const locale = ref<Locale>('pt')
 const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (intl)
-const isBrazilianPortugueseBrowser = ref(false)
 function browserUsesBrazilianPortuguese() {
   if (typeof navigator === 'undefined') return true
   const primaryLanguage = String(navigator.language || '').toLowerCase().replace(/_/g, '-')
   return /^pt-br(?:-|$)/.test(primaryLanguage)
 }
+const isBrazilianPortugueseBrowser = useState('links-is-pt-br-browser', () => {
+  if (import.meta.server) {
+    const acceptLanguage = useRequestHeaders(['accept-language'])['accept-language'] || ''
+    const primaryLanguage = String(acceptLanguage.split(',')[0] || '').toLowerCase().replace(/_/g, '-')
+    return /^pt-br(?:-|$)/.test(primaryLanguage)
+  }
+  return browserUsesBrazilianPortuguese()
+})
 type OfferQuizInterest = 'conteudo' | 'contato'
 type OfferQuizSelection = 'privsex' | 'telegram' | 'compare'
 const offerQuizStep = ref<'interest' | 'platform' | 'result'>('interest')
@@ -6408,22 +6433,6 @@ async function loadNearPresence() {
 const gate = ref<1 | 2 | 3 | 4 | 'pass' | 'reject' | null>('pass')
 const quizAnswers = ref<Record<string, string>>({})
 const gateReady = ref(true) // true desde o start — evita flash do chat WA antigo
-const faqItems = [
-  { question: 'Você faz encontros presenciais?', answer: 'Não. Eu sou criadora de conteúdo e meu contato com você acontece somente online.' },
-  { question: 'O que posso encontrar por aqui?', answer: 'Conteúdo exclusivo, conversa por mensagem (sexting) e opções de videochamada. Você escolhe o formato que combina com você.' },
-  { question: 'Como escolho onde assinar?', answer: 'No PrivSex você encontra conteúdo exclusivo e chat comigo. No Telegram VIP você recebe conteúdo exclusivo e meu WhatsApp pessoal. Confira os valores nas opções da página.' },
-  { question: 'Você responde pessoalmente?', answer: 'Sim. Você conversa diretamente comigo pelo chat e escolhe o tipo de experiência que quer viver.' },
-  { question: 'Como funciona o pagamento e a entrega?', answer: 'Você escolhe o que quer, recebe a chave Pix no chat e envia o comprovante. Depois da confirmação, eu libero o acesso ou envio o conteúdo pelo canal combinado.' },
-  { question: 'Meus dados ficam seguros?', answer: 'Sim. O atendimento é privado e seus dados não são publicados.' },
-  { question: 'Como começo?', answer: 'Toque em “Conversar comigo” para conhecer as opções, escolher o que combina com você e receber as condições.' },
-]
-const faqActive = ref<number | null>(null)
-const faqSeen = ref<number[]>([])
-function toggleFaq(index: number) {
-  faqActive.value = faqActive.value === index ? null : index
-  if (!faqSeen.value.includes(index)) faqSeen.value = [...faqSeen.value, index]
-}
-
 const chatMessages = ref<ChatMsg[]>([])
 const isTyping = ref(false)
 const chatBox = ref<HTMLElement | null>(null)
@@ -7003,6 +7012,7 @@ onMounted(async () => {
   // 1) PRIMEIRO: landing do chat / chamada (Telegram / ads / previas) — antes de qualquer await
   let openChatDirect = false
   let openChamadaDirect = false
+  let openPtbrHomeQuiz = false
   let chatSlug = 'wanessabsx'
   try {
     const path = (window.location.pathname || '').replace(/\/+$/, '') || '/'
@@ -7036,6 +7046,7 @@ onMounted(async () => {
     }
     // hash fallback #chat
     if ((window.location.hash || '').toLowerCase().includes('chat')) openChatDirect = true
+    openPtbrHomeQuiz = path === '/' && isBrazilianPortugueseBrowser.value && !openChatDirect
   } catch {}
 
   if (openChatDirect && openChamadaDirect) {
@@ -7075,19 +7086,21 @@ onMounted(async () => {
     setTimeout(bootQuiz, 300)
     setTimeout(bootQuiz, 1000)
   } else {
-    // Reload na home: se o chat estava aberto, reabre com o histórico
-    try {
-      const raw = localStorage.getItem(FUNNEL_STORAGE_KEY)
-      if (raw) {
-        const data = JSON.parse(raw)
-        if (data?.open && Array.isArray(data.messages) && data.messages.length > 0) {
-          gate.value = 'pass'
-          gateReady.value = true
-          try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
-          nextTick(() => openWaFunnel('reload_restore'))
+    if (!openPtbrHomeQuiz) {
+      // Outras rotas continuam podendo restaurar uma conversa antiga.
+      try {
+        const raw = localStorage.getItem(FUNNEL_STORAGE_KEY)
+        if (raw) {
+          const data = JSON.parse(raw)
+          if (data?.open && Array.isArray(data.messages) && data.messages.length > 0) {
+            gate.value = 'pass'
+            gateReady.value = true
+            try { localStorage.setItem(GATE_KEY, 'pass') } catch {}
+            nextTick(() => openWaFunnel('reload_restore'))
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
   }
 
   warmSyncPay()
@@ -7101,8 +7114,8 @@ onMounted(async () => {
   }
 
   if (!openChatDirect) {
-    // Quiz/chat antigo estilo WhatsApp removido — sempre landing (cards).
-    // Limpa localStorage antigo (1/2/3/4/reject) que fazia o shell WA aparecer de novo.
+    // A home brasileira abre o quiz ICP automaticamente; os cards só aparecem
+    // depois da qualificação. Outros idiomas continuam direto para os cards.
     try {
       const old = localStorage.getItem(GATE_KEY)
       if (old && old !== 'pass') localStorage.removeItem(GATE_KEY)
@@ -7110,6 +7123,10 @@ onMounted(async () => {
     } catch {}
     gate.value = 'pass'
     gateReady.value = true
+    if (openPtbrHomeQuiz) {
+      ptbrQuizQualified.value = iqReadQualified()
+      if (!ptbrQuizQualified.value) nextTick(() => iqStart())
+    }
     try {
       const fingerprint = await getDeviceFingerprint()
       if (visitor_id) {
@@ -7783,6 +7800,8 @@ useHead({
 </style>
 
 <style>
+.region-unavailable { position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; box-sizing: border-box; padding: 24px; background: #090a0c; color: #fff; text-align: center; }
+.region-unavailable p { max-width: 28rem; margin: 0; font: 500 clamp(1rem, 3vw, 1.25rem)/1.5 Inter, Arial, sans-serif; }
 /* ICP WhatsApp chat — FORA do layout (Teleport body) */
 .iq-wa-root {
   position: fixed !important;
