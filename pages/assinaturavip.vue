@@ -770,7 +770,7 @@ async function continueToPayment() {
     pendingPixExitTracked.value = false
     trackVip('vip_pix_generated', selected.value.id)
   } catch (error: any) {
-    paymentError.value = checkoutText('paymentError')
+    paymentError.value = String(error?.data?.statusMessage || error?.data?.message || error?.statusMessage || checkoutText('paymentError'))
   } finally { paymentLoading.value = false }
 }
 async function copyPix() {
