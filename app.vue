@@ -1550,10 +1550,10 @@ async function iqAnswerInChat(opt: { id: string; label: string }) {
     iqPhase.value = 'result'
     iqPersistQualified()
     iqTrack('qualified', { answers: { ...iqAnswers } })
-    await iqTypeHer(
-      'Ah, gostei de saber o que você procura 😊\nPara acompanhar meu conteúdo reservado e ficar mais perto de mim, tenho duas opções:\nPrivSex: conteúdo exclusivo + chat comigo · R$ 49,90.\nTelegram VIP: conteúdo exclusivo + meu WhatsApp pessoal · R$ 29,90 ao mês.\nEsse conteúdo fica fora do meu perfil aberto. Se quiser conhecer hoje, olha as opções logo abaixo, com calma.',
-      900,
-    )
+    await iqTypeHer('Gostei de saber 😊', 600)
+    await iqTypeHer('PrivSex: conteúdo exclusivo + chat comigo · R$ 49,90.', 600)
+    await iqTypeHer('Telegram VIP: conteúdo exclusivo + meu WhatsApp · R$ 29,90/mês.', 600)
+    await iqTypeHer('Toque abaixo pra ver as opções.', 600)
   }
 }
 const iqPhase = ref<IqPhase>('quiz')
