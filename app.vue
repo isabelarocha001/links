@@ -63,12 +63,9 @@
         <header v-if="isBrazilianPortugueseBrowser" class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
-              <img v-for="(src, i) in gallery" :key="src + i" :src="src" :class="['hero-photo', { 'is-active': i === photoIndex }]" alt="" decoding="async" draggable="false" />
+              <img src="/model.jpg" class="hero-photo is-active" alt="" decoding="async" draggable="false" />
               <div class="photo-shine" aria-hidden="true"></div>
               <div class="photo-vignette" aria-hidden="true"></div>
-            </div>
-            <div class="photo-dots" aria-hidden="true">
-              <span v-for="(_, i) in gallery" :key="i" class="dot" :class="{ active: i === photoIndex }" />
             </div>
             <!-- CTA principal: WhatsApp — só se link WhatsApp estiver ativo no admin -->
             <button v-if="false && whatsappLinkEnabled" type="button" class="hero-wa-btn" @click="iqStart()">
@@ -126,17 +123,10 @@
           <h2 id="choice-guide-title">{{ t('offerQuizGuideTitle') }}</h2>
           <p>{{ t('offerQuizGuideDescription') }}</p>
         </section>
-        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isBrazilianPortugueseBrowser, 'main-cards--intl': !isBrazilianPortugueseBrowser }" v-if="configReady && (!isBrazilianPortugueseBrowser || (ptbrQuizQualified && !iqChatMode))">
+        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isBrazilianPortugueseBrowser, 'main-cards--intl': !isBrazilianPortugueseBrowser }" v-if="configReady">
           <p v-if="!isBrazilianPortugueseBrowser" class="intl-chat-prompt">{{ t('intlChatPrompt') }}</p>
           <div class="card-col" v-if="privsexLinkEnabled">
-            <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
-              <div class="portal-spiral" aria-hidden="true">
-                <span class="ps-ring ps-r1"></span>
-                <span class="ps-ring ps-r2"></span>
-                <span class="ps-ring ps-r3"></span>
-                <span class="ps-ring ps-r4"></span>
-                <span class="ps-core"></span>
-              </div>
+            <a class="lux-card lux-card--left" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
               <div class="card-glow"></div>
               <div class="card-top">
                 <span class="card-icon"><img v-if="logoPriv" :src="logoPriv" alt="" class="logo-img" width="28" height="28" /><template v-else>🔥</template></span>
@@ -145,11 +135,11 @@
               <h2 class="card-title">{{ isPt ? 'PrivSex' : t('privTitle') }}</h2>
               <p class="card-desc">{{ isPt ? 'Conteúdo exclusivo e chat comigo.' : t('privDesc') }}</p>
               <p v-if="isPt" class="offer-card__price">R$ 49,90</p>
+              <span class="card-cta">{{ isPt ? 'Assinar agora' : t('privEnter') }} <span aria-hidden="true">↗</span></span>
             </a>
-            <a class="card-enter card-enter--quest" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 49,90' : t('privEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
-          <div class="card-col" v-if="!isBrazilianPortugueseBrowser">
-            <a class="lux-card lux-card--right" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">
+          <div class="card-col">
+            <a class="lux-card lux-card--right lux-card--public" :href="publicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', publicChannelUrl)">
               <div class="card-glow"></div>
               <div class="card-top">
                 <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
@@ -157,8 +147,8 @@
               </div>
               <h2 class="card-title">{{ t('pubTitle') }}</h2>
               <p class="card-desc">{{ t('pubDesc') }}</p>
+              <span class="card-cta">{{ t('pubEnter') }} <span aria-hidden="true">↗</span></span>
             </a>
-            <a class="card-enter card-enter--quest" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">{{ t('pubEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
           <!-- WhatsApp ocupa a esquerda somente se o link PrivSex não existir -->
           <div class="card-col" v-if="false && isPt">
@@ -266,20 +256,6 @@
           </div>
         </section>
         <footer v-if="isBrazilianPortugueseBrowser" class="bio-block">
-          <div class="ig-card">
-            <img class="ig-avatar" :src="igProfileSrc" alt="" width="72" height="72" draggable="false" />
-            <div class="ig-info">
-              <p class="ig-user">wanessabsx_</p>
-              <p class="ig-name">Wanessa Borges</p>
-              <div class="ig-stats">
-                <span><b>22</b> {{ t('posts') }}</span>
-                <span><b>{{ t('followersCount') }}</b> {{ t('followers') }}</span>
-                <span><b>53</b> {{ t('following') }}</span>
-              </div>
-            </div>
-          </div>
-          <p class="bio-meta">{{ t('bioMeta') }}</p>
-          <p class="bio-text">{{ t('bioText') }}</p>
           <a
             class="x-profile-link"
             href="https://x.com/wanessabsx"
@@ -1382,7 +1358,6 @@ type LinkItem = { label: string; icon: string; url: string; desc?: string; logo?
 type ChatMsg = { from: 'her' | 'me'; text: string; time: string }
 import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 import { getDeviceFingerprint } from '~/utils/fingerprint'
-import { IG_PROFILE_SRC as igProfileSrc } from '~/utils/ig-profile'
 import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i18n'
 import { detectBrowserMoney, formatMoney, convertFromBrl } from '~/utils/currency'
 
@@ -1905,6 +1880,7 @@ function iqGoWhatsApp() {
 }
 
 const vipBotUrl = '/assinaturavip'
+const ptBrPublicChannelUrl = 'https://t.me/+xVxNfCJ-Qe1hNTIx'
 const intlPublicChannelUrl = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const locale = ref<Locale>('pt')
 const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (intl)
@@ -1921,6 +1897,7 @@ const isBrazilianPortugueseBrowser = useState('links-is-pt-br-browser', () => {
   }
   return browserUsesBrazilianPortuguese()
 })
+const publicChannelUrl = computed(() => isBrazilianPortugueseBrowser.value ? ptBrPublicChannelUrl : intlPublicChannelUrl)
 type OfferQuizInterest = 'conteudo' | 'contato'
 type OfferQuizSelection = 'privsex' | 'telegram' | 'compare'
 const offerQuizStep = ref<'interest' | 'platform' | 'result'>('interest')
@@ -6377,9 +6354,6 @@ if (opt.key === 'vid_10' || opt.key === 'vid_20' || opt.key === 'vid_30' || opt.
 const logoPriv = LOGO_PRIVSEX
 const logoTg = LOGO_TG_BLUE
 const logoTgPurple = LOGO_TG_PURPLE
-const gallery = ['/model.jpg', '/hero-1.jpg', '/hero-2.jpg', '/hero-3.jpg']
-const photoIndex = ref(0)
-let photoTimer: ReturnType<typeof setInterval> | null = null
 
 /** Presença regional (IP): mostra somente uma distância aproximada, sem expor o IP. */
 const nearPresenceReady = ref(false)
@@ -7012,10 +6986,11 @@ onMounted(async () => {
   // 1) PRIMEIRO: landing do chat / chamada (Telegram / ads / previas) — antes de qualquer await
   let openChatDirect = false
   let openChamadaDirect = false
-  let openPtbrHomeQuiz = false
+  let isHomeRoute = false
   let chatSlug = 'wanessabsx'
   try {
     const path = (window.location.pathname || '').replace(/\/+$/, '') || '/'
+    isHomeRoute = path === '/'
     // /whatsapp e /chat → quiz ICP (não funil antigo)
     if (path === '/whatsapp') {
       openChatDirect = true
@@ -7046,7 +7021,6 @@ onMounted(async () => {
     }
     // hash fallback #chat
     if ((window.location.hash || '').toLowerCase().includes('chat')) openChatDirect = true
-    openPtbrHomeQuiz = path === '/' && isBrazilianPortugueseBrowser.value && !openChatDirect
   } catch {}
 
   if (openChatDirect && openChamadaDirect) {
@@ -7086,8 +7060,8 @@ onMounted(async () => {
     setTimeout(bootQuiz, 300)
     setTimeout(bootQuiz, 1000)
   } else {
-    if (!openPtbrHomeQuiz) {
-      // Outras rotas continuam podendo restaurar uma conversa antiga.
+    // Não reabre chat antigo automaticamente na home; ela mostra os cards direto.
+    if (!isHomeRoute) {
       try {
         const raw = localStorage.getItem(FUNNEL_STORAGE_KEY)
         if (raw) {
@@ -7114,8 +7088,7 @@ onMounted(async () => {
   }
 
   if (!openChatDirect) {
-    // A home brasileira abre o quiz ICP automaticamente; os cards só aparecem
-    // depois da qualificação. Outros idiomas continuam direto para os cards.
+    // A home mostra os cards diretamente; o quiz fica fora do fluxo principal.
     try {
       const old = localStorage.getItem(GATE_KEY)
       if (old && old !== 'pass') localStorage.removeItem(GATE_KEY)
@@ -7123,10 +7096,6 @@ onMounted(async () => {
     } catch {}
     gate.value = 'pass'
     gateReady.value = true
-    if (openPtbrHomeQuiz) {
-      ptbrQuizQualified.value = iqReadQualified()
-      if (!ptbrQuizQualified.value) nextTick(() => iqStart())
-    }
     try {
       const fingerprint = await getDeviceFingerprint()
       if (visitor_id) {
@@ -7140,10 +7109,8 @@ onMounted(async () => {
     } catch {}
   }
 
-  photoTimer = setInterval(() => { photoIndex.value = (photoIndex.value + 1) % gallery.length }, 5500)
 })
 onUnmounted(() => {
-  if (photoTimer) clearInterval(photoTimer)
   if (typingTimer) clearTimeout(typingTimer)
 })
 function openLogin() {
