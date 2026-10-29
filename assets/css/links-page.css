@@ -10,7 +10,7 @@
 .bg-glow { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: min(150vw, 1100px); height: 100%; background: radial-gradient(ellipse 56% 38% at 50% 4%, rgba(41, 88, 255, 0.2) 0%, transparent 72%); pointer-events: none; }
 .bg-grain { position: absolute; inset: 0; opacity: 0.03; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); pointer-events: none; }
 .lock-btn { position: fixed; top: max(8px, env(safe-area-inset-top)); right: 8px; z-index: 50; width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.container { width: 100%; max-width: 420px; min-height: 100vh; min-height: 100dvh; padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom)); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 1; margin: 0 auto; background: #050507; }
+.container { width: 100%; max-width: 420px; min-height: 100vh; min-height: 100dvh; padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom)); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 1; margin: 0 auto; background: transparent; }
 .page--intl-cards-centered > .container { min-height: calc(100vh - 28px); min-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom))); }
 .page--intl-cards-centered { background-color: #07080d; background-image: radial-gradient(ellipse 38% 58% at 0% 42%, rgba(28, 74, 255, 0.3), transparent 72%), radial-gradient(ellipse 34% 52% at 100% 58%, rgba(91, 62, 169, 0.28), transparent 72%), linear-gradient(rgba(5,7,10,.91), rgba(5,7,10,.91)), url("data:image/svg+xml,%3Csvg width='76' height='76' viewBox='0 0 76 76' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23d8e2e7' stroke-opacity='.14' stroke-width='1.2'%3E%3Cpath d='M9 13h20a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H20l-6 5v-5h-5a4 4 0 0 1-4-4V17a4 4 0 0 1 4-4zM48 48h17a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-5l-5 4v-4h-7a4 4 0 0 1-4-4v-8a4 4 0 0 1 4-4z'/%3E%3Cpath d='M48 14c-2-3-7-2-7 2 0 4 7 8 7 8s7-4 7-8c0-4-5-5-7-2zM17 55h10m-5-5v10M59 25h9m-4-4v8'/%3E%3C/g%3E%3C/svg%3E"); background-attachment: fixed; }
 /* ========== SHELL CHAT WHATSAPP (quiz gate) ========== */
@@ -57,6 +57,8 @@
 .wa-input::placeholder { color: #667781; }
 /* ========== HERO / FOTO ========== */
 .hero { width: 100%; text-align: center; margin-bottom: 8px; }
+.platforms-heading { width: 100%; margin: 0 0 16px; padding: 0 12px; box-sizing: border-box; text-align: center; }
+.platforms-heading h1 { margin: 0 0 4px; color: #fff; font-size: 1rem; font-weight: 700; line-height: 1.25; }
 .photo-stage { position: relative; width: 100%; max-width: 420px; margin: 0 auto 24px; }
 .photo-frame {
   position: relative; width: 100%; aspect-ratio: 3/4; border-radius: 0; overflow: hidden;
@@ -305,10 +307,14 @@
 .card-enter--quest:hover, .card-enter--quest:focus-visible { transform: translateY(-2px); box-shadow: 0 0 0 2px rgba(216, 180, 254, 0.2), 0 10px 24px rgba(126, 34, 206, 0.35); }
 .card-enter--quest span:first-child { color: #f5d0fe; }
 @keyframes quest-glow { 0%, 100% { background-position: 0 50%; } 50% { background-position: 100% 50%; } }
-.lux-card { position: relative; display: flex; flex-direction: column; padding: 14px; border-radius: 12px; background: #15171d; border: 1px solid rgba(79, 173, 255, 0.42); text-decoration: none; overflow: hidden; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; min-height: 151px; }
+.lux-card { position: relative; isolation: isolate; display: flex; flex-direction: column; padding: 14px; border-radius: 12px; background: #15171d; border: 1px solid rgba(79, 173, 255, 0.42); text-decoration: none; overflow: hidden; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; min-height: 151px; }
+.lux-card::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.48) 55%, rgba(0,0,0,.7)); pointer-events: none; }
 .lux-card:hover { transform: translateY(-2px); border-color: #4fadff; box-shadow: 0 8px 22px rgba(0,0,0,0.24); }
 .lux-card:active { transform: scale(0.98); }
-.card-glow { position: absolute; top: -30%; right: -20%; width: 80%; height: 70%; background: radial-gradient(circle, rgba(79, 173, 255, 0.12) 0%, transparent 70%); pointer-events: none; }
+.card-background { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; pointer-events: none; }
+.lux-card--left .card-background { object-position: center 60%; }
+.lux-card--public .card-background { object-position: center 65%; }
+.card-glow { position: absolute; z-index: 1; top: -30%; right: -20%; width: 80%; height: 70%; background: radial-gradient(circle, rgba(79, 173, 255, 0.12) 0%, transparent 70%); pointer-events: none; }
 .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; position: relative; z-index: 2; }
 .card-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
 .logo-img { width: 22px; height: 22px; object-fit: contain; border-radius: 50%; }
@@ -475,13 +481,15 @@
   text-align: center;
   border-top: 1px solid rgba(192, 132, 252, 0.18);
 }
+.social-links-label { margin: 0 0 8px; color: #fff; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.social-links { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .x-profile-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  margin: 10px auto 4px;
+  margin: 0;
   border-radius: 50%;
   color: rgba(245, 240, 255, 0.85);
   background: rgba(255, 255, 255, 0.06);

@@ -6,7 +6,8 @@ Algoritmo local do CPF (módulo 11), alinhado à shape pública documentada em h
 ## Objetivo
 
 - Gerar CPF matematicamente válido sem dependência de terceiro.
-- Auto-preencher **nome, e-mail, telefone e CPF** de forma **estável por `visitor_id`**, para o funil/agente não pedir esses dados a cada visita.
+- Gerar dados fictícios estáveis por `visitor_id` para ferramentas e testes locais.
+- O checkout real de Pix Automático pede o CPF do titular da conta; não usa CPF gerado.
 - Expor endpoints REST no próprio app Nuxt (Vercel).
 
 ## Arquivos
@@ -17,7 +18,7 @@ Algoritmo local do CPF (módulo 11), alinhado à shape pública documentada em h
 | `server/api/cpf/index.get.ts` | `GET /api/cpf` — gera 1–100 CPFs |
 | `server/api/cpf/validate.get.ts` | `GET /api/cpf/validate?cpf=` — valida |
 | `server/api/fake-person.get.ts` | `GET /api/fake-person?visitor_id=` — pessoa completa estável |
-| `server/api/checkout/vip-monthly.post.ts` | Se body sem nome/email/CPF válidos, preenche via `fakePersonForVisitor(visitorId)` |
+| `server/api/checkout/vip-monthly.post.ts` | Completa nome/email se necessário e exige um CPF válido enviado pelo pagador |
 
 ## Visitor ID (contexto)
 
@@ -71,18 +72,18 @@ Exemplos de resposta:
 
 `POST /api/checkout/vip-monthly`:
 
-1. Exige `visitor_id` (UUID) e `accepted_recurring: true`.
-2. Lê `name` / `email` / `document` do body.
-3. Se inválidos ou ausentes → completa com `fakePersonForVisitor(visitorId)`.
-4. Segue enroll SyncPay Pix Automático.
+1. Exige `visitor_id` (UUID), `accepted_recurring: true` e um `document` válido.
+2. A página pede o CPF em uma janela antes de iniciar o Pix Automático.
+3. Nome/e-mail ainda podem ser completados com dados locais; o CPF nunca é substituído por um valor gerado.
+4. Envia o CPF à SyncPay para iniciar a autorização. O PrivSex não grava esse número no banco; a página o guarda no `localStorage` deste navegador para evitar nova digitação.
 
-O agente pode mandar só `{ visitor_id, accepted_recurring: true }` e o servidor completa o resto.
+Uma chamada sem CPF válido é recusada antes de iniciar uma nova autorização.
 
 ## Aviso (Pix Automático)
 
-CPF fictício é válido **matematicamente**, não é documento real de uma pessoa.  
-No Pix Automático o banco autoriza o mandato no CPF de quem escaneia o QR no app.  
-Auto-fill serve para não travar o funil/agente e para testes; cobrança real pode falhar na autorização bancária se o CPF não for o do pagador.
+CPF fictício pode ser válido **matematicamente**, mas não é o documento real do pagador. Por isso, os endpoints de geração continuam restritos a ferramentas/testes e não são usados no checkout mensal.
+
+O checkout exige o CPF do titular que autoriza o Pix Automático. Tentativas antigas sem a confirmação desse dado não são reutilizadas; se houver uma autorização anterior aberta, o sistema bloqueia uma nova para evitar duplicidade.
 
 ## O que NÃO fazer
 

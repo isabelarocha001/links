@@ -169,8 +169,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Confirme que entendeu a cobrança mensal automática.' })
   }
 
-  // Auto-preenche nome/email/CPF estáveis por visitor_id (instância própria — sem API externa).
-  // Se o front/agente mandar dados válidos, usa os enviados; senão completa com gerador local.
+  // Nome e email continuam sendo completados localmente; o CPF deve ser informado pelo pagador.
   const auto = fakePersonForVisitor(visitorId)
   let name = String(body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 100)
   let email = String(body?.email || '').trim().toLowerCase().slice(0, 254)
@@ -178,7 +177,9 @@ export default defineEventHandler(async (event) => {
 
   if (name.length < 2) name = auto.name
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) email = auto.email
-  if (!isValidCpf(document)) document = auto.document
+  if (!isValidCpf(document)) {
+    throw createError({ statusCode: 400, statusMessage: 'Digite um CPF válido para autorizar o Pix Automático.' })
+  }
 
   const planToken = await loadPlanToken()
   if (!/^[0-9a-f-]{36}$/i.test(planToken)) {
@@ -221,8 +222,19 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 503, statusMessage: 'Não consegui verificar uma tentativa anterior. Tente novamente em instantes.' })
   }
 
+  const legacyAttempt = previousAttempts?.find((item: any) => {
+    if (item?.metadata?.payer_document_provided === true) return false
+    const metadata = item?.metadata || {}
+    const hasMandate = Boolean(metadata.subscription_token && metadata.mandate_id)
+    const hasPendingPix = item?.status === 'pending' && typeof item?.pix_qr_code === 'string' && item.pix_qr_code.trim()
+    return hasMandate || hasPendingPix
+  })
+  if (legacyAttempt) {
+    throw createError({ statusCode: 409, statusMessage: 'Existe uma autorização anterior ainda aberta. Para evitar uma cobrança duplicada, fale com o suporte antes de tentar novamente.' })
+  }
+
   const existingPix = previousAttempts?.find((item: any) =>
-    item.status === 'pending' && typeof item.pix_qr_code === 'string' && item.pix_qr_code.trim()
+    item.status === 'pending' && item.metadata?.payer_document_provided === true && typeof item.pix_qr_code === 'string' && item.pix_qr_code.trim()
   )
   if (existingPix) {
     const metadata = existingPix.metadata || {}
@@ -241,6 +253,9 @@ export default defineEventHandler(async (event) => {
   )
   if (existingMandate) {
     const existingMetadata = existingMandate.metadata || {}
+    if (existingMetadata.payer_document_provided !== true) {
+      throw createError({ statusCode: 409, statusMessage: 'Existe uma autorização anterior ainda aberta. Para evitar uma cobrança duplicada, fale com o suporte antes de tentar novamente.' })
+    }
     let lookup: { status: number; payload: any; qrCode: string } | null = null
     try {
       lookup = await lookupSubscriptionPix(base, headers, existingMetadata.subscription_token)
@@ -282,7 +297,7 @@ export default defineEventHandler(async (event) => {
     status: 'pending',
     amount: EXPECTED_AMOUNT,
     currency: 'BRL',
-    metadata: { source: 'assinaturavip', plan_key: 'vip_monthly', visitor_id: visitorId, billing_method: 'pix_automatico' },
+    metadata: { source: 'assinaturavip', plan_key: 'vip_monthly', visitor_id: visitorId, billing_method: 'pix_automatico', payer_document_provided: true },
   }).select('id').single()
   if (insertError || !payment?.id) {
     console.error('[checkout/vip-monthly] pending payment insert failed', insertError?.code || 'unknown')
@@ -319,6 +334,7 @@ export default defineEventHandler(async (event) => {
       plan_key: 'vip_monthly',
       visitor_id: visitorId,
       billing_method: 'pix_automatico',
+      payer_document_provided: true,
       subscription_token: enrollment.subscriptionToken,
       mandate_id: enrollment.mandateId,
       mandate_status: enrollment.mandateStatus || 'CREATED',

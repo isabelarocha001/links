@@ -65,7 +65,19 @@
     <div v-if="checkoutDialogOpen" class="vip-modal-backdrop" @click.self="closeCheckoutDialog">
       <section class="vip-modal" role="dialog" aria-modal="true" aria-labelledby="vip-modal-title" @keydown.esc="closeCheckoutDialog">
         <button class="vip-modal__close" type="button" :aria-label="checkoutText('closeDialog')" autofocus @click="closeCheckoutDialog">&times;</button>
-        <template v-if="!pixCode && !stripePaid">
+        <template v-if="cpfDialogOpen">
+          <p class="vip-modal__eyebrow">{{ checkoutText('chosenPlan') }}</p>
+          <h2 id="vip-modal-title">{{ checkoutText('cpfTitle') }}</h2>
+          <p class="vip-modal__note">{{ checkoutText('cpfHelp') }}</p>
+          <form class="vip-payer-form" @submit.prevent="submitCpfForPix">
+            <label for="vip-pix-cpf">{{ checkoutText('cpfLabel') }}</label>
+            <input id="vip-pix-cpf" :value="cpfInput" type="text" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00" :aria-invalid="!!cpfError" :aria-describedby="cpfError ? 'vip-pix-cpf-help vip-pix-cpf-error' : 'vip-pix-cpf-help'" autofocus @input="updateCpfInput">
+            <small id="vip-pix-cpf-help">{{ checkoutText('cpfPrivacy') }}</small>
+            <p v-if="cpfError" id="vip-pix-cpf-error" class="vip-modal__error" role="alert">{{ cpfError }}</p>
+            <button class="vip-checkout__cta" type="submit">{{ checkoutText('cpfSubmit') }} <span aria-hidden="true">&rarr;</span></button>
+          </form>
+        </template>
+        <template v-else-if="!pixCode && !stripePaid">
           <p class="vip-modal__eyebrow">{{ checkoutText('chosenPlan') }}</p>
           <h2 id="vip-modal-title">{{ selected ? planName(selected) : '' }}</h2>
           <p class="vip-modal__price">{{ selected ? displayPrice(selected) : '' }}</p>
@@ -222,6 +234,7 @@ type Prices = Record<Currency, number | null>
 type Plan = { id: string; name: string; detail: string; prices: Prices; enabled: boolean; badge?: string; price?: number }
 type CheckoutSettings = { plans: Plan[] }
 const STORAGE_KEY = 'wanessa-vip-checkout-settings-v1'
+const CPF_STORAGE_KEY = 'wanessa-vip-pix-auto-cpf-v1'
 const defaultSettings: CheckoutSettings = {
   plans: [
     { id: 'monthly', name: 'Mensal', detail: 'Cobrança automática a cada 30 dias', prices: { BRL: 29.9, USD: 29.9, EUR: 29.9 }, enabled: true, badge: 'OFERTA' },
@@ -240,6 +253,10 @@ const paymentLoading = ref(false)
 const paymentStarted = ref(false)
 const paymentError = ref('')
 const paymentMethod = ref<'pix' | 'card' | null>(null)
+const cpfDialogOpen = ref(false)
+const cpfInput = ref('')
+const cpfForPix = ref('')
+const cpfError = ref('')
 const cardAvailability = ref<{ plan: string; currency: string }[]>([])
 const stripeMounted = ref(false)
 const stripePaid = ref(false)
@@ -406,6 +423,37 @@ function choosePix() {
   paymentError.value = ''
   void continueToPayment()
 }
+function formatCpfInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  return digits.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2')
+}
+function updateCpfInput(event: Event) {
+  cpfInput.value = formatCpfInput((event.target as HTMLInputElement).value)
+  cpfError.value = ''
+}
+function isValidCpfInput(value: string) {
+  const digits = value.replace(/\D/g, '')
+  if (!/^\d{11}$/.test(digits) || /^([0-9])\1{10}$/.test(digits)) return false
+  const digit = (length: number) => {
+    let sum = 0
+    for (let index = 0; index < length; index++) sum += Number(digits[index]) * (length + 1 - index)
+    const remainder = (sum * 10) % 11
+    return remainder === 10 ? 0 : remainder
+  }
+  return digit(9) === Number(digits[9]) && digit(10) === Number(digits[10])
+}
+function submitCpfForPix() {
+  const digits = cpfInput.value.replace(/\D/g, '')
+  if (!isValidCpfInput(digits)) {
+    cpfError.value = checkoutText('cpfInvalid')
+    return
+  }
+  cpfForPix.value = digits
+  try { localStorage.setItem(CPF_STORAGE_KEY, digits) } catch { /* Keep the CPF in memory for this checkout if storage is unavailable. */ }
+  cpfError.value = ''
+  cpfDialogOpen.value = false
+  void continueToPayment()
+}
 async function chooseCard() {
   if (!cardAvailableForSelected.value) return
   paymentMethod.value = 'card'
@@ -558,7 +606,10 @@ async function mountStripePaymentElement(pre: StripePrefetch) {
       },
     },
   })
-  const paymentElement = elements.create('payment', { layout: 'tabs' })
+  const paymentElement = elements.create('payment', {
+    layout: 'tabs',
+    business: { name: 'Privsex' },
+  })
   await nextTick()
   await nextTick()
   const mount = document.getElementById('vip-stripe-payment-element')
@@ -675,6 +726,8 @@ function resetIncompleteCheckout() {
   paymentLoading.value = false
   paymentError.value = ''
   paymentMethod.value = null
+  cpfDialogOpen.value = false
+  cpfError.value = ''
   stripePaid.value = false
   stripeCapability.value = ''
   stripeRecurrence.value = ''
@@ -733,6 +786,10 @@ function onPageHide() {
 async function continueToPayment() {
   if (!selected.value || !canPay(selected.value) || paymentLoading.value) return
   paymentMethod.value = 'pix'
+  if (selected.value.id === 'monthly' && !cpfForPix.value) {
+    cpfDialogOpen.value = true
+    return
+  }
   paymentLoading.value = true
   paymentError.value = ''
   try {
@@ -740,6 +797,7 @@ async function continueToPayment() {
       const response = await $fetch<any>('/api/checkout/vip-monthly', { method: 'POST', body: {
         visitor_id: getVipVisitorId(),
         accepted_recurring: true,
+        document: cpfForPix.value,
       } })
       if (!response?.ok || !response.pix_code || !response.payment_id) throw new Error('payment_failed')
       pixCode.value = response.pix_code
@@ -821,6 +879,15 @@ onMounted(() => {
       }
     }
   } catch { /* Keep the safe defaults when local settings are invalid. */ }
+  try {
+    const savedCpf = String(localStorage.getItem(CPF_STORAGE_KEY) || '').replace(/\D/g, '')
+    if (isValidCpfInput(savedCpf)) {
+      cpfForPix.value = savedCpf
+      cpfInput.value = formatCpfInput(savedCpf)
+    } else if (savedCpf) {
+      localStorage.removeItem(CPF_STORAGE_KEY)
+    }
+  } catch { /* CPF can still be entered and kept in memory if browser storage is blocked. */ }
   detectCurrency()
   void refreshCardAvailability()
   pixStatus.value = checkoutText('waitingStatus')
