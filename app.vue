@@ -4,7 +4,7 @@
   </main>
   <NuxtPage v-else />
   <AdminChatInbox v-if="!isRegionUnavailable && isAdminRoute" />
-  <div v-else-if="!isRegionUnavailable && !isIsolatedRoute" class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding, 'page--intl-cards-centered': !isBrazilianPortugueseBrowser && configReady }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
+  <div v-else-if="!isRegionUnavailable && !isIsolatedRoute" class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="bg-grain" aria-hidden="true"></div>
     <!-- cadeado removido do front: acesso admin só por rota direta (/admin/chat) -->
@@ -60,7 +60,7 @@
 
 
       <template v-if="gateReady && gate === 'pass'">
-        <header v-if="isBrazilianPortugueseBrowser" class="hero">
+        <header class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
               <img src="/model.jpg" class="hero-photo is-active" alt="" decoding="async" draggable="false" />
@@ -80,8 +80,8 @@
             </button>
           </div>
         </header>
-        <section v-if="isBrazilianPortugueseBrowser" class="platforms-heading" aria-label="Minhas plataformas">
-          <h1>Minhas plataformas</h1>
+        <section class="platforms-heading" :aria-label="t('platformsHeading')">
+          <h1>{{ t('platformsHeading') }}</h1>
         </section>
         <section v-if="false && isBrazilianPortugueseBrowser" class="offer-quiz" aria-labelledby="offer-quiz-title">
           <div class="offer-quiz__game">
@@ -126,8 +126,7 @@
           <h2 id="choice-guide-title">{{ t('offerQuizGuideTitle') }}</h2>
           <p>{{ t('offerQuizGuideDescription') }}</p>
         </section>
-        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isBrazilianPortugueseBrowser, 'main-cards--intl': !isBrazilianPortugueseBrowser }" v-if="configReady">
-          <p v-if="!isBrazilianPortugueseBrowser" class="intl-chat-prompt">{{ t('intlChatPrompt') }}</p>
+        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': !isBrazilianPortugueseBrowser }" v-if="configReady">
           <div class="card-col" v-if="privsexLinkEnabled">
             <a class="lux-card lux-card--left" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
               <img class="card-background" src="/card-privsex.jpeg" alt="" aria-hidden="true" loading="eager" />
@@ -154,8 +153,8 @@
             </a>
             <a class="card-enter card-enter--quest" href="/assinaturavip" @pointerdown.passive="onCardClick('Checkout Canal VIP', '/assinaturavip')"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 29,90/mês' : t('vipEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
-          <div class="card-col">
-            <a class="lux-card lux-card--right lux-card--public" :href="publicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', publicChannelUrl)">
+          <div class="card-col" v-if="!isBrazilianPortugueseBrowser">
+            <a class="lux-card lux-card--right lux-card--public" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">
               <img class="card-background card-background--public" src="/card-telegram-public.jpeg" alt="" aria-hidden="true" loading="eager" />
               <div class="card-glow"></div>
               <div class="card-top">
@@ -165,7 +164,7 @@
               <h2 class="card-title">{{ t('pubTitle') }}</h2>
               <p class="card-desc">{{ t('pubDesc') }}</p>
             </a>
-            <a class="card-enter card-enter--quest card-enter--public" :href="publicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', publicChannelUrl)">{{ t('pubEnter') }} <span aria-hidden="true">↗</span></a>
+            <a class="card-enter card-enter--quest card-enter--public" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">{{ t('pubEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
           <!-- WhatsApp ocupa a esquerda somente se o link PrivSex não existir -->
           <div class="card-col" v-if="false && isPt">
@@ -259,15 +258,15 @@
             </a>
           </div>
         </section>
-        <footer v-if="isBrazilianPortugueseBrowser" class="bio-block">
-          <p class="social-links-label">Minhas redes sociais</p>
-          <nav class="social-links" aria-label="Redes sociais">
-            <a class="x-profile-link" href="https://x.com/wanessabsx" target="_blank" rel="noopener noreferrer" aria-label="Perfil no X">
+        <footer class="bio-block">
+          <p class="social-links-label">{{ t('socialLinksLabel') }}</p>
+          <nav class="social-links" :aria-label="t('socialLinksNav')">
+            <a class="x-profile-link" href="https://x.com/wanessabsx" target="_blank" rel="noopener noreferrer" :aria-label="t('xProfileLabel')">
               <svg class="x-profile-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.451L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
               </svg>
             </a>
-            <a class="x-profile-link" href="https://www.instagram.com/wanessa_bsx/" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Wanessa">
+            <a class="x-profile-link" href="https://www.instagram.com/wanessa_bsx/" target="_blank" rel="noopener noreferrer" :aria-label="t('instagramProfileLabel')">
               <svg class="instagram-profile-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.7" r=".8" fill="currentColor" stroke="none"/>
               </svg>
@@ -1886,10 +1885,15 @@ function iqGoWhatsApp() {
 }
 
 const vipBotUrl = '/assinaturavip'
-const ptBrPublicChannelUrl = 'https://t.me/+xVxNfCJ-Qe1hNTIx'
 const intlPublicChannelUrl = 'https://t.me/+2bYvtb_AA0AzMTcx'
-const locale = ref<Locale>('pt')
-const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (intl)
+const requestPreferredLanguages = import.meta.server
+  ? (useRequestHeaders(['accept-language'])['accept-language'] || '')
+      .split(',')
+      .map((value) => value.split(';')[0].trim())
+      .filter(Boolean)
+  : []
+const locale = useState<Locale>('links-page-locale', () => import.meta.server ? detectLocale(requestPreferredLanguages) : detectLocale())
+const isPt = useState('links-is-brazil-audience', () => import.meta.server ? isBrazilAudience(requestPreferredLanguages[0]) : isBrazilAudience()) // true only BR; pt-PT = false (intl)
 function browserUsesBrazilianPortuguese() {
   if (typeof navigator === 'undefined') return true
   const primaryLanguage = String(navigator.language || '').toLowerCase().replace(/_/g, '-')
@@ -1903,7 +1907,6 @@ const isBrazilianPortugueseBrowser = useState('links-is-pt-br-browser', () => {
   }
   return browserUsesBrazilianPortuguese()
 })
-const publicChannelUrl = computed(() => isBrazilianPortugueseBrowser.value ? ptBrPublicChannelUrl : intlPublicChannelUrl)
 type OfferQuizInterest = 'conteudo' | 'contato'
 type OfferQuizSelection = 'privsex' | 'telegram' | 'compare'
 const offerQuizStep = ref<'interest' | 'platform' | 'result'>('interest')
@@ -6972,6 +6975,7 @@ onMounted(async () => {
   // Landing isolada: não inicializa o funil da Wanessa nem registra
   // page_view como /links/wanessa.
   if (isIsolatedRoute.value) return
+  isPt.value = isBrazilAudience()
   isBrazilianPortugueseBrowser.value = browserUsesBrazilianPortuguese()
   // Em /admin/chat: sincroniza sessão admin com o painel de config
   if (isAdminRoute.value) {
@@ -7286,8 +7290,8 @@ async function doSave() {
   finally { loading.value = false }
 }
 useHead({
-  title: 'Wanessa',
-  meta: [{ name: 'description', content: 'Acesso restrito — privacidade e alto nível.' }, { name: 'theme-color', content: '#12081a' }],
+  title: 'Links das minhas redes sociais pagas | Wanessa',
+  meta: [{ name: 'description', content: 'Acesse minhas redes sociais e plataformas em um só lugar.' }, { name: 'theme-color', content: '#12081a' }],
 })
 </script>
 <style scoped>

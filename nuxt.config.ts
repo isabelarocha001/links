@@ -26,15 +26,16 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'Wanessa | Links',
+      title: 'Links das minhas redes sociais pagas | Wanessa',
       htmlAttrs: { lang: 'pt-BR' },
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content' },
-        { name: 'description', content: 'Todos os meus links em um só lugar' },
+        { name: 'description', content: 'Acesse minhas redes sociais e plataformas em um só lugar.' },
         { name: 'theme-color', content: '#0a0a0c' }
       ],
       link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/links-icon.svg' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {

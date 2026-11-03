@@ -12,9 +12,8 @@
  */
 export type Locale = 'pt' | 'en' | 'es' | 'fr' | 'de' | 'it'
 
-export function detectLocale(): Locale {
-  if (typeof navigator === 'undefined') return 'pt'
-  const list = [...(navigator.languages || []), navigator.language || 'pt']
+export function detectLocale(preferredLanguages?: readonly string[]): Locale {
+  const list = preferredLanguages ?? (typeof navigator === 'undefined' ? [] : [...(navigator.languages || []), navigator.language || 'pt'])
   for (const raw of list) {
     const code = String(raw || '').toLowerCase().slice(0, 2)
     if (code === 'pt') return 'pt'
@@ -33,9 +32,9 @@ export function detectLocale(): Locale {
  * Não usa navigator.languages inteira: se o lead tem en-US como principal
  * e pt-BR só na lista, deve ser tratado como gringo (Stripe), não PIX.
  */
-export function isBrazilAudience(): boolean {
-  if (typeof navigator === 'undefined') return true
-  const primary = String(navigator.language || 'pt-BR').toLowerCase().replace(/_/g, '-')
+export function isBrazilAudience(primaryLanguageOverride?: string): boolean {
+  const primaryLanguage = primaryLanguageOverride ?? (typeof navigator === 'undefined' ? 'pt-BR' : navigator.language || 'pt-BR')
+  const primary = String(primaryLanguage).toLowerCase().replace(/_/g, '-')
   if (primary === 'pt-pt' || primary.startsWith('pt-pt-')) return false
   if (primary === 'pt-br' || primary.startsWith('pt-br-')) return true
   if (primary === 'pt' || primary === 'pt-') return true
@@ -51,6 +50,11 @@ type Dict = Record<string, string>
 
 // --- PT-BR (Brasil) ---
 const pt: Dict = {
+  platformsHeading: 'Minhas plataformas',
+  socialLinksLabel: 'Minhas redes sociais',
+  socialLinksNav: 'Redes sociais',
+  xProfileLabel: 'Perfil no X',
+  instagramProfileLabel: 'Instagram da Wanessa',
   // payment method labels
   cuPixBalloon: "Posso te mandar a chave PIX pra liberar o chat? 💚",
   cuCardBalloon: "Pode pagar no cartão pra liberar o chat? 💚",
@@ -168,6 +172,11 @@ const pt: Dict = {
 
 // --- English ---
 const en: Dict = {
+  platformsHeading: 'My platforms',
+  socialLinksLabel: 'My social media',
+  socialLinksNav: 'Social media',
+  xProfileLabel: 'X profile',
+  instagramProfileLabel: 'Wanessa on Instagram',
   // payment method labels
   cuPixBalloon: "Can I send you the PIX key to unlock chat? 💚",
   cuCardBalloon: "Pay by card to unlock the chat? 💚",
@@ -286,6 +295,11 @@ const en: Dict = {
 
 // --- Español (herda en + overrides) ---
 const es: Dict = {
+  platformsHeading: 'Mis plataformas',
+  socialLinksLabel: 'Mis redes sociales',
+  socialLinksNav: 'Redes sociales',
+  xProfileLabel: 'Perfil en X',
+  instagramProfileLabel: 'Instagram de Wanessa',
   // payment method labels
   cuPixBalloon: "¿Te mando la clave PIX para liberar el chat? 💚",
   cuCardBalloon: "¿Pagas con tarjeta para liberar el chat? 💚",
@@ -401,6 +415,11 @@ const es: Dict = {
 // --- Français ---
 const fr: Dict = {
   ...en,
+  platformsHeading: 'Mes plateformes',
+  socialLinksLabel: 'Mes réseaux sociaux',
+  socialLinksNav: 'Réseaux sociaux',
+  xProfileLabel: 'Profil sur X',
+  instagramProfileLabel: 'Instagram de Wanessa',
   waName: 'Créatrice de contenu · Wanessa',
   waTyping: 'écrit…',
   waDay: "Aujourd'hui",
@@ -444,6 +463,11 @@ const fr: Dict = {
 // --- Deutsch ---
 const de: Dict = {
   ...en,
+  platformsHeading: 'Meine Plattformen',
+  socialLinksLabel: 'Meine sozialen Medien',
+  socialLinksNav: 'Soziale Medien',
+  xProfileLabel: 'X-Profil',
+  instagramProfileLabel: 'Wanessas Instagram',
   waName: 'Content Creatorin · Wanessa',
   waTyping: 'tippt…',
   waDay: 'Heute',
@@ -488,6 +512,11 @@ const de: Dict = {
 // --- Italiano ---
 const it: Dict = {
   ...en,
+  platformsHeading: 'Le mie piattaforme',
+  socialLinksLabel: 'I miei social',
+  socialLinksNav: 'Social media',
+  xProfileLabel: 'Profilo su X',
+  instagramProfileLabel: 'Instagram di Wanessa',
   waName: 'Content creator · Wanessa',
   waTyping: 'sta scrivendo…',
   waDay: 'Oggi',

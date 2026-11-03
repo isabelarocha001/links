@@ -1,0 +1,11 @@
+{
+  "appId": "com.wanessabsx.links",
+  "appName": "Wanessa",
+  "webDir": "capacitor-web",
+  "backgroundColor": "#0a0a0c",
+  "server": {
+    "url": "https://wanessabsx.vercel.app",
+    "cleartext": false,
+    "allowNavigation": ["wanessabsx.vercel.app"]
+  }
+}
