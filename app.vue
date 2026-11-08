@@ -1904,7 +1904,7 @@ function iqGoWhatsApp() {
   }, 2600)
 }
 
-const vipBotUrl = '/assinaturavip'
+const vipBotUrl = 'https://t.me/wanessavipxbot?start=pagina'
 const intlPublicChannelUrl = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const locale = ref<Locale>('pt')
 const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (intl)
