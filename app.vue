@@ -176,7 +176,7 @@
             <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </div>
           <div class="card-col">
-            <a class="lux-card lux-card--right lux-card--vip" :class="{ 'offer-card--selected': offerQuizSelection === 'telegram' }" href="/assinaturavip" @pointerdown.passive="onCardClick('Checkout Canal VIP', '/assinaturavip')">
+            <a class="lux-card lux-card--right lux-card--vip" :class="{ 'offer-card--selected': offerQuizSelection === 'telegram' }" :href="vipBotUrl" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
               <div class="card-glow"></div>
               <div class="card-top">
                 <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
@@ -186,7 +186,7 @@
               <p class="card-desc">{{ isPt ? 'Conteúdo exclusivo e meu WhatsApp pessoal.' : t('vipDesc') }}</p>
               <p v-if="isPt" class="offer-card__price">R$ 29,90 <span>/ mês · cancele quando quiser</span></p>
             </a>
-            <a class="card-enter card-enter--quest" href="/assinaturavip" @pointerdown.passive="onCardClick('Checkout Canal VIP', '/assinaturavip')"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 29,90/mês' : t('vipEnter') }} <span aria-hidden="true">↗</span></a>
+            <a class="card-enter card-enter--quest" :href="vipBotUrl" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 29,90/mês' : t('vipEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
         </section>
         <!-- creator-intro longo removido: bio em tópicos fica acima dos cards -->
