@@ -63,12 +63,9 @@
         <header v-if="isBrazilianPortugueseBrowser" class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
-              <img v-for="(src, i) in gallery" :key="src + i" :src="src" :class="['hero-photo', { 'is-active': i === photoIndex }]" alt="" decoding="async" draggable="false" />
+              <img src="/model.jpg" class="hero-photo is-active" alt="" decoding="async" draggable="false" />
               <div class="photo-shine" aria-hidden="true"></div>
               <div class="photo-vignette" aria-hidden="true"></div>
-            </div>
-            <div class="photo-dots" aria-hidden="true">
-              <span v-for="(_, i) in gallery" :key="i" class="dot" :class="{ active: i === photoIndex }" />
             </div>
             <!-- CTA principal: WhatsApp — só se link WhatsApp estiver ativo no admin -->
             <button v-if="false && whatsappLinkEnabled" type="button" class="hero-wa-btn" @click="iqStart()">
@@ -126,17 +123,13 @@
           <h2 id="choice-guide-title">{{ t('offerQuizGuideTitle') }}</h2>
           <p>{{ t('offerQuizGuideDescription') }}</p>
         </section>
-        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isBrazilianPortugueseBrowser, 'main-cards--intl': !isBrazilianPortugueseBrowser }" v-if="configReady">
-          <p v-if="!isBrazilianPortugueseBrowser" class="intl-chat-prompt">{{ t('intlChatPrompt') }}</p>
+        <section class="platforms-heading" :aria-label="t('platformsHeading')">
+          <h1>{{ t('platformsHeading') }}</h1>
+        </section>
+        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': !isBrazilianPortugueseBrowser }" v-if="configReady">
           <div class="card-col" v-if="privsexLinkEnabled">
-            <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
-              <div class="portal-spiral" aria-hidden="true">
-                <span class="ps-ring ps-r1"></span>
-                <span class="ps-ring ps-r2"></span>
-                <span class="ps-ring ps-r3"></span>
-                <span class="ps-ring ps-r4"></span>
-                <span class="ps-core"></span>
-              </div>
+            <a class="lux-card lux-card--left" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
+              <img class="card-background" src="/card-privsex.jpeg" alt="" aria-hidden="true" loading="eager" />
               <div class="card-glow"></div>
               <div class="card-top">
                 <span class="card-icon"><img v-if="logoPriv" :src="logoPriv" alt="" class="logo-img" width="28" height="28" /><template v-else>🔥</template></span>
@@ -144,7 +137,6 @@
               </div>
               <h2 class="card-title">{{ isPt ? 'PrivSex' : t('privTitle') }}</h2>
               <p class="card-desc">{{ isPt ? 'Conteúdo exclusivo e chat comigo.' : t('privDesc') }}</p>
-              <p v-if="isPt" class="offer-card__price">R$ 49,90</p>
             </a>
             <a class="card-enter card-enter--quest" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 49,90' : t('privEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
@@ -158,7 +150,7 @@
               <h2 class="card-title">{{ t('pubTitle') }}</h2>
               <p class="card-desc">{{ t('pubDesc') }}</p>
             </a>
-            <a class="card-enter card-enter--quest" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">{{ t('pubEnter') }} <span aria-hidden="true">↗</span></a>
+            <a class="card-enter card-enter--quest card-enter--public" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">{{ t('pubEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
           <!-- WhatsApp ocupa a esquerda somente se o link PrivSex não existir -->
           <div class="card-col" v-if="false && isPt">
@@ -177,14 +169,14 @@
           </div>
           <div class="card-col">
             <a class="lux-card lux-card--right lux-card--vip" :class="{ 'offer-card--selected': offerQuizSelection === 'telegram' }" :href="vipBotUrl" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
+              <img class="card-background" src="/card-telegram-vip.jpg" alt="" aria-hidden="true" loading="eager" />
               <div class="card-glow"></div>
               <div class="card-top">
                 <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
-                <span class="card-badge badge-tg">{{ offerQuizSelection === 'telegram' ? 'Sua escolha' : isPt ? 'Assinatura mensal' : t('vipBadge') }}</span>
+                <span class="card-badge badge-tg">VIP</span>
               </div>
               <h2 class="card-title">{{ isPt ? 'Telegram VIP' : t('vipTitle') }}</h2>
               <p class="card-desc">{{ isPt ? 'Conteúdo exclusivo e meu WhatsApp pessoal.' : t('vipDesc') }}</p>
-              <p v-if="isPt" class="offer-card__price">R$ 29,90 <span>/ mês · cancele quando quiser</span></p>
             </a>
             <a class="card-enter card-enter--quest" :href="vipBotUrl" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 29,90/mês' : t('vipEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
@@ -266,32 +258,20 @@
           </div>
         </section>
         <footer v-if="isBrazilianPortugueseBrowser" class="bio-block">
-          <div class="ig-card">
-            <img class="ig-avatar" :src="igProfileSrc" alt="" width="72" height="72" draggable="false" />
-            <div class="ig-info">
-              <p class="ig-user">wanessabsx_</p>
-              <p class="ig-name">Wanessa Borges</p>
-              <div class="ig-stats">
-                <span><b>22</b> {{ t('posts') }}</span>
-                <span><b>{{ t('followersCount') }}</b> {{ t('followers') }}</span>
-                <span><b>53</b> {{ t('following') }}</span>
-              </div>
-            </div>
-          </div>
-          <p class="bio-meta">{{ t('bioMeta') }}</p>
-          <p class="bio-text">{{ t('bioText') }}</p>
-          <a
-            class="x-profile-link"
-            href="https://x.com/wanessabsx"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Perfil no X"
-          >
-            <svg class="x-profile-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.451L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-            </svg>
-          </a>
-          <p class="bio-copy">© Wanessa</p>
+          <p class="social-links-label">{{ t('socialLinksLabel') }}</p>
+          <nav class="social-links" :aria-label="t('socialLinksNav')">
+            <a class="x-profile-link" href="https://x.com/wanessabsx" target="_blank" rel="noopener noreferrer" :aria-label="t('xProfileLabel')">
+              <svg class="x-profile-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.451L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </a>
+            <a class="x-profile-link" href="https://www.instagram.com/wanessa_bsx/" target="_blank" rel="noopener noreferrer" :aria-label="t('instagramProfileLabel')">
+              <svg class="instagram-profile-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.7" r=".8" fill="currentColor" stroke="none"/>
+              </svg>
+            </a>
+          </nav>
+          <p class="bio-copy">? Wanessa</p>
         </footer>
       </template>
     </main>
