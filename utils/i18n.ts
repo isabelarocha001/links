@@ -51,6 +51,11 @@ type Dict = Record<string, string>
 
 // --- PT-BR (Brasil) ---
 const pt: Dict = {
+  platformsHeading: 'Minhas plataformas',
+  socialLinksLabel: 'Me encontre nas redes',
+  socialLinksNav: 'Redes sociais',
+  xProfileLabel: 'Perfil no X',
+  instagramProfileLabel: 'Perfil no Instagram',
   // payment method labels
   cuPixBalloon: "Posso te mandar a chave PIX pra liberar o chat? 💚",
   cuCardBalloon: "Pode pagar no cartão pra liberar o chat? 💚",
@@ -168,6 +173,11 @@ const pt: Dict = {
 
 // --- English ---
 const en: Dict = {
+  platformsHeading: 'My platforms',
+  socialLinksLabel: 'Find me on social media',
+  socialLinksNav: 'Social media',
+  xProfileLabel: 'X profile',
+  instagramProfileLabel: 'Instagram profile',
   // payment method labels
   cuPixBalloon: "Can I send you the PIX key to unlock chat? 💚",
   cuCardBalloon: "Pay by card to unlock the chat? 💚",
@@ -286,6 +296,11 @@ const en: Dict = {
 
 // --- Español (herda en + overrides) ---
 const es: Dict = {
+  platformsHeading: 'Mis plataformas',
+  socialLinksLabel: 'Encu\u00e9ntrame en redes',
+  socialLinksNav: 'Redes sociales',
+  xProfileLabel: 'Perfil en X',
+  instagramProfileLabel: 'Perfil de Instagram',
   // payment method labels
   cuPixBalloon: "¿Te mando la clave PIX para liberar el chat? 💚",
   cuCardBalloon: "¿Pagas con tarjeta para liberar el chat? 💚",
@@ -400,6 +415,11 @@ const es: Dict = {
 
 // --- Français ---
 const fr: Dict = {
+  platformsHeading: 'Mes plateformes',
+  socialLinksLabel: 'Retrouvez-moi sur les r\u00e9seaux',
+  socialLinksNav: 'R\u00e9seaux sociaux',
+  xProfileLabel: 'Profil X',
+  instagramProfileLabel: 'Profil Instagram',
   ...en,
   waName: 'Créatrice de contenu · Wanessa',
   waTyping: 'écrit…',
@@ -443,6 +463,11 @@ const fr: Dict = {
 
 // --- Deutsch ---
 const de: Dict = {
+  platformsHeading: 'Meine Plattformen',
+  socialLinksLabel: 'Finde mich in den sozialen Medien',
+  socialLinksNav: 'Soziale Medien',
+  xProfileLabel: 'X-Profil',
+  instagramProfileLabel: 'Instagram-Profil',
   ...en,
   waName: 'Content Creatorin · Wanessa',
   waTyping: 'tippt…',
@@ -487,6 +512,11 @@ const de: Dict = {
 
 // --- Italiano ---
 const it: Dict = {
+  platformsHeading: 'Le mie piattaforme',
+  socialLinksLabel: 'Seguimi sui social',
+  socialLinksNav: 'Social media',
+  xProfileLabel: 'Profilo X',
+  instagramProfileLabel: 'Profilo Instagram',
   ...en,
   waName: 'Content creator · Wanessa',
   waTyping: 'sta scrivendo…',

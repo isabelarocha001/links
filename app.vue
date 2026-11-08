@@ -271,7 +271,7 @@
               </svg>
             </a>
           </nav>
-          <p class="bio-copy">? Wanessa</p>
+          <p class="bio-copy">Wanessa</p>
         </footer>
       </template>
     </main>
