@@ -126,7 +126,7 @@
           <h2 id="choice-guide-title">{{ t('offerQuizGuideTitle') }}</h2>
           <p>{{ t('offerQuizGuideDescription') }}</p>
         </section>
-        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isBrazilianPortugueseBrowser, 'main-cards--intl': !isBrazilianPortugueseBrowser }" v-if="configReady && (!isBrazilianPortugueseBrowser || (ptbrQuizQualified && !iqChatMode))">
+        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': isBrazilianPortugueseBrowser, 'main-cards--intl': !isBrazilianPortugueseBrowser }" v-if="configReady">
           <p v-if="!isBrazilianPortugueseBrowser" class="intl-chat-prompt">{{ t('intlChatPrompt') }}</p>
           <div class="card-col" v-if="privsexLinkEnabled">
             <a class="lux-card lux-card--left lux-card--portal" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
@@ -7012,10 +7012,11 @@ onMounted(async () => {
   // 1) PRIMEIRO: landing do chat / chamada (Telegram / ads / previas) — antes de qualquer await
   let openChatDirect = false
   let openChamadaDirect = false
-  let openPtbrHomeQuiz = false
+  let isHomeRoute = false
   let chatSlug = 'wanessabsx'
   try {
     const path = (window.location.pathname || '').replace(/\/+$/, '') || '/'
+    isHomeRoute = path === '/'
     // /whatsapp e /chat → quiz ICP (não funil antigo)
     if (path === '/whatsapp') {
       openChatDirect = true
@@ -7046,7 +7047,6 @@ onMounted(async () => {
     }
     // hash fallback #chat
     if ((window.location.hash || '').toLowerCase().includes('chat')) openChatDirect = true
-    openPtbrHomeQuiz = path === '/' && isBrazilianPortugueseBrowser.value && !openChatDirect
   } catch {}
 
   if (openChatDirect && openChamadaDirect) {
@@ -7086,8 +7086,8 @@ onMounted(async () => {
     setTimeout(bootQuiz, 300)
     setTimeout(bootQuiz, 1000)
   } else {
-    if (!openPtbrHomeQuiz) {
-      // Outras rotas continuam podendo restaurar uma conversa antiga.
+    // A home não reabre conversas antigas automaticamente.
+    if (!isHomeRoute) {
       try {
         const raw = localStorage.getItem(FUNNEL_STORAGE_KEY)
         if (raw) {
@@ -7114,8 +7114,7 @@ onMounted(async () => {
   }
 
   if (!openChatDirect) {
-    // A home brasileira abre o quiz ICP automaticamente; os cards só aparecem
-    // depois da qualificação. Outros idiomas continuam direto para os cards.
+    // A home mostra os cards diretamente; o quiz fica fora do fluxo principal.
     try {
       const old = localStorage.getItem(GATE_KEY)
       if (old && old !== 'pass') localStorage.removeItem(GATE_KEY)
@@ -7123,10 +7122,6 @@ onMounted(async () => {
     } catch {}
     gate.value = 'pass'
     gateReady.value = true
-    if (openPtbrHomeQuiz) {
-      ptbrQuizQualified.value = iqReadQualified()
-      if (!ptbrQuizQualified.value) nextTick(() => iqStart())
-    }
     try {
       const fingerprint = await getDeviceFingerprint()
       if (visitor_id) {
