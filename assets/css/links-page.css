@@ -3587,6 +3587,11 @@ html, body {
 .main-cards--offers { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 650px; margin: 0 auto 24px; }
 .main-cards .card-col { display: block; width: 100%; }
 .main-cards .lux-card--row { display: grid; grid-template-columns: 56px minmax(0, 1fr) 28px; align-items: center; gap: 14px; width: 100%; min-height: 80px; box-sizing: border-box; padding: 10px 14px; border-radius: 10px; }
+.links-gift-wrap { display: flex; justify-content: center; margin: -8px auto 24px; }
+.links-gift-button { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid rgba(169, 122, 220, .28); border-radius: 999px; background: transparent; color: rgba(235, 226, 246, .72); font: inherit; font-size: .82rem; cursor: pointer; transition: color .18s ease, border-color .18s ease, background .18s ease; }
+.links-gift-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.links-gift-button:hover, .links-gift-button:focus-visible { color: #e8c8ff; border-color: rgba(190, 120, 255, .62); background: rgba(160, 90, 220, .08); }
+.links-gift-button:focus-visible { outline: 2px solid #c487ff; outline-offset: 3px; }
 .card-icon--thumb { width: 56px; height: 56px; box-sizing: border-box; border-radius: 8px; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .1); }
 .card-icon--thumb { animation: link-icon-enter .48s cubic-bezier(.2, .8, .2, 1) both; transition: transform .24s cubic-bezier(.2, .8, .2, 1), box-shadow .24s ease, border-color .24s ease; }
 .card-col:nth-child(2) .card-icon--thumb { animation-delay: 90ms; }

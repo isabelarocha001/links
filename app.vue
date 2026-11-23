@@ -119,6 +119,12 @@
             </a>
           </div>
         </section>
+        <div v-if="isBrazilianPortugueseBrowser" class="links-gift-wrap">
+          <button type="button" class="links-gift-button" @click="onLinksGiftMimo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v9H4v-9m-2-5h20v5H2zm10 0v14M12 7H7.5a2.5 2.5 0 1 1 2.4-3.2L12 7Zm0 0h4.5a2.5 2.5 0 1 0-2.4-3.2L12 7Z" /></svg>
+            <span>Me enviar um mimo</span>
+          </button>
+        </div>
         <!-- creator-intro longo removido: bio em tópicos fica acima dos cards -->
 
         <Teleport to="body">
@@ -2755,13 +2761,21 @@ function loadPermanentBlock() {
   } catch {}
 }
 
-function onFunnelGiftMimo() {
-  if (funnelPermBlocked.value || leadBlockedWanessa.value) return
+function openMimoGiftModal(source = 'funnel_gift_mimo_open') {
   mimoGiftError.value = ''
   mimoGiftAmount.value = ''
   mimoGiftMessage.value = ''
   showMimoGiftModal.value = true
-  try { track('funnel_gift_mimo_open', { offer_slug: 'mimo_gift' }) } catch {}
+  try { track(source, { offer_slug: 'mimo_gift' }) } catch {}
+}
+
+function onFunnelGiftMimo() {
+  if (funnelPermBlocked.value || leadBlockedWanessa.value) return
+  openMimoGiftModal()
+}
+
+function onLinksGiftMimo() {
+  openMimoGiftModal('links_gift_mimo_open')
 }
 
 function closeMimoGiftModal() {
