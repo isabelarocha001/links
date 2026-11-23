@@ -2789,13 +2789,18 @@ html, body {
 .mimo-gift-card {
   width: min(92vw, 400px) !important;
   max-height: min(78vh, 560px) !important; max-height: min(78dvh, 560px) !important;
-  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
   margin: 0 auto !important;
   padding: 16px 16px 14px !important;
   border-radius: 18px 18px 14px 14px !important;
   box-sizing: border-box !important;
   flex-shrink: 0;
 }
+.mimo-gift-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.mimo-gift-footer { flex: 0 0 auto; padding-top: 10px; background: #1f2c34; }
+.mimo-gift-footer .mimo-gift-send { margin-top: 0 !important; }
 .mimo-gift-avatar {
   width: 72px !important;
   height: 72px !important;

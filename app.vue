@@ -863,39 +863,43 @@
       <div v-if="showMimoGiftModal" class="chat-plans-overlay mimo-gift-overlay" style="z-index:40060" @click.self="closeMimoGiftModal">
         <div class="mimo-gift-card" @click.stop>
           <button type="button" class="chat-plans-x mimo-gift-x" :aria-label="t('close')" @click="closeMimoGiftModal">✕</button>
-          <img class="mimo-gift-avatar" src="/model.jpg" alt="Wanessa" draggable="false" />
-          <p class="mimo-gift-name">Wanessa</p>
-          <label class="mimo-gift-label" for="mimo-gift-amount">Digite o valor do mimo pra Wanessa</label>
-          <div class="mimo-gift-amount-wrap">
-            <span class="mimo-gift-currency">R$</span>
-            <input
-              id="mimo-gift-amount"
-              v-model="mimoGiftAmount"
-              class="mimo-gift-amount"
-              type="text"
-              inputmode="decimal"
-              placeholder="0,00"
-              autocomplete="off"
-            />
+          <div class="mimo-gift-content">
+            <img class="mimo-gift-avatar" src="/model.jpg" alt="Wanessa" draggable="false" />
+            <p class="mimo-gift-name">Wanessa</p>
+            <label class="mimo-gift-label" for="mimo-gift-amount">Digite o valor do mimo pra Wanessa</label>
+            <div class="mimo-gift-amount-wrap">
+              <span class="mimo-gift-currency">R$</span>
+              <input
+                id="mimo-gift-amount"
+                v-model="mimoGiftAmount"
+                class="mimo-gift-amount"
+                type="text"
+                inputmode="decimal"
+                placeholder="0,00"
+                autocomplete="off"
+              />
+            </div>
+            <label class="mimo-gift-label mimo-gift-label--msg" for="mimo-gift-msg">Mensagem (opcional)</label>
+            <textarea
+              id="mimo-gift-msg"
+              v-model="mimoGiftMessage"
+              class="mimo-gift-msg"
+              rows="3"
+              maxlength="300"
+              placeholder="Escreva algo… ou deixe em branco"
+            ></textarea>
+            <p v-if="mimoGiftError" class="mimo-gift-error">{{ mimoGiftError }}</p>
           </div>
-          <label class="mimo-gift-label mimo-gift-label--msg" for="mimo-gift-msg">Mensagem (opcional)</label>
-          <textarea
-            id="mimo-gift-msg"
-            v-model="mimoGiftMessage"
-            class="mimo-gift-msg"
-            rows="3"
-            maxlength="300"
-            placeholder="Escreva algo… ou deixe em branco"
-          ></textarea>
-          <p v-if="mimoGiftError" class="mimo-gift-error">{{ mimoGiftError }}</p>
-          <button
-            type="button"
-            class="mimo-gift-send"
-            :disabled="mimoGiftLoading"
-            @click="sendMimoGift"
-          >
-            {{ mimoGiftLoading ? (preferStripeCheckout() ? t('cuGeneratingCard') : t('cuGenerating')) : 'Enviar mimo' }}
-          </button>
+          <div class="mimo-gift-footer">
+            <button
+              type="button"
+              class="mimo-gift-send"
+              :disabled="mimoGiftLoading"
+              @click="sendMimoGift"
+            >
+              {{ mimoGiftLoading ? (preferStripeCheckout() ? t('cuGeneratingCard') : t('cuGenerating')) : 'Enviar mimo' }}
+            </button>
+          </div>
         </div>
       </div>
 
