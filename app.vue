@@ -4,7 +4,7 @@
   </main>
   <NuxtPage v-else />
   <AdminChatInbox v-if="!isRegionUnavailable && isAdminRoute" />
-  <div v-else-if="!isRegionUnavailable && !isIsolatedRoute" class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding, 'page--intl-cards-centered': !isBrazilianPortugueseBrowser && configReady }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
+  <div v-else-if="!isRegionUnavailable && !isIsolatedRoute" class="page" :class="{ 'page--locked': showLogin || showAdminPanel, 'page--chat-landing': isChatLanding, 'page--intl-cards-centered': !isBrazilianPortugueseBrowser }" @copy.prevent @cut.prevent @contextmenu.prevent @selectstart.prevent @dragstart.prevent>
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="bg-grain" aria-hidden="true"></div>
     <!-- cadeado removido do front: acesso admin só por rota direta (/admin/chat) -->
@@ -63,7 +63,7 @@
         <header v-if="isBrazilianPortugueseBrowser" class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
-              <img src="/model.jpg" class="hero-photo is-active" alt="" decoding="async" draggable="false" />
+              <img src="/home-banner.png" class="hero-photo is-active" alt="" decoding="async" fetchpriority="high" draggable="false" />
               <div class="photo-shine" aria-hidden="true"></div>
               <div class="photo-vignette" aria-hidden="true"></div>
             </div>
@@ -80,82 +80,33 @@
             </button>
           </div>
         </header>
-        <section v-if="false && isBrazilianPortugueseBrowser" class="offer-quiz" aria-labelledby="offer-quiz-title">
-          <div class="offer-quiz__game">
-            <div class="offer-quiz__hud">
-              <span class="offer-quiz__level"><span aria-hidden="true">✦</span> {{ offerQuizStep === 'interest' ? t('offerQuizPhase1') : offerQuizStep === 'platform' ? t('offerQuizPhase2') : t('offerQuizResultLabel') }}</span>
-              <span class="offer-quiz__counter">{{ offerQuizStep === 'interest' ? '01 / 02' : offerQuizStep === 'platform' ? '02 / 02' : '✓' }}</span>
-            </div>
-            <div class="offer-quiz__progress" role="progressbar" :aria-valuenow="offerQuizStep === 'interest' ? 1 : 2" aria-valuemin="1" aria-valuemax="2" :aria-label="offerQuizStep === 'interest' ? 'Fase 1 de 2' : 'Fase 2 de 2'">
-              <span :style="{ width: offerQuizStep === 'interest' ? '50%' : '100%' }"></span>
-            </div>
-            <div class="offer-quiz__scene" :key="offerQuizStep">
-              <template v-if="offerQuizStep === 'interest'">
-                <p class="offer-quiz__eyebrow">{{ t('offerQuizChoosePath') }}</p>
-                <h2 id="offer-quiz-title">{{ t('offerQuizInterestQuestion') }}</h2>
-                <p class="offer-quiz__intro">{{ t('offerQuizInterestIntro') }}</p>
-                <div class="offer-quiz__choices">
-                  <button type="button" class="offer-quiz__choice" @click="chooseOfferInterest('conteudo')"><span class="offer-quiz__choice-mark" aria-hidden="true">01</span><b>{{ t('offerQuizContentTitle') }}</b><span>{{ t('offerQuizContentDescription') }}</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
-                  <button type="button" class="offer-quiz__choice" @click="chooseOfferInterest('contato')"><span class="offer-quiz__choice-mark" aria-hidden="true">02</span><b>{{ t('offerQuizContactTitle') }}</b><span>{{ t('offerQuizContactDescription') }}</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
-                </div>
-              </template>
-              <template v-else-if="offerQuizStep === 'platform'">
-                <p class="offer-quiz__eyebrow">{{ t('offerQuizNextStep') }}</p>
-                <h2 id="offer-quiz-title">{{ t('offerQuizPlatformQuestion') }}</h2>
-                <p class="offer-quiz__intro">{{ t('offerQuizPlatformIntro') }}</p>
-                <div class="offer-quiz__choices">
-                  <button type="button" class="offer-quiz__choice offer-quiz__choice--offer" :class="{ 'is-selected': offerQuizSelection === 'privsex' }" @click="chooseOffer('privsex')"><span class="offer-quiz__choice-mark" aria-hidden="true">01</span><b>{{ t('privTitle') }}</b><span>{{ t('privDesc') }}</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
-                  <button type="button" class="offer-quiz__choice offer-quiz__choice--offer" :class="{ 'is-selected': offerQuizSelection === 'telegram' }" @click="chooseOffer('telegram')"><span class="offer-quiz__choice-mark" aria-hidden="true">02</span><b>{{ t('vipTitle') }}</b><span>{{ t('vipDesc') }}</span><span class="offer-quiz__choice-arrow" aria-hidden="true">↗</span></button>
-                  <button type="button" class="offer-quiz__compare" :class="{ 'is-selected': offerQuizSelection === 'compare' }" @click="chooseOffer('compare')">{{ t('offerQuizCompare') }}</button>
-                </div>
-                <p class="offer-quiz__paid-note">{{ t('offerQuizPaidNote') }}</p>
-              </template>
-              <div v-else class="offer-quiz__notice" role="status" aria-live="polite">
-                <b>{{ offerQuizSelection === 'compare' ? t('offerQuizResultCompare') : offerQuizSelection === 'telegram' ? t('offerQuizResultTelegram') : t('offerQuizResultPrivsex') }}</b>
-                <span>{{ t('offerQuizResultHint') }}</span>
-                <button type="button" class="offer-quiz__restart" @click="resetOfferQuiz">{{ t('offerQuizChange') }}</button>
-              </div>
-            </div>
-            <div class="offer-quiz__base" aria-hidden="true"><span></span><i></i><span></span></div>
-          </div>
-        </section>
-        <section v-if="false && isBrazilianPortugueseBrowser && offerQuizStep === 'result'" class="choice-guide" aria-labelledby="choice-guide-title">
-          <h2 id="choice-guide-title">{{ t('offerQuizGuideTitle') }}</h2>
-          <p>{{ t('offerQuizGuideDescription') }}</p>
-        </section>
         <section class="platforms-heading" :aria-label="t('platformsHeading')">
           <h1>{{ t('platformsHeading') }}</h1>
         </section>
-        <section id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': !isBrazilianPortugueseBrowser }" v-if="configReady">
+        <section v-if="configReady" id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': !isBrazilianPortugueseBrowser }">
           <div class="card-col" v-if="privsexLinkEnabled">
-            <a class="lux-card lux-card--left" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
-              <img class="card-background" src="/card-privsex.jpeg" alt="" aria-hidden="true" loading="eager" />
-              <div class="card-glow"></div>
-              <div class="card-top">
-                <span class="card-icon"><img v-if="logoPriv" :src="logoPriv" alt="" class="logo-img" width="28" height="28" /><template v-else>🔥</template></span>
-                <span class="card-badge">{{ t('portalBadge') }}</span>
-              </div>
+            <a class="lux-card lux-card--row" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
+              <span class="card-icon card-icon--thumb privsex-shirt-logo" aria-hidden="true">
+                <svg viewBox="0 0 96 52" role="presentation">
+                  <path d="M35 16 29 7l11 5 8-9 8 9 11-5-6 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M31 17h34l-3 7H34z" fill="currentColor" />
+                  <text x="48" y="43" text-anchor="middle">PrivSex</text>
+                </svg>
+              </span>
               <h2 class="card-title">{{ isPt ? 'PrivSex' : t('privTitle') }}</h2>
-              <p class="card-desc">{{ isPt ? 'Conteúdo exclusivo e chat comigo.' : t('privDesc') }}</p>
+              <span class="card-row-action" aria-hidden="true">↗</span>
             </a>
-            <a class="card-enter card-enter--quest" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 49,90' : t('privEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
           <div class="card-col" v-if="!isBrazilianPortugueseBrowser">
-            <a class="lux-card lux-card--right" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">
-              <div class="card-glow"></div>
-              <div class="card-top">
-                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
-                <span class="card-badge badge-tg">{{ t('tgBadge') }}</span>
-              </div>
+            <a class="lux-card lux-card--row" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">
+              <span class="card-icon card-icon--thumb" aria-hidden="true"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
               <h2 class="card-title">{{ t('pubTitle') }}</h2>
-              <p class="card-desc">{{ t('pubDesc') }}</p>
+              <span class="card-row-action" aria-hidden="true">↗</span>
             </a>
-            <a class="card-enter card-enter--quest card-enter--public" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">{{ t('pubEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
           <!-- WhatsApp ocupa a esquerda somente se o link PrivSex não existir -->
           <div class="card-col" v-if="false && isPt">
             <button type="button" class="lux-card lux-card--left iq-main-card" @click="iqStart">
-              <div class="card-glow"></div>
               <div class="card-top">
                 <span class="card-icon iq-wa-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="28" height="28" fill="#25D366" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -168,17 +119,11 @@
             <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </div>
           <div class="card-col">
-            <a class="lux-card lux-card--right lux-card--vip" :class="{ 'offer-card--selected': offerQuizSelection === 'telegram' }" :href="vipBotUrl" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
-              <img class="card-background" src="/card-telegram-vip.jpg" alt="" aria-hidden="true" loading="eager" />
-              <div class="card-glow"></div>
-              <div class="card-top">
-                <span class="card-icon"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
-                <span class="card-badge badge-tg">VIP</span>
-              </div>
-              <h2 class="card-title">{{ isPt ? 'Telegram VIP' : t('vipTitle') }}</h2>
-              <p class="card-desc">{{ isPt ? 'Conteúdo exclusivo e meu WhatsApp pessoal.' : t('vipDesc') }}</p>
+            <a class="lux-card lux-card--row" :href="vipBotUrl" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
+              <span class="card-icon card-icon--thumb" aria-hidden="true"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
+              <h2 class="card-title">{{ t('vipTitle') }}</h2>
+              <span class="card-row-action" aria-hidden="true">↗</span>
             </a>
-            <a class="card-enter card-enter--quest" :href="vipBotUrl" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)"><span aria-hidden="true">✦</span> {{ isPt ? 'Assinar · R$ 29,90/mês' : t('vipEnter') }} <span aria-hidden="true">↗</span></a>
           </div>
         </section>
         <!-- creator-intro longo removido: bio em tópicos fica acima dos cards -->
@@ -1363,7 +1308,7 @@ type ChatMsg = { from: 'her' | 'me'; text: string; time: string }
 import { LOGO_TG_BLUE, LOGO_TG_PURPLE, LOGO_PRIVSEX } from '~/utils/logos'
 import { getDeviceFingerprint } from '~/utils/fingerprint'
 import { IG_PROFILE_SRC as igProfileSrc } from '~/utils/ig-profile'
-import { detectLocale, isBrazilAudience, t as tr, type Locale } from '~/utils/i18n'
+import { detectLocale, t as tr, type Locale } from '~/utils/i18n'
 import { detectBrowserMoney, formatMoney, convertFromBrl } from '~/utils/currency'
 
 const route = useRoute()
@@ -1886,8 +1831,10 @@ function iqGoWhatsApp() {
 
 const vipBotUrl = 'https://t.me/wanessavipxbot?start=pagina'
 const intlPublicChannelUrl = 'https://t.me/+2bYvtb_AA0AzMTcx'
-const locale = ref<Locale>('pt')
-const isPt = computed(() => isBrazilAudience()) // true only BR; pt-PT = false (intl)
+const acceptedLanguages = import.meta.server
+  ? (useRequestHeaders(['accept-language'])['accept-language'] || '').split(',').map((value) => value.trim().split(';')[0]).filter(Boolean)
+  : undefined
+const locale = useState<Locale>('links-page-locale', () => detectLocale(acceptedLanguages))
 function browserUsesBrazilianPortuguese() {
   if (typeof navigator === 'undefined') return true
   const primaryLanguage = String(navigator.language || '').toLowerCase().replace(/_/g, '-')
@@ -1901,28 +1848,7 @@ const isBrazilianPortugueseBrowser = useState('links-is-pt-br-browser', () => {
   }
   return browserUsesBrazilianPortuguese()
 })
-type OfferQuizInterest = 'conteudo' | 'contato'
-type OfferQuizSelection = 'privsex' | 'telegram' | 'compare'
-const offerQuizStep = ref<'interest' | 'platform' | 'result'>('interest')
-const offerQuizInterest = ref<OfferQuizInterest | null>(null)
-const offerQuizSelection = ref<OfferQuizSelection | null>(null)
-function chooseOfferInterest(interest: OfferQuizInterest) {
-  offerQuizInterest.value = interest
-  offerQuizStep.value = 'platform'
-  track('offer_quiz_interest', { interest })
-}
-function chooseOffer(selection: OfferQuizSelection) {
-  offerQuizSelection.value = selection
-  offerQuizStep.value = 'result'
-  track('offer_quiz_selection', { interest: offerQuizInterest.value, selection })
-  nextTick(() => document.getElementById('links-main-cards')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
-}
-function resetOfferQuiz() {
-  offerQuizSelection.value = null
-  offerQuizInterest.value = null
-  offerQuizStep.value = 'interest'
-  nextTick(() => document.querySelector('.offer-quiz')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
-}
+const isPt = computed(() => isBrazilianPortugueseBrowser.value)
 function t(key: string) { return tr(locale.value, key) }
 /** Tradução com placeholders {price}, {name}, etc. */
 function tf(key: string, vars: Record<string, string | number> = {}) {
@@ -7085,8 +7011,6 @@ onMounted(async () => {
 
   warmSyncPay()
 
-  locale.value = detectLocale()
-  try { document.documentElement.lang = locale.value } catch {}
   const visitor_id = getOrCreateVisitorId()
   if (!alreadyViewedToday() && !openChatDirect) {
     markViewedToday()
@@ -7289,6 +7213,7 @@ async function doSave() {
 }
 useHead({
   title: 'Wanessa',
+  htmlAttrs: { lang: locale.value },
   meta: [{ name: 'description', content: 'Acesso restrito — privacidade e alto nível.' }, { name: 'theme-color', content: '#12081a' }],
 })
 </script>
