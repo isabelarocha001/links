@@ -97,13 +97,6 @@
               <span class="card-row-action" aria-hidden="true">↗</span>
             </a>
           </div>
-          <div class="card-col" v-if="!isBrazilianPortugueseBrowser">
-            <a class="lux-card lux-card--row" :href="intlPublicChannelUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('Telegram Público', intlPublicChannelUrl)">
-              <span class="card-icon card-icon--thumb" aria-hidden="true"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>📱</template></span>
-              <h2 class="card-title">{{ t('pubTitle') }}</h2>
-              <span class="card-row-action" aria-hidden="true">↗</span>
-            </a>
-          </div>
           <!-- WhatsApp ocupa a esquerda somente se o link PrivSex não existir -->
           <div class="card-col" v-if="false && isPt">
             <button type="button" class="lux-card lux-card--left iq-main-card" @click="iqStart">
