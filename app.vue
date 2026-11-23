@@ -60,7 +60,7 @@
 
 
       <template v-if="gateReady && gate === 'pass'">
-        <header v-if="isBrazilianPortugueseBrowser" class="hero">
+        <header class="hero">
           <div class="photo-stage">
             <div class="photo-frame">
               <img src="/home-banner.png" class="hero-photo is-active" alt="" decoding="async" fetchpriority="high" draggable="false" />
