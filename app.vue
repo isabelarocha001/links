@@ -7315,10 +7315,31 @@ async function doSave() {
   } catch (e: any) { saveError.value = e?.data?.statusMessage || 'Erro ao salvar' }
   finally { loading.value = false }
 }
+const shareUrl = 'https://wanessabsx.vercel.app/'
+const shareImage = `${shareUrl}og-links-wanessa.jpg`
 useHead({
-  title: 'Wanessa',
-  htmlAttrs: { lang: locale.value },
-  meta: [{ name: 'description', content: 'Acesso restrito — privacidade e alto nível.' }, { name: 'theme-color', content: '#12081a' }],
+  title: computed(() => t('shareTitle')),
+  htmlAttrs: { lang: locale },
+  link: [{ rel: 'canonical', href: shareUrl }],
+  meta: [
+    { name: 'description', content: computed(() => t('shareDescription')) },
+    { name: 'theme-color', content: '#12081a' },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:title', content: computed(() => t('shareTitle')) },
+    { property: 'og:description', content: computed(() => t('shareDescription')) },
+    { property: 'og:url', content: shareUrl },
+    { property: 'og:site_name', content: 'Wanessa' },
+    { property: 'og:image', content: shareImage },
+    { property: 'og:image:type', content: 'image/jpeg' },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+    { property: 'og:image:alt', content: 'Arte PrivSex com links de Wanessa para PrivSex e Telegram' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: computed(() => t('shareTitle')) },
+    { name: 'twitter:description', content: computed(() => t('shareDescription')) },
+    { name: 'twitter:image', content: shareImage },
+    { name: 'twitter:image:alt', content: 'Arte PrivSex com links de Wanessa para PrivSex e Telegram' },
+  ],
 })
 </script>
 <style scoped>

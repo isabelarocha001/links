@@ -64,6 +64,8 @@ type Dict = Record<string, string>
 
 // --- PT-BR (Brasil) ---
 const pt: Dict = {
+  shareTitle: 'Wanessa | links oficiais',
+  shareDescription: 'Acesse meus perfis oficiais na PrivSex e no Telegram. Todos os meus links em um só lugar.',
   platformsHeading: 'Escolha onde acessar meu conteúdo exclusivo',
   platformPrivsexTitle: 'Meu perfil oficial',
   platformInfoPrivsex: 'O acesso ao meu conteúdo é pago. Clique abaixo para ver meu perfil e quanto custa a assinatura.',
@@ -193,6 +195,8 @@ const pt: Dict = {
 
 // --- English ---
 const en: Dict = {
+  shareTitle: 'Wanessa | Official links',
+  shareDescription: 'Find my official PrivSex and Telegram profiles, with all my links in one place.',
   platformsHeading: 'Choose where to access my exclusive content',
   platformPrivsexTitle: 'My official profile',
   platformInfoPrivsex: 'Visit my PrivSex profile to explore the available subscription plans.',
@@ -324,6 +328,8 @@ const en: Dict = {
 // --- Español (herda en + overrides) ---
 const es: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Enlaces oficiales',
+  shareDescription: 'Encuentra mis perfiles oficiales de PrivSex y Telegram, con todos mis enlaces en un solo lugar.',
   platformsHeading: 'Elige dónde acceder a mi contenido exclusivo',
   platformPrivsexTitle: 'Mi perfil oficial',
   platformInfoPrivsex: 'Visita mi perfil de PrivSex para conocer los planes de suscripción disponibles.',
@@ -450,6 +456,8 @@ const es: Dict = {
 // --- Français ---
 const fr: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Liens officiels',
+  shareDescription: 'Retrouvez mes profils officiels PrivSex et Telegram, avec tous mes liens au même endroit.',
   platformsHeading: 'Choisissez où accéder à mon contenu exclusif',
   platformPrivsexTitle: 'Mon profil officiel',
   platformInfoPrivsex: 'Visitez mon profil PrivSex pour découvrir les formules d’abonnement disponibles.',
@@ -508,6 +516,8 @@ const fr: Dict = {
 // --- Deutsch ---
 const de: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Offizielle Links',
+  shareDescription: 'Finde meine offiziellen Profile bei PrivSex und Telegram – alle Links an einem Ort.',
   platformsHeading: 'Wähle, wo du auf meine exklusiven Inhalte zugreifen kannst',
   platformPrivsexTitle: 'Mein offizielles Profil',
   platformInfoPrivsex: 'Besuche mein PrivSex-Profil, um die verfügbaren Abos anzusehen.',
@@ -567,6 +577,8 @@ const de: Dict = {
 // --- Italiano ---
 const it: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Link ufficiali',
+  shareDescription: 'Trova i miei profili ufficiali su PrivSex e Telegram, con tutti i link in un unico posto.',
   platformsHeading: 'Scegli dove accedere ai miei contenuti esclusivi',
   platformPrivsexTitle: 'Il mio profilo ufficiale',
   platformInfoPrivsex: 'Visita il mio profilo PrivSex per scoprire i piani di abbonamento disponibili.',
@@ -625,6 +637,8 @@ const it: Dict = {
 
 const nl: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Officiële links',
+  shareDescription: 'Vind mijn officiële PrivSex- en Telegram-profielen, met al mijn links op één plek.',
   platformsHeading: 'Kies waar je toegang wilt tot mijn exclusieve content',
   platformPrivsexTitle: 'Mijn officiële profiel',
   platformInfoPrivsex: 'Bezoek mijn PrivSex-profiel om de beschikbare abonnementen te bekijken.',
@@ -637,6 +651,8 @@ const nl: Dict = {
 
 const sv: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Officiella länkar',
+  shareDescription: 'Hitta mina officiella PrivSex- och Telegram-profiler, med alla mina länkar på ett ställe.',
   platformsHeading: 'Välj var du vill ta del av mitt exklusiva innehåll',
   platformPrivsexTitle: 'Min officiella profil',
   platformInfoPrivsex: 'Besök min PrivSex-profil för att se de tillgängliga abonnemangen.',
@@ -649,6 +665,8 @@ const sv: Dict = {
 
 const no: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Offisielle lenker',
+  shareDescription: 'Finn mine offisielle PrivSex- og Telegram-profiler, med alle lenkene mine på ett sted.',
   platformsHeading: 'Velg hvor du vil få tilgang til det eksklusive innholdet mitt',
   platformPrivsexTitle: 'Min offisielle profil',
   platformInfoPrivsex: 'Besøk PrivSex-profilen min for å se de tilgjengelige abonnementene.',
@@ -661,6 +679,8 @@ const no: Dict = {
 
 const da: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Officielle links',
+  shareDescription: 'Find mine officielle PrivSex- og Telegram-profiler med alle mine links samlet ét sted.',
   platformsHeading: 'Vælg, hvor du vil få adgang til mit eksklusive indhold',
   platformPrivsexTitle: 'Min officielle profil',
   platformInfoPrivsex: 'Besøg min PrivSex-profil for at se de tilgængelige abonnementer.',
@@ -673,6 +693,8 @@ const da: Dict = {
 
 const fi: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Viralliset linkit',
+  shareDescription: 'Löydä viralliset PrivSex- ja Telegram-profiilini sekä kaikki linkkini yhdestä paikasta.',
   platformsHeading: 'Valitse, mistä haluat käyttää eksklusiivista sisältöäni',
   platformPrivsexTitle: 'Virallinen profiilini',
   platformInfoPrivsex: 'Käy PrivSex-profiilissani tutustumassa saatavilla oleviin tilausvaihtoehtoihin.',
@@ -685,6 +707,8 @@ const fi: Dict = {
 
 const pl: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Oficjalne linki',
+  shareDescription: 'Znajdź moje oficjalne profile PrivSex i Telegram oraz wszystkie linki w jednym miejscu.',
   platformsHeading: 'Wybierz, gdzie chcesz uzyskać dostęp do moich ekskluzywnych treści',
   platformPrivsexTitle: 'Mój oficjalny profil',
   platformInfoPrivsex: 'Odwiedź mój profil PrivSex, aby zobaczyć dostępne plany subskrypcji.',
@@ -697,6 +721,8 @@ const pl: Dict = {
 
 const cs: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Oficiální odkazy',
+  shareDescription: 'Najděte mé oficiální profily na PrivSex a Telegramu i všechny odkazy na jednom místě.',
   platformsHeading: 'Vyberte, kde chcete získat přístup k mému exkluzivnímu obsahu',
   platformPrivsexTitle: 'Můj oficiální profil',
   platformInfoPrivsex: 'Navštivte můj profil PrivSex a prohlédněte si dostupné předplatné.',
@@ -709,6 +735,8 @@ const cs: Dict = {
 
 const el: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Επίσημοι σύνδεσμοι',
+  shareDescription: 'Βρείτε τα επίσημα προφίλ μου στο PrivSex και στο Telegram, μαζί με όλους τους συνδέσμους μου σε ένα σημείο.',
   platformsHeading: 'Επιλέξτε πού θα αποκτήσετε πρόσβαση στο αποκλειστικό μου περιεχόμενο',
   platformPrivsexTitle: 'Το επίσημο προφίλ μου',
   platformInfoPrivsex: 'Επισκεφθείτε το προφίλ μου στο PrivSex για να δείτε τα διαθέσιμα πακέτα συνδρομής.',
@@ -721,6 +749,8 @@ const el: Dict = {
 
 const ro: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Linkuri oficiale',
+  shareDescription: 'Găsește profilurile mele oficiale de pe PrivSex și Telegram, cu toate linkurile într-un singur loc.',
   platformsHeading: 'Alege unde vrei să accesezi conținutul meu exclusiv',
   platformPrivsexTitle: 'Profilul meu oficial',
   platformInfoPrivsex: 'Vizitează profilul meu PrivSex pentru a vedea abonamentele disponibile.',
@@ -733,6 +763,8 @@ const ro: Dict = {
 
 const hu: Dict = {
   ...en,
+  shareTitle: 'Wanessa | Hivatalos linkek',
+  shareDescription: 'Itt találod a hivatalos PrivSex- és Telegram-profilomat, valamint az összes linkemet egy helyen.',
   platformsHeading: 'Válaszd ki, hol szeretnéd elérni az exkluzív tartalmaimat',
   platformPrivsexTitle: 'Hivatalos profilom',
   platformInfoPrivsex: 'Látogass el a PrivSex-profilomra az elérhető előfizetések megtekintéséhez.',
