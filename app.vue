@@ -112,7 +112,7 @@
             <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </div>
           <div class="card-col">
-            <a class="lux-card lux-card--row" :href="vipBotUrl" aria-haspopup="dialog" :aria-expanded="activePlatformInfo === 'telegram'" @click="onPlatformCardClick($event, 'telegram')">
+            <a class="lux-card lux-card--row" :href="vipBotHref" aria-haspopup="dialog" :aria-expanded="activePlatformInfo === 'telegram'" @click="onPlatformCardClick($event, 'telegram')">
               <span class="card-icon card-icon--thumb" aria-hidden="true"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
               <h2 class="card-title">{{ t('vipTitle') }}</h2>
               <span class="card-row-action" aria-hidden="true">↗</span>
@@ -1303,7 +1303,7 @@
             <span class="platform-modal__eyebrow">TELEGRAM</span>
             <h2>{{ t('platformTelegramTitle') }}</h2>
             <p>{{ t('platformInfoTelegram') }}</p>
-            <a class="platform-modal__primary platform-modal__primary--telegram" :href="vipBotUrl" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl, 'telegram')" @click="closePlatformInfo">{{ t('platformAccessTelegram') }}</a>
+            <a class="platform-modal__primary platform-modal__primary--telegram" :href="vipBotHref" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl, 'telegram')" @click="closePlatformInfo">{{ t('platformAccessTelegram') }}</a>
           </article>
         </section>
       </div>
@@ -1872,6 +1872,7 @@ function iqGoWhatsApp() {
 }
 
 const vipBotUrl = 'https://t.me/wanessavipxbot?start=pagina'
+const vipBotHref = ref(vipBotUrl)
 const intlPublicChannelUrl = 'https://t.me/+2bYvtb_AA0AzMTcx'
 const acceptedLanguages = import.meta.server
   ? (useRequestHeaders(['accept-language'])['accept-language'] || '').split(',').map((value) => value.trim().split(';')[0]).filter(Boolean)
@@ -6921,6 +6922,12 @@ function onPlatformCardClick(event: MouseEvent, platform: 'privsex' | 'telegram'
   })
   nextTick(() => platformModalCloseButton.value?.focus())
 }
+function buildVipBotHref() {
+  const visitorId = getOrCreateVisitorId()
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(visitorId)
+    ? `https://t.me/wanessavipxbot?start=pagina_${visitorId}`
+    : vipBotUrl
+}
 function closePlatformInfo() {
   activePlatformInfo.value = null
   nextTick(() => platformModalTrigger.value?.focus())
@@ -6999,6 +7006,7 @@ onMounted(async () => {
   // Landing isolada: não inicializa o funil da Wanessa nem registra
   // page_view como /links/wanessa.
   if (isIsolatedRoute.value) return
+  vipBotHref.value = buildVipBotHref()
   isBrazilianPortugueseBrowser.value = browserUsesBrazilianPortuguese()
   // Em /admin/chat: sincroniza sessão admin com o painel de config
   if (isAdminRoute.value) {
@@ -7114,8 +7122,9 @@ onMounted(async () => {
 
   const visitor_id = getOrCreateVisitorId()
   if (!alreadyViewedToday() && !openChatDirect) {
+    const previousViewDay = (() => { try { return localStorage.getItem(VIEW_DAY_KEY) || '' } catch { return '' } })()
     markViewedToday()
-    track('page_view', { offer_slug: 'wanessa_links' })
+    track('page_view', { offer_slug: 'wanessa_links', metadata: previousViewDay && previousViewDay !== todayKey() ? { funnel_stage: 'remarketing_return' } : { funnel_stage: 'first_visit' } })
   }
 
   if (!openChatDirect) {
