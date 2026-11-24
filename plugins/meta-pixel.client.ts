@@ -7,9 +7,22 @@ export default defineNuxtPlugin(() => {
 
   const KEY_PV = 'meta_pv_session_v1'
   const KEY_VC = 'meta_vc_session_v1'
+  const KEY_ANALYTICS_VC = 'analytics_vc_session_v1'
 
   const fire = () => {
     try {
+      try {
+        if (!sessionStorage.getItem(KEY_ANALYTICS_VC)) {
+          fetch('/api/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_name: 'view_content', offer_slug: 'wanessa_links' }),
+            keepalive: true
+          }).catch(() => {})
+          sessionStorage.setItem(KEY_ANALYTICS_VC, '1')
+        }
+      } catch {}
+
       const fbq = (window as any).fbq
       if (typeof fbq !== 'function') return false
 

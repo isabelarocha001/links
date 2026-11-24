@@ -10,6 +10,10 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
+    analyticsSupabaseUrl: process.env.ANALYTICS_SUPABASE_URL || 'https://qkxjbfybwpjrujsmbpjj.supabase.co',
+    analyticsSupabaseAnonKey:
+      process.env.ANALYTICS_SUPABASE_ANON_KEY ||
+      'sb_publishable_hzpxysIKFGLxuE_ireV2PQ_36bj-p3D',
     adminSessionSecret: process.env.ADMIN_SESSION_SECRET || '',
     syncpayClientId: process.env.SYNCPAY_CLIENT_ID || '',
     syncpayClientSecret: process.env.SYNCPAY_CLIENT_SECRET || '',

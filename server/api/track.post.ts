@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js'
+
 /**
  * POST /api/track
  * Analytics de eventos do funil/página (views, cliques, unlocks).
@@ -46,7 +48,8 @@ const TREE_EVENTS = new Set([
   'scroll_depth',
   'presell_view',
   'cta_click',
-  'pageview'
+  'pageview',
+  'view_content'
 ])
 
 const hits = new Map<string, { n: number; t: number }>()
@@ -74,6 +77,8 @@ function clientIp(event: any): string {
 function originAllowed(event: any): boolean {
   const origin = (getHeader(event, 'origin') || '').trim()
   const referer = (getHeader(event, 'referer') || '').trim()
+
+  if (process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true
 
   if (origin && ALLOWED_ORIGINS.has(origin)) return true
 
@@ -105,10 +110,28 @@ function slugify(label: string): string {
   )
 }
 
+function safeText(value: unknown, max = 200): string | null {
+  if (typeof value !== 'string' && typeof value !== 'number') return null
+  return String(value).trim().slice(0, max) || null
+}
+
+function safeMetadata(value: unknown): Record<string, string | number | boolean> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const entries = Object.entries(value as Record<string, unknown>).slice(0, 24)
+  return Object.fromEntries(entries.flatMap(([key, item]) => {
+    if (!/^[a-zA-Z0-9_:-]{1,40}$/.test(key)) return []
+    if (typeof item === 'string') return [[key, item.slice(0, 300)]]
+    if (typeof item === 'number' && Number.isFinite(item)) return [[key, item]]
+    if (typeof item === 'boolean') return [[key, item]]
+    return []
+  }))
+}
+
 function normalizeEvent(raw: string): string {
   let e = raw.trim().toLowerCase().slice(0, 40)
   if (['click', 'cta', 'btn_click'].includes(e)) e = 'cta_click'
   if (['view', 'pv', 'pageview'].includes(e)) e = 'page_view'
+  if (e === 'viewcontent') e = 'view_content'
   return e || 'page_view'
 }
 
@@ -178,15 +201,20 @@ export default defineEventHandler(async (event) => {
     safeVipMetadata.plan_key = String(body.metadata.plan_key)
   }
   const utms = {
-    utm_source: body?.utm_source || null,
-    utm_medium: body?.utm_medium || null,
-    utm_campaign: body?.utm_campaign || null,
-    utm_content: body?.utm_content || null,
-    utm_term: body?.utm_term || null,
-    src: body?.src || null,
-    sck: body?.sck || null
+    utm_source: safeText(body?.utm_source),
+    utm_medium: safeText(body?.utm_medium),
+    utm_campaign: safeText(body?.utm_campaign),
+    utm_content: safeText(body?.utm_content),
+    utm_term: safeText(body?.utm_term),
+    src: safeText(body?.src),
+    sck: safeText(body?.sck)
   }
 
+  const extraMetadata = safeMetadata(body?.metadata)
+  // Country is derived server-side from Vercel's IP geolocation header; never trust a client-supplied country.
+  delete extraMetadata.country_code
+  const countryCode = String(getHeader(event, 'x-vercel-ip-country') || '').toUpperCase()
+  if (/^[A-Z]{2}$/.test(countryCode)) extraMetadata.country_code = countryCode
   const baseMeta = {
     label: isVipCheckoutEvent ? requestedEventName : label || null,
     url: isVipCheckoutEvent ? `https://${LINK_TREE_HOST}${VIP_CHECKOUT_PATH}` : url || null,
@@ -197,10 +225,34 @@ export default defineEventHandler(async (event) => {
     channel: isVipCheckoutEvent ? 'vip_checkout' : 'link_tree',
     tree_event: isVipCheckoutEvent ? requestedEventName : eventName,
     ...(isVipCheckoutEvent ? { funnel_event: requestedEventName, ...safeVipMetadata } : {}),
-    ...(body?.depth != null ? { depth: Number(body.depth) || 0 } : {}),
+    ...(body?.depth != null ? { depth: Math.max(0, Math.min(100, Number(body.depth) || 0)) } : {}),
     ...(isVipCheckoutEvent
       ? safeVipMetadata
-      : body?.metadata && typeof body.metadata === 'object' ? body.metadata : {})
+      : extraMetadata)
+  }
+
+  // Separate analytics destination; the app's primary Supabase remains untouched.
+  try {
+    const config = useRuntimeConfig()
+    const analytics = createClient(config.analyticsSupabaseUrl, config.analyticsSupabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    })
+    const metadataJson = JSON.stringify(baseMeta)
+    const metadata = metadataJson.length <= 8000
+      ? baseMeta
+      : { source, channel: baseMeta.channel, tree_event: eventName }
+    const { error } = await analytics.from('tracking_events').insert({
+      visitor_id: visitorId,
+      event_name: eventName,
+      occurred_at: new Date().toISOString(),
+      path,
+      offer_slug: offerSlug,
+      ...utms,
+      metadata
+    })
+    if (error) console.warn('[track] Analytics Supabase insert failed', { message: error.message })
+  } catch (error: any) {
+    console.warn('[track] Analytics Supabase unavailable', { message: error?.message || 'unknown error' })
   }
 
   const toSend: string[] = [eventName]

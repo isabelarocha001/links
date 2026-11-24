@@ -10,7 +10,7 @@
  *   pubTitle / pubDesc  → canal público
  *   privTitle / privDesc → PrivSex
  */
-export type Locale = 'pt' | 'en' | 'es' | 'fr' | 'de' | 'it'
+export type Locale = 'pt' | 'en' | 'es' | 'fr' | 'de' | 'it' | 'nl' | 'sv' | 'no' | 'da' | 'fi' | 'pl' | 'cs' | 'el' | 'ro' | 'hu'
 
 export function detectLocale(languagePreferences?: readonly string[]): Locale {
   const list = languagePreferences?.length
@@ -26,6 +26,16 @@ export function detectLocale(languagePreferences?: readonly string[]): Locale {
     if (code === 'fr') return 'fr'
     if (code === 'de') return 'de'
     if (code === 'it') return 'it'
+    if (code === 'nl') return 'nl'
+    if (code === 'sv') return 'sv'
+    if (code === 'no' || code === 'nb' || code === 'nn') return 'no'
+    if (code === 'da') return 'da'
+    if (code === 'fi') return 'fi'
+    if (code === 'pl') return 'pl'
+    if (code === 'cs') return 'cs'
+    if (code === 'el') return 'el'
+    if (code === 'ro') return 'ro'
+    if (code === 'hu') return 'hu'
   }
   return 'pt'
 }
@@ -54,7 +64,14 @@ type Dict = Record<string, string>
 
 // --- PT-BR (Brasil) ---
 const pt: Dict = {
-  platformsHeading: 'Minhas plataformas',
+  platformsHeading: 'Escolha onde acessar meu conteúdo exclusivo',
+  platformPrivsexTitle: 'Meu perfil oficial',
+  platformInfoPrivsex: 'O acesso ao meu conteúdo é pago. Clique abaixo para ver meu perfil e quanto custa a assinatura.',
+  platformInfoPrivsexPayment: 'Você verá o valor e a renovação antes de confirmar.',
+  platformAccessPrivsex: 'Ver perfil e preços →',
+  platformTelegramTitle: 'Meu canal VIP privado',
+  platformInfoTelegram: 'O acesso ao canal VIP é pago. Tem conteúdo novo toda semana; no Telegram, você verá a oferta, os planos e os valores.',
+  platformAccessTelegram: 'Ver oferta VIP e planos →',
   socialLinksLabel: 'Me encontre nas redes',
   socialLinksNav: 'Redes sociais',
   xProfileLabel: 'Perfil no X',
@@ -176,7 +193,14 @@ const pt: Dict = {
 
 // --- English ---
 const en: Dict = {
-  platformsHeading: 'My platforms',
+  platformsHeading: 'Choose where to access my exclusive content',
+  platformPrivsexTitle: 'My official profile',
+  platformInfoPrivsex: 'Visit my PrivSex profile to explore the available subscription plans.',
+  platformInfoPrivsexPayment: 'Access requires a paid subscription. You’ll see the price and renewal terms before confirming.',
+  platformAccessPrivsex: 'Visit my profile →',
+  platformTelegramTitle: 'My private VIP channel',
+  platformInfoTelegram: 'Access to the VIP channel requires a paid subscription. Telegram shows the offer, plans and prices. New content every week.',
+  platformAccessTelegram: 'View VIP offer and plans →',
   socialLinksLabel: 'Find me on social media',
   socialLinksNav: 'Social media',
   xProfileLabel: 'X profile',
@@ -299,7 +323,15 @@ const en: Dict = {
 
 // --- Español (herda en + overrides) ---
 const es: Dict = {
-  platformsHeading: 'Mis plataformas',
+  ...en,
+  platformsHeading: 'Elige dónde acceder a mi contenido exclusivo',
+  platformPrivsexTitle: 'Mi perfil oficial',
+  platformInfoPrivsex: 'Visita mi perfil de PrivSex para conocer los planes de suscripción disponibles.',
+  platformInfoPrivsexPayment: 'El acceso requiere una suscripción de pago. Verás el precio y la renovación antes de confirmar.',
+  platformAccessPrivsex: 'Visitar mi perfil →',
+  platformTelegramTitle: 'Mi canal VIP privado',
+  platformInfoTelegram: 'El acceso al canal VIP requiere una suscripción de pago. Telegram muestra la oferta, los planes y los precios. Hay contenido nuevo cada semana.',
+  platformAccessTelegram: 'Ver oferta VIP y planes →',
   socialLinksLabel: 'Encu\u00e9ntrame en redes',
   socialLinksNav: 'Redes sociales',
   xProfileLabel: 'Perfil en X',
@@ -317,7 +349,6 @@ const es: Dict = {
   btnPay: "Pagar",
   generatingPay: "Cargando…",
   cuBody3: "¿Desbloqueaste? Entonces puedes escribirme aquí… 🔥",
-  ...en,
   waName: 'Creadora de contenido · Wanessa',
   waTyping: 'escribiendo…',
   waDay: 'Hoy',
@@ -418,12 +449,19 @@ const es: Dict = {
 
 // --- Français ---
 const fr: Dict = {
-  platformsHeading: 'Mes plateformes',
+  ...en,
+  platformsHeading: 'Choisissez où accéder à mon contenu exclusif',
+  platformPrivsexTitle: 'Mon profil officiel',
+  platformInfoPrivsex: 'Visitez mon profil PrivSex pour découvrir les formules d’abonnement disponibles.',
+  platformInfoPrivsexPayment: 'L’accès nécessite un abonnement payant. Le prix et le renouvellement sont affichés avant confirmation.',
+  platformAccessPrivsex: 'Visiter mon profil →',
+  platformTelegramTitle: 'Mon canal VIP privé',
+  platformInfoTelegram: 'L’accès au canal VIP nécessite un abonnement payant. Telegram affiche l’offre, les formules et les prix. Du nouveau contenu chaque semaine.',
+  platformAccessTelegram: 'Voir l’offre VIP et les formules →',
   socialLinksLabel: 'Retrouvez-moi sur les r\u00e9seaux',
   socialLinksNav: 'R\u00e9seaux sociaux',
   xProfileLabel: 'Profil X',
   instagramProfileLabel: 'Profil Instagram',
-  ...en,
   waName: 'Créatrice de contenu · Wanessa',
   waTyping: 'écrit…',
   waDay: "Aujourd'hui",
@@ -469,12 +507,19 @@ const fr: Dict = {
 
 // --- Deutsch ---
 const de: Dict = {
-  platformsHeading: 'Meine Plattformen',
+  ...en,
+  platformsHeading: 'Wähle, wo du auf meine exklusiven Inhalte zugreifen kannst',
+  platformPrivsexTitle: 'Mein offizielles Profil',
+  platformInfoPrivsex: 'Besuche mein PrivSex-Profil, um die verfügbaren Abos anzusehen.',
+  platformInfoPrivsexPayment: 'Der Zugang erfordert ein kostenpflichtiges Abo. Preis und Verlängerung werden vor der Bestätigung angezeigt.',
+  platformAccessPrivsex: 'Mein Profil besuchen →',
+  platformTelegramTitle: 'Mein privater VIP-Kanal',
+  platformInfoTelegram: 'Der Zugang zum VIP-Kanal erfordert ein kostenpflichtiges Abo. Telegram zeigt Angebot, Abos und Preise. Jede Woche gibt es neue Inhalte.',
+  platformAccessTelegram: 'VIP-Angebot und Abos ansehen →',
   socialLinksLabel: 'Finde mich in den sozialen Medien',
   socialLinksNav: 'Soziale Medien',
   xProfileLabel: 'X-Profil',
   instagramProfileLabel: 'Instagram-Profil',
-  ...en,
   waName: 'Content Creatorin · Wanessa',
   waTyping: 'tippt…',
   waDay: 'Heute',
@@ -521,12 +566,19 @@ const de: Dict = {
 
 // --- Italiano ---
 const it: Dict = {
-  platformsHeading: 'Le mie piattaforme',
+  ...en,
+  platformsHeading: 'Scegli dove accedere ai miei contenuti esclusivi',
+  platformPrivsexTitle: 'Il mio profilo ufficiale',
+  platformInfoPrivsex: 'Visita il mio profilo PrivSex per scoprire i piani di abbonamento disponibili.',
+  platformInfoPrivsexPayment: 'L’accesso richiede un abbonamento a pagamento. Prezzo e rinnovo sono mostrati prima della conferma.',
+  platformAccessPrivsex: 'Visita il mio profilo →',
+  platformTelegramTitle: 'Il mio canale VIP privato',
+  platformInfoTelegram: 'L’accesso al canale VIP richiede un abbonamento a pagamento. Telegram mostra offerta, piani e prezzi. Nuovi contenuti ogni settimana.',
+  platformAccessTelegram: 'Vedi offerta VIP e piani →',
   socialLinksLabel: 'Seguimi sui social',
   socialLinksNav: 'Social media',
   xProfileLabel: 'Profilo X',
   instagramProfileLabel: 'Profilo Instagram',
-  ...en,
   waName: 'Content creator · Wanessa',
   waTyping: 'sta scrivendo…',
   waDay: 'Oggi',
@@ -571,7 +623,127 @@ const it: Dict = {
   waPrefill: 'Voglio più informazioni sul tuo contenuto VIP',
 }
 
-const ALL: Record<Locale, Dict> = { pt, en, es, fr, de, it }
+const nl: Dict = {
+  ...en,
+  platformsHeading: 'Kies waar je toegang wilt tot mijn exclusieve content',
+  platformPrivsexTitle: 'Mijn officiële profiel',
+  platformInfoPrivsex: 'Bezoek mijn PrivSex-profiel om de beschikbare abonnementen te bekijken.',
+  platformInfoPrivsexPayment: 'Toegang vereist een betaald abonnement. Je ziet de prijs en verlenging voordat je bevestigt.',
+  platformAccessPrivsex: 'Bekijk mijn profiel →',
+  platformTelegramTitle: 'Mijn privé VIP-kanaal',
+  platformInfoTelegram: 'Toegang tot het VIP-kanaal vereist een betaald abonnement. Telegram toont het aanbod, de abonnementen en prijzen. Elke week nieuwe content.',
+  platformAccessTelegram: 'Bekijk het VIP-aanbod en de abonnementen →',
+}
+
+const sv: Dict = {
+  ...en,
+  platformsHeading: 'Välj var du vill ta del av mitt exklusiva innehåll',
+  platformPrivsexTitle: 'Min officiella profil',
+  platformInfoPrivsex: 'Besök min PrivSex-profil för att se de tillgängliga abonnemangen.',
+  platformInfoPrivsexPayment: 'Tillgång kräver ett betalt abonnemang. Du ser priset och förnyelsen innan du bekräftar.',
+  platformAccessPrivsex: 'Besök min profil →',
+  platformTelegramTitle: 'Min privata VIP-kanal',
+  platformInfoTelegram: 'Tillgång till VIP-kanalen kräver ett betalt abonnemang. Telegram visar erbjudandet, abonnemangen och priserna. Nytt innehåll varje vecka.',
+  platformAccessTelegram: 'Se VIP-erbjudandet och abonnemangen →',
+}
+
+const no: Dict = {
+  ...en,
+  platformsHeading: 'Velg hvor du vil få tilgang til det eksklusive innholdet mitt',
+  platformPrivsexTitle: 'Min offisielle profil',
+  platformInfoPrivsex: 'Besøk PrivSex-profilen min for å se de tilgjengelige abonnementene.',
+  platformInfoPrivsexPayment: 'Tilgang krever et betalt abonnement. Du ser pris og fornyelse før du bekrefter.',
+  platformAccessPrivsex: 'Besøk profilen min →',
+  platformTelegramTitle: 'Min private VIP-kanal',
+  platformInfoTelegram: 'Tilgang til VIP-kanalen krever et betalt abonnement. Telegram viser tilbudet, abonnementene og prisene. Nytt innhold hver uke.',
+  platformAccessTelegram: 'Se VIP-tilbudet og abonnementene →',
+}
+
+const da: Dict = {
+  ...en,
+  platformsHeading: 'Vælg, hvor du vil få adgang til mit eksklusive indhold',
+  platformPrivsexTitle: 'Min officielle profil',
+  platformInfoPrivsex: 'Besøg min PrivSex-profil for at se de tilgængelige abonnementer.',
+  platformInfoPrivsexPayment: 'Adgang kræver et betalt abonnement. Du ser prisen og fornyelsen, før du bekræfter.',
+  platformAccessPrivsex: 'Besøg min profil →',
+  platformTelegramTitle: 'Min private VIP-kanal',
+  platformInfoTelegram: 'Adgang til VIP-kanalen kræver et betalt abonnement. Telegram viser tilbuddet, abonnementerne og priserne. Nyt indhold hver uge.',
+  platformAccessTelegram: 'Se VIP-tilbuddet og abonnementerne →',
+}
+
+const fi: Dict = {
+  ...en,
+  platformsHeading: 'Valitse, mistä haluat käyttää eksklusiivista sisältöäni',
+  platformPrivsexTitle: 'Virallinen profiilini',
+  platformInfoPrivsex: 'Käy PrivSex-profiilissani tutustumassa saatavilla oleviin tilausvaihtoehtoihin.',
+  platformInfoPrivsexPayment: 'Sisältö edellyttää maksullista tilausta. Näet hinnan ja uusimisehdot ennen vahvistamista.',
+  platformAccessPrivsex: 'Siirry profiiliini →',
+  platformTelegramTitle: 'Yksityinen VIP-kanavani',
+  platformInfoTelegram: 'VIP-kanavan käyttö edellyttää maksullista tilausta. Telegramissa näet tarjouksen, tilausvaihtoehdot ja hinnat. Uutta sisältöä joka viikko.',
+  platformAccessTelegram: 'Katso VIP-tarjous ja tilausvaihtoehdot →',
+}
+
+const pl: Dict = {
+  ...en,
+  platformsHeading: 'Wybierz, gdzie chcesz uzyskać dostęp do moich ekskluzywnych treści',
+  platformPrivsexTitle: 'Mój oficjalny profil',
+  platformInfoPrivsex: 'Odwiedź mój profil PrivSex, aby zobaczyć dostępne plany subskrypcji.',
+  platformInfoPrivsexPayment: 'Dostęp wymaga płatnej subskrypcji. Cenę i zasady odnowienia zobaczysz przed potwierdzeniem.',
+  platformAccessPrivsex: 'Odwiedź mój profil →',
+  platformTelegramTitle: 'Mój prywatny kanał VIP',
+  platformInfoTelegram: 'Dostęp do kanału VIP wymaga płatnej subskrypcji. Telegram pokazuje ofertę, plany i ceny. Nowe treści co tydzień.',
+  platformAccessTelegram: 'Zobacz ofertę VIP i plany →',
+}
+
+const cs: Dict = {
+  ...en,
+  platformsHeading: 'Vyberte, kde chcete získat přístup k mému exkluzivnímu obsahu',
+  platformPrivsexTitle: 'Můj oficiální profil',
+  platformInfoPrivsex: 'Navštivte můj profil PrivSex a prohlédněte si dostupné předplatné.',
+  platformInfoPrivsexPayment: 'Přístup vyžaduje placené předplatné. Cenu a podmínky obnovení uvidíte před potvrzením.',
+  platformAccessPrivsex: 'Navštívit můj profil →',
+  platformTelegramTitle: 'Můj soukromý VIP kanál',
+  platformInfoTelegram: 'Přístup k VIP kanálu vyžaduje placené předplatné. Telegram zobrazí nabídku, předplatné a ceny. Nový obsah každý týden.',
+  platformAccessTelegram: 'Zobrazit nabídku VIP a předplatné →',
+}
+
+const el: Dict = {
+  ...en,
+  platformsHeading: 'Επιλέξτε πού θα αποκτήσετε πρόσβαση στο αποκλειστικό μου περιεχόμενο',
+  platformPrivsexTitle: 'Το επίσημο προφίλ μου',
+  platformInfoPrivsex: 'Επισκεφθείτε το προφίλ μου στο PrivSex για να δείτε τα διαθέσιμα πακέτα συνδρομής.',
+  platformInfoPrivsexPayment: 'Η πρόσβαση απαιτεί συνδρομή επί πληρωμή. Θα δείτε την τιμή και την ανανέωση πριν επιβεβαιώσετε.',
+  platformAccessPrivsex: 'Επισκεφθείτε το προφίλ μου →',
+  platformTelegramTitle: 'Το ιδιωτικό VIP κανάλι μου',
+  platformInfoTelegram: 'Η πρόσβαση στο VIP κανάλι απαιτεί συνδρομή επί πληρωμή. Στο Telegram θα δείτε την προσφορά, τα πακέτα και τις τιμές. Νέο περιεχόμενο κάθε εβδομάδα.',
+  platformAccessTelegram: 'Δείτε την προσφορά VIP και τα πακέτα →',
+}
+
+const ro: Dict = {
+  ...en,
+  platformsHeading: 'Alege unde vrei să accesezi conținutul meu exclusiv',
+  platformPrivsexTitle: 'Profilul meu oficial',
+  platformInfoPrivsex: 'Vizitează profilul meu PrivSex pentru a vedea abonamentele disponibile.',
+  platformInfoPrivsexPayment: 'Accesul necesită un abonament plătit. Vei vedea prețul și reînnoirea înainte de confirmare.',
+  platformAccessPrivsex: 'Vizitează profilul meu →',
+  platformTelegramTitle: 'Canalul meu VIP privat',
+  platformInfoTelegram: 'Accesul la canalul VIP necesită un abonament plătit. Telegram afișează oferta, abonamentele și prețurile. Conținut nou în fiecare săptămână.',
+  platformAccessTelegram: 'Vezi oferta VIP și abonamentele →',
+}
+
+const hu: Dict = {
+  ...en,
+  platformsHeading: 'Válaszd ki, hol szeretnéd elérni az exkluzív tartalmaimat',
+  platformPrivsexTitle: 'Hivatalos profilom',
+  platformInfoPrivsex: 'Látogass el a PrivSex-profilomra az elérhető előfizetések megtekintéséhez.',
+  platformInfoPrivsexPayment: 'A hozzáférés fizetős előfizetéshez kötött. Az árat és a megújítás feltételeit a megerősítés előtt látod.',
+  platformAccessPrivsex: 'Profilom megtekintése →',
+  platformTelegramTitle: 'Privát VIP-csatornám',
+  platformInfoTelegram: 'A VIP-csatornához fizetős előfizetés szükséges. A Telegramon látod az ajánlatot, a csomagokat és az árakat. Minden héten új tartalom.',
+  platformAccessTelegram: 'VIP-ajánlatok és csomagok →',
+}
+
+const ALL: Record<Locale, Dict> = { pt, en, es, fr, de, it, nl, sv, no, da, fi, pl, cs, el, ro, hu }
 
 export function t(locale: Locale, key: string): string {
   return ALL[locale]?.[key] || ALL.pt[key] || key

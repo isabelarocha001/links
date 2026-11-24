@@ -62,8 +62,8 @@
       <template v-if="gateReady && gate === 'pass'">
         <header class="hero">
           <div class="photo-stage">
-            <div class="photo-frame">
-              <img src="/home-banner.png" class="hero-photo is-active" alt="" decoding="async" fetchpriority="high" draggable="false" />
+            <div class="photo-frame" :class="{ 'photo-frame--loading': !heroImageLoaded }" :aria-busy="!heroImageLoaded">
+              <img ref="heroPhoto" src="/home-banner.png" class="hero-photo is-active" alt="" decoding="async" fetchpriority="high" draggable="false" @load="heroImageLoaded = true" @error="heroImageLoaded = true" />
               <div class="photo-shine" aria-hidden="true"></div>
               <div class="photo-vignette" aria-hidden="true"></div>
             </div>
@@ -85,7 +85,7 @@
         </section>
         <section v-if="configReady" id="links-main-cards" class="main-cards" :class="{ 'main-cards--single': !privsexLinkEnabled, 'main-cards--offers': !isBrazilianPortugueseBrowser }">
           <div class="card-col" v-if="privsexLinkEnabled">
-            <a class="lux-card lux-card--row" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl)">
+            <a class="lux-card lux-card--row lux-card--privsex" :href="privsexUrl" target="_blank" rel="noopener noreferrer" aria-haspopup="dialog" :aria-expanded="activePlatformInfo === 'privsex'" @click="onPlatformCardClick($event, 'privsex')">
               <span class="card-icon card-icon--thumb privsex-shirt-logo" aria-hidden="true">
                 <svg viewBox="0 0 96 52" role="presentation">
                   <path d="M35 16 29 7l11 5 8-9 8 9 11-5-6 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
@@ -112,7 +112,7 @@
             <button type="button" class="card-enter card-enter--quest iq-main-enter" @click="iqStart"><span aria-hidden="true">✦</span> Conversar comigo <span aria-hidden="true">→</span></button>
           </div>
           <div class="card-col">
-            <a class="lux-card lux-card--row" :href="vipBotUrl" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl)">
+            <a class="lux-card lux-card--row" :href="vipBotUrl" aria-haspopup="dialog" :aria-expanded="activePlatformInfo === 'telegram'" @click="onPlatformCardClick($event, 'telegram')">
               <span class="card-icon card-icon--thumb" aria-hidden="true"><img v-if="logoTg" :src="logoTg" alt="" class="logo-img" width="28" height="28" /><template v-else>⭐</template></span>
               <h2 class="card-title">{{ t('vipTitle') }}</h2>
               <span class="card-row-action" aria-hidden="true">↗</span>
@@ -122,7 +122,7 @@
         <div v-if="isBrazilianPortugueseBrowser" class="links-gift-wrap">
           <button type="button" class="links-gift-button" @click="onLinksGiftMimo">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v9H4v-9m-2-5h20v5H2zm10 0v14M12 7H7.5a2.5 2.5 0 1 1 2.4-3.2L12 7Zm0 0h4.5a2.5 2.5 0 1 0-2.4-3.2L12 7Z" /></svg>
-            <span>Me enviar um mimo</span>
+            <span>Enviar mimo</span>
           </button>
         </div>
         <!-- creator-intro longo removido: bio em tópicos fica acima dos cards -->
@@ -1287,6 +1287,37 @@
         </div>
       </div>
     </Teleport>
+  <Teleport to="body">
+    <Transition name="platform-modal">
+      <div v-if="activePlatformInfo" class="platform-modal-backdrop" @click.self="closePlatformInfo" @keydown="trapPlatformModalFocus">
+        <section class="platform-modal" role="dialog" aria-modal="true" :aria-label="t('platformsHeading')">
+          <button ref="platformModalCloseButton" type="button" class="platform-modal__close" :aria-label="t('close')" @click="closePlatformInfo">×</button>
+          <article v-if="activePlatformInfo === 'privsex'" class="platform-modal__choice platform-modal__choice--privsex">
+            <span class="platform-modal__eyebrow">PRIVSEX</span>
+            <h2>{{ t('platformPrivsexTitle') }}</h2>
+            <p>{{ t('platformInfoPrivsex') }}</p>
+            <p class="platform-modal__disclosure">{{ t('platformInfoPrivsexPayment') }}</p>
+            <a class="platform-modal__primary" :href="privsexUrl" target="_blank" rel="noopener noreferrer" @pointerdown.passive="onCardClick('PrivSex', privsexUrl, 'privsex')" @click="closePlatformInfo">{{ t('platformAccessPrivsex') }}</a>
+          </article>
+          <article v-else class="platform-modal__choice platform-modal__choice--telegram">
+            <span class="platform-modal__eyebrow">TELEGRAM</span>
+            <h2>{{ t('platformTelegramTitle') }}</h2>
+            <p>{{ t('platformInfoTelegram') }}</p>
+            <a class="platform-modal__primary platform-modal__primary--telegram" :href="vipBotUrl" @pointerdown.passive="onCardClick('Telegram Bot', vipBotUrl, 'telegram')" @click="closePlatformInfo">{{ t('platformAccessTelegram') }}</a>
+          </article>
+        </section>
+      </div>
+    </Transition>
+  </Teleport>
+  <Teleport to="body">
+    <Transition name="site-toast">
+      <div v-if="toastMessage" class="site-toast" :class="`site-toast--${toastKind}`" role="status" aria-live="polite">
+        <span class="site-toast__icon" aria-hidden="true">{{ toastKind === 'error' ? '!' : '✓' }}</span>
+        <span class="site-toast__message">{{ toastMessage }}</span>
+        <button type="button" class="site-toast__close" aria-label="Fechar aviso" @click="dismissToast">×</button>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -1340,6 +1371,14 @@ const CLICK_DAY_PREFIX = 'wanessa_click_'
 const GATE_KEY = 'wanessa_gate_v1'
 
 const privsexUrl = 'https://privsex.com/wanessa'
+const activePlatformInfo = ref<'privsex' | 'telegram' | null>(null)
+const platformModalCloseButton = ref<HTMLButtonElement | null>(null)
+const platformModalTrigger = ref<HTMLAnchorElement | null>(null)
+watch(activePlatformInfo, (platform) => {
+  if (typeof document === 'undefined') return
+  document.documentElement.classList.toggle('platform-modal-open', Boolean(platform))
+  document.body.classList.toggle('platform-modal-open', Boolean(platform))
+})
 
 // =============================================================================
 // QUIZ ICP — qualificação antes do WhatsApp (sem pontuação visível)
@@ -1931,6 +1970,20 @@ const mimoGiftAmount = ref('')
 const mimoGiftMessage = ref('')
 const mimoGiftError = ref('')
 const mimoGiftLoading = ref(false)
+const toastMessage = ref('')
+const toastKind = ref<'success' | 'error'>('success')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+function showToast(message: string, kind: 'success' | 'error') {
+  toastMessage.value = message
+  toastKind.value = kind
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toastMessage.value = ''; toastTimer = null }, 3600)
+}
+function dismissToast() {
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = null
+  toastMessage.value = ''
+}
 const funnelMsgMenuIdx = ref<number | null>(null)
 const funnelEditingIdx = ref<number | null>(null)
 const funnelEditDraft = ref('')
@@ -2868,6 +2921,7 @@ async function sendMimoGift() {
     funnelExternalId.value = pixExternalId.value
     showMimoGiftModal.value = false
     showPixModal.value = true
+    showToast('PIX gerado. Conclua o pagamento para enviar o mimo.', 'success')
     funnelStep.value = 'awaiting_payment'
     if (msg) {
       try { pushFunnel('me', msg) } catch {}
@@ -2888,6 +2942,7 @@ async function sendMimoGift() {
     }
   } catch (e: any) {
     mimoGiftError.value = e?.data?.statusMessage || e?.message || 'Não deu pra gerar o PIX agora'
+    showToast(mimoGiftError.value, 'error')
   } finally {
     mimoGiftLoading.value = false
   }
@@ -2975,7 +3030,7 @@ async function buySegundaChanceMimo() {
     }
   } catch (e: any) {
     blockedUnlockError.value = e?.data?.statusMessage || e?.message || 'Não deu pra gerar o PIX agora'
-    try { alert(blockedUnlockError.value) } catch {}
+    showToast(blockedUnlockError.value, 'error')
   } finally {
     blockedUnlockLoading.value = false
   }
@@ -3246,49 +3301,44 @@ function closePixModal() {
     funnelType('Quando quiser, toca em "Sim, pode mandar o PIX" que eu te envio a chave 💚', 1000)
   }
 }
+async function copyToClipboard(value: string) {
+  try {
+    await navigator.clipboard.writeText(value)
+    return true
+  } catch {
+    const input = document.createElement('textarea')
+    input.value = value
+    input.setAttribute('readonly', '')
+    input.style.position = 'fixed'
+    input.style.left = '-9999px'
+    document.body.appendChild(input)
+    input.select()
+    try { return document.execCommand('copy') } catch { return false } finally { input.remove() }
+  }
+}
 async function copyPixCode() {
   const code = String(pixCopyCode.value || funnelPixCode.value || '').trim()
   if (!code) return
-  try {
-    await navigator.clipboard.writeText(code)
-  } catch {
-    try {
-      const ta = document.createElement('textarea')
-      ta.value = code
-      ta.setAttribute('readonly', '')
-      ta.style.position = 'fixed'
-      ta.style.left = '-9999px'
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-    } catch {}
+  if (!await copyToClipboard(code)) {
+    showToast('Não foi possível copiar o código PIX.', 'error')
+    return
   }
   pixCopied.value = true
   setTimeout(() => { pixCopied.value = false }, 2000)
+  showToast('Código PIX copiado.', 'success')
 }
 
 async function copyPixEmail(button?: HTMLButtonElement | null) {
   const originalLabel = button?.textContent || 'Copiar chave Pix'
-  try {
-    await navigator.clipboard.writeText(PIX_KEY_EMAIL)
-  } catch {
-    try {
-      const ta = document.createElement('textarea')
-      ta.value = PIX_KEY_EMAIL
-      ta.setAttribute('readonly', '')
-      ta.style.position = 'fixed'
-      ta.style.left = '-9999px'
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-    } catch {}
+  if (!await copyToClipboard(PIX_KEY_EMAIL)) {
+    showToast('Não foi possível copiar a chave Pix.', 'error')
+    return
   }
   if (button) {
     button.textContent = 'Chave copiada!'
     window.setTimeout(() => { button.textContent = originalLabel }, 2000)
   }
+  showToast('Chave Pix copiada.', 'success')
 }
 
 async function adminUnlockChat() {
@@ -6161,20 +6211,13 @@ async function answerFunnel(opt: { key: string; label: string }) {
   if (opt.key === 'pix_copy') {
     const code = String(funnelPixCode.value || pixCopyCode.value || '').trim()
     if (code) {
-      try {
-        await navigator.clipboard.writeText(code)
-      } catch {
-        try {
-          const ta = document.createElement('textarea')
-          ta.value = code
-          document.body.appendChild(ta)
-          ta.select()
-          document.execCommand('copy')
-          document.body.removeChild(ta)
-        } catch {}
+      if (!await copyToClipboard(code)) {
+        showToast('Não foi possível copiar o código PIX.', 'error')
+        return
       }
       pixCopied.value = true
       setTimeout(() => { pixCopied.value = false }, 2000)
+      showToast('Código PIX copiado.', 'success')
       // feedback instantâneo no botão/UI — sem esperar mensagem da Wanessa
     }
     return
@@ -6296,6 +6339,8 @@ const logoTg = LOGO_TG_BLUE
 const logoTgPurple = LOGO_TG_PURPLE
 const gallery = ['/model.jpg', '/hero-1.jpg', '/hero-2.jpg', '/hero-3.jpg']
 const photoIndex = ref(0)
+const heroImageLoaded = ref(false)
+const heroPhoto = ref<HTMLImageElement | null>(null)
 let photoTimer: ReturnType<typeof setInterval> | null = null
 
 /** Presença regional (IP): mostra somente uma distância aproximada, sem expor o IP. */
@@ -6792,7 +6837,13 @@ function offerFromLabel(label: string) {
 // =============================================================================
 function track(eventName: string, extra: Record<string, any> = {}) {
   const visitor_id = getOrCreateVisitorId()
-  const payload = { event_name: eventName, path: '/links/wanessa', visitor_id, ...readUtms(), ...extra }
+  const browserLanguage = typeof navigator !== 'undefined' ? String(navigator.language || '').slice(0, 32) : ''
+  const metadata = {
+    locale: locale.value,
+    ...(browserLanguage ? { browser_language: browserLanguage } : {}),
+    ...(extra.metadata && typeof extra.metadata === 'object' ? extra.metadata : {}),
+  }
+  const payload = { event_name: eventName, path: '/links/wanessa', visitor_id, ...readUtms(), ...extra, metadata }
   const json = JSON.stringify(payload)
   try {
     if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
@@ -6836,11 +6887,11 @@ function metaPurchase(planKey: string, amount: number, paymentId?: string, title
   })
 }
 
-function onCardClick(label: string, url: string) {
+function onCardClick(label: string, url: string, platform?: 'privsex' | 'telegram') {
   const slug = offerFromLabel(label)
   if (alreadyClickedToday(slug)) return
   markClickedToday(slug)
-  track('outbound_click', { label, url, offer_slug: slug })
+  track('outbound_click', { label, url, offer_slug: slug, metadata: platform ? { platform, funnel_stage: 'destination_click' } : undefined })
 
   // Meta Pixel — eventos personalizados de clique (não são conversão)
   try {
@@ -6855,6 +6906,44 @@ function onCardClick(label: string, url: string) {
       }
     }
   } catch {}
+}
+function onPlatformCardClick(event: MouseEvent, platform: 'privsex' | 'telegram') {
+  event.preventDefault()
+  platformModalTrigger.value = event.currentTarget as HTMLAnchorElement
+  activePlatformInfo.value = platform
+  const label = platform === 'privsex' ? 'PrivSex' : 'Telegram Bot'
+  const url = platform === 'privsex' ? privsexUrl : vipBotUrl
+  track('link_view', {
+    label: `${label} info modal`,
+    url,
+    offer_slug: platform === 'privsex' ? 'privsex' : 'telegram_vip',
+    metadata: { platform, funnel_stage: 'modal_open' },
+  })
+  nextTick(() => platformModalCloseButton.value?.focus())
+}
+function closePlatformInfo() {
+  activePlatformInfo.value = null
+  nextTick(() => platformModalTrigger.value?.focus())
+}
+function trapPlatformModalFocus(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closePlatformInfo()
+    return
+  }
+  if (event.key !== 'Tab') return
+  const panel = event.currentTarget as HTMLElement
+  const focusable = [...panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')]
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (!first || !last) return
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
 }
 function attachLogo(l: LinkItem): LinkItem {
   const lab = (l.label || '').toLowerCase()
@@ -6906,6 +6995,7 @@ async function warmSyncPay() {
 // LIFECYCLE (mounted / route)
 // =============================================================================
 onMounted(async () => {
+  if (heroPhoto.value?.complete) heroImageLoaded.value = true
   // Landing isolada: não inicializa o funil da Wanessa nem registra
   // page_view como /links/wanessa.
   if (isIsolatedRoute.value) return
@@ -7055,6 +7145,9 @@ onMounted(async () => {
 onUnmounted(() => {
   if (photoTimer) clearInterval(photoTimer)
   if (typingTimer) clearTimeout(typingTimer)
+  if (toastTimer) clearTimeout(toastTimer)
+  document.documentElement.classList.remove('platform-modal-open')
+  document.body.classList.remove('platform-modal-open')
 })
 function openLogin() {
   if (isAdmin.value) {
